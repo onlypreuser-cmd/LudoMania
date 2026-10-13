@@ -99,10 +99,17 @@ export interface DiceSkinOption {
   soundId: string;
 }
 
+export type BoardRuleType =
+  | 'tournament-cut-to-enter'
+  | 'sanctuary-and-timber-leap'
+  | 'phalanx-and-royal-march'
+  | 'quantum-warp-speedpads';
+
 export interface BoardPerk {
   perkName: string;
   badge: string;
   description: string;
+  ruleType: BoardRuleType;
   captureBountyBonus: number;
   safeStarFortitudeBonus: number;
   homeStretchSurgeBonus: number;
@@ -219,6 +226,7 @@ export interface MoveEvaluation {
   capturedPawnsInfo: CapturedPawnInfo[];
   willReachHome: boolean;
   landsOnSafeStar: boolean;
+  perkRuleTag?: string;
 }
 
 export interface SavedGameSession {
@@ -231,6 +239,12 @@ export interface SavedGameSession {
   playerLastDiceValues: number[];
   consecutiveSixes: number;
   captureBonusPoints: number[];
+  /** Tracks which players had at least one pawn captured during this match (for cleanMatchBounty check) */
+  capturedPlayerFlags: boolean[];
+  /** Tracks which players have successfully captured at least one opponent pawn this match (for Cut-to-Enter rule) */
+  playerHasCapturedAnyOpponent?: boolean[];
+  /** Internal engine state — persisted silently for mid-game save/restore accuracy */
+  _e?: DiceBiasState;
   turnNumber: number;
   statusMessage: string;
   timestamp: number;

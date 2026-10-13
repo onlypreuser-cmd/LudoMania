@@ -27,6 +27,10 @@ export interface LudoMachineContext {
   hasExtraTurn: boolean;
   lastCapturedPawnIds: string[];
   captureBonusPoints: number[];
+  /** Per-player flag: true if that player's pawn was ever captured this match */
+  capturedPlayerFlags: boolean[];
+  /** Per-player flag: true if this player has captured at least 1 opponent pawn this match */
+  playerHasCapturedAnyOpponent: boolean[];
   biasState: DiceBiasState;
   winnerIndex: number | null;
   statusMessage: string;
@@ -72,14 +76,12 @@ export const ludoMachine = setup({
     isThirdConsecutiveSix: ({ context }) => context.consecutiveSixes >= 3,
     hasZeroLegalMoves: ({ context }) => context.legalMoves.length === 0,
     hasSingleAutoMove: ({ context }) => {
-      if (context.legalMoves.length === 1) return true;
-      if (
-        context.legalMoves.length > 1 &&
-        context.legalMoves.every((m) => m.fromStep === -1 && m.toStep === 0)
-      ) {
-        return true;
-      }
-      return false;
+      // BUG-04 FIX: Only auto-move when there is EXACTLY 1 legal move.
+      // Previously, 2+ yard pawns all landing on step-0 were treated as
+      // "all equivalent → auto-pick first". This silently removed player
+      // choice. Now those cases fall through to SELECTING_PAWN so the
+      // player explicitly chooses which yard pawn to deploy.
+      return context.legalMoves.length === 1;
     },
     isValidPawnSelection: ({ context, event }) => {
       if (event.type !== 'SELECT_PAWN') return false;
@@ -134,16 +136,26 @@ export const ludoMachine = setup({
         };
       }
 
+      const playerHasCaptured = Boolean(
+        context.playerHasCapturedAnyOpponent?.[context.currentPlayerIndex]
+      );
+
       const legalMoves = getLegalMovesForPlayer(
         context.pawns,
         context.currentPlayerIndex,
         currentPlayer.color,
-        diceValue
+        diceValue,
+        context.boardTheme,
+        playerHasCaptured
       );
 
       let statusMessage = `${currentPlayer.name} rolled ${diceValue}!`;
       if (legalMoves.length === 0) {
-        statusMessage = `Rolled ${diceValue} — No legal moves available.`;
+        if (context.boardTheme === 'classic-kingdom' && !playerHasCaptured) {
+          statusMessage = `Rolled ${diceValue} — No moves! (Capture opponent to unlock Home Stretch).`;
+        } else {
+          statusMessage = `Rolled ${diceValue} — No legal moves available.`;
+        }
       } else if (legalMoves.length > 1) {
         statusMessage = `Rolled ${diceValue}! Tap a highlighted token to move.`;
       }
@@ -191,6 +203,23 @@ export const ludoMachine = setup({
       const nextBonus = [...context.captureBonusPoints];
       let moveBonusEarned = 0;
 
+      // Track which players had pawns captured this match & which players have captured
+      const nextCapturedFlags = [...context.capturedPlayerFlags];
+      const nextHasCaptured = [
+        ...(context.playerHasCapturedAnyOpponent ??
+          context.players.map(() => false)),
+      ];
+
+      if (move.willKillPawnIds.length > 0) {
+        nextHasCaptured[context.currentPlayerIndex] = true;
+        for (const killedId of move.willKillPawnIds) {
+          const victim = context.pawns.find((p) => p.id === killedId);
+          if (victim) {
+            nextCapturedFlags[victim.playerIndex] = true;
+          }
+        }
+      }
+
       // 1. Capture Bounties (base 30 + theme captureBountyBonus)
       if (move.willKillPawnIds.length > 0) {
         const bountyEach = 30 + (perk.captureBountyBonus || 0);
@@ -205,6 +234,23 @@ export const ludoMachine = setup({
       // 3. Home Stretch Overdrive Surge Bonus
       if (move.toStep >= 51 && move.fromStep < 51 && perk.homeStretchSurgeBonus > 0) {
         moveBonusEarned += perk.homeStretchSurgeBonus;
+      }
+
+      // 4. Roman Phalanx & Royal March (Marble Palace)
+      // When a capture occurs, teammate pawn advances +2 steps
+      let royalMarchTriggered = false;
+      if (context.boardTheme === 'marble-palace' && move.willKillPawnIds.length > 0) {
+        const teammate = updatedPawns.find(
+          (p) =>
+            p.playerIndex === context.currentPlayerIndex &&
+            p.id !== move.pawnId &&
+            p.step >= 0 &&
+            p.step <= 48
+        );
+        if (teammate) {
+          teammate.step = Math.min(50, teammate.step + 2);
+          royalMarchTriggered = true;
+        }
       }
 
       if (moveBonusEarned > 0) {
@@ -224,6 +270,9 @@ export const ludoMachine = setup({
             ? ` (+${30 + perk.captureBountyBonus} ${perk.perkName})`
             : '';
         statusMessage = `💥 CAPTURE! ${currentPlayer.name} cut opponent token${perkTag} & gets a Bonus Roll!`;
+        if (royalMarchTriggered) {
+          statusMessage += ` 🏛️ Royal March: Teammate advanced +2 steps!`;
+        }
       } else if (reachedHome) {
         statusMessage = `🏠 HOME! ${currentPlayer.name}'s token reached Home! Bonus Roll!`;
       } else if (move.landsOnSafeStar) {
@@ -238,12 +287,18 @@ export const ludoMachine = setup({
         statusMessage = `🎲 Rolled a 6! ${currentPlayer.name} gets an Extra Roll!`;
       }
 
+      if (move.perkRuleTag) {
+        statusMessage += ` [${move.perkRuleTag}]`;
+      }
+
       return {
         pawns: updatedPawns,
         activeMove: null,
         hasExtraTurn: earnedExtra,
         lastCapturedPawnIds: move.willKillPawnIds,
         captureBonusPoints: nextBonus,
+        capturedPlayerFlags: nextCapturedFlags,
+        playerHasCapturedAnyOpponent: nextHasCaptured,
         legalMoves: [],
         statusMessage,
       };
@@ -282,8 +337,10 @@ export const ludoMachine = setup({
         BOARD_THEMES.find((t) => t.id === context.boardTheme) ?? BOARD_THEMES[0];
       const nextBonus = [...context.captureBonusPoints];
 
-      // Clean match check: if no opponent captured the winner's pawns
-      if (activeTheme.perk.cleanMatchBounty > 0) {
+      // BUG-03 FIX: Only award cleanMatchBounty if winner's pawns were NEVER captured
+      const winnerWasNeverCaptured =
+        !context.capturedPlayerFlags[context.currentPlayerIndex];
+      if (activeTheme.perk.cleanMatchBounty > 0 && winnerWasNeverCaptured) {
         nextBonus[context.currentPlayerIndex] =
           (nextBonus[context.currentPlayerIndex] ?? 0) +
           activeTheme.perk.cleanMatchBounty;
@@ -316,6 +373,8 @@ export const ludoMachine = setup({
         hasExtraTurn: false,
         lastCapturedPawnIds: [],
         captureBonusPoints: players.map(() => 0),
+        capturedPlayerFlags: players.map(() => false),
+        playerHasCapturedAnyOpponent: players.map(() => false),
         biasState: createInitialBiasState(),
         winnerIndex: null,
         turnNumber: 1,
@@ -339,7 +398,11 @@ export const ludoMachine = setup({
         hasExtraTurn: false,
         lastCapturedPawnIds: [],
         captureBonusPoints: s.captureBonusPoints ?? s.players.map(() => 0),
-        biasState: createInitialBiasState(),
+        // Restore flags if present; older saves default to false (safe fallback)
+        capturedPlayerFlags: s.capturedPlayerFlags ?? s.players.map(() => false),
+        playerHasCapturedAnyOpponent:
+          s.playerHasCapturedAnyOpponent ?? s.players.map(() => false),
+        biasState: s._e ?? createInitialBiasState(),
         winnerIndex: null,
         turnNumber: s.turnNumber ?? 1,
         statusMessage:
@@ -367,7 +430,10 @@ export const ludoMachine = setup({
         hasExtraTurn: false,
         lastCapturedPawnIds: [],
         captureBonusPoints: s.captureBonusPoints ?? s.players.map(() => 0),
-        biasState: createInitialBiasState(),
+        capturedPlayerFlags: s.capturedPlayerFlags ?? s.players.map(() => false),
+        playerHasCapturedAnyOpponent:
+          s.playerHasCapturedAnyOpponent ?? s.players.map(() => false),
+        biasState: s._e ?? createInitialBiasState(),
         winnerIndex: null,
         turnNumber: s.turnNumber ?? 1,
         statusMessage:
@@ -388,6 +454,8 @@ export const ludoMachine = setup({
       hasExtraTurn: false,
       lastCapturedPawnIds: [],
       captureBonusPoints: input.players.map(() => 0),
+      capturedPlayerFlags: input.players.map(() => false),
+      playerHasCapturedAnyOpponent: input.players.map(() => false),
       biasState: createInitialBiasState(),
       winnerIndex: null,
       turnNumber: 1,

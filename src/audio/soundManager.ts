@@ -217,6 +217,22 @@ class SoundSpriteManager {
     return this.howl;
   }
 
+  /**
+   * BUG-07 FIX: Pre-warm the audio sprite during browser idle time so the
+   * 1.4 MB base64 PCM generation + Howl init does NOT block the main thread
+   * on the first dice roll. Called once after module initialisation.
+   */
+  public prewarm(): void {
+    if (typeof window === 'undefined') return;
+    const init = () => this.ensureHowl();
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(init, { timeout: 2000 });
+    } else {
+      // Fallback for Safari / older browsers
+      setTimeout(init, 2000);
+    }
+  }
+
   public setEnabled(enabled: boolean) {
     this.enabled = enabled;
   }
@@ -233,3 +249,6 @@ class SoundSpriteManager {
 }
 
 export const soundManager = new SoundSpriteManager();
+
+// Pre-warm audio during browser idle time — eliminates first-roll jank (BUG-07)
+soundManager.prewarm();

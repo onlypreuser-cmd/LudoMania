@@ -42,6 +42,7 @@ export const GamePage: React.FC = () => {
     saveActiveGameSession,
     clearSavedGameSession,
     recordMatchResult,
+    _hasHydrated,
   } = useProfileStore();
 
   const [state, send] = useMachine(ludoMachine, {
@@ -52,32 +53,41 @@ export const GamePage: React.FC = () => {
     },
   });
 
-  const missingP1Name = !players[0]?.name.trim();
-  const missingP2Name = !players[1]?.name.trim();
-  const [setupTargetIdx, setSetupTargetIdx] = useState<0 | 1 | null>(
-    missingP1Name ? 0 : missingP2Name ? 1 : null
-  );
+  const [setupTargetIdx, setSetupTargetIdx] = useState<0 | 1 | null>(null);
 
   const hasRestoredSessionRef = useRef(Boolean(savedGameSession));
+  /**
+   * BUG-06 FIX: Track whether the game has actually started (pawn moved / turn > 1).
+   * Once true, players/theme changes must NOT trigger CONFIGURE_PLAYERS — that would
+   * wipe the live board. Resets to false only after GAME_OVER.
+   */
+  const gameStartedRef = useRef(
+    Boolean(savedGameSession) ||
+    (savedGameSession?.pawns?.some((p) => p.step > -1) ?? false) ||
+    (savedGameSession?.turnNumber ?? 1) > 1
+  );
 
   useEffect(() => {
+    // Gate on store hydration to prevent premature setup modal flash
+    if (!_hasHydrated) return;
+
     if (!players[0]?.name.trim()) {
       setSetupTargetIdx(0);
     } else if (!players[1]?.name.trim()) {
       setSetupTargetIdx(1);
     } else {
       setSetupTargetIdx(null);
-      if (!hasRestoredSessionRef.current) {
+      if (!hasRestoredSessionRef.current && !gameStartedRef.current) {
         send({
           type: 'CONFIGURE_PLAYERS',
           players,
           boardTheme: selectedBoardTheme,
         });
-      } else {
+      } else if (hasRestoredSessionRef.current) {
         hasRestoredSessionRef.current = false;
       }
     }
-  }, [players, selectedBoardTheme, send]);
+  }, [_hasHydrated, players, selectedBoardTheme, send]);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasRecordedWinRef = useRef(false);
@@ -99,6 +109,7 @@ export const GamePage: React.FC = () => {
     statusMessage,
     turnNumber,
     captureBonusPoints,
+    capturedPlayerFlags,
   } = state.context;
 
   const boardThemeMeta =
@@ -145,6 +156,8 @@ export const GamePage: React.FC = () => {
           playerLastDiceValues,
           consecutiveSixes: state.context.consecutiveSixes,
           captureBonusPoints,
+          capturedPlayerFlags,
+          _e: state.context.biasState,
           turnNumber,
           statusMessage,
           timestamp: Date.now(),
@@ -159,6 +172,7 @@ export const GamePage: React.FC = () => {
     currentPlayerIndex,
     playerLastDiceValues,
     captureBonusPoints,
+    capturedPlayerFlags,
     statusMessage,
     players,
     selectedBoardTheme,
@@ -167,12 +181,15 @@ export const GamePage: React.FC = () => {
     state.context.consecutiveSixes,
   ]);
 
-  // 2. Clear saved match session once the game is won
+  // 2. Update gameStartedRef when game actually progresses, reset on game over
   useEffect(() => {
     if (isGameOver) {
       clearSavedGameSession();
+      gameStartedRef.current = false; // Allow CONFIGURE_PLAYERS after game ends
+    } else if (pawns.some((p) => p.step > -1) || turnNumber > 1) {
+      gameStartedRef.current = true; // Guard activated — board is live
     }
-  }, [isGameOver, clearSavedGameSession]);
+  }, [isGameOver, pawns, turnNumber, clearSavedGameSession]);
 
   // 3. Fullscreen toggle & window state synchronizer
   const [isFullscreen, setIsFullscreen] = useState(
@@ -675,10 +692,10 @@ export const GamePage: React.FC = () => {
               </div>
 
               <h2 className="mt-3 text-4xl font-black tracking-tight font-['Fredoka'] bg-gradient-to-b from-amber-400 via-amber-500 to-orange-600 bg-clip-text text-transparent drop-shadow-sm">
-                You Win!
+                {winnerPlayer.name || 'Player'} Wins!
               </h2>
               <p className="mt-1 text-sm font-extrabold text-slate-700">
-                Great game, {winnerPlayer.name}!
+                Spectacular Victory!
               </p>
 
               <div className="mt-5 rounded-2xl bg-white border-2 border-slate-100 p-3.5 shadow-sm flex items-center justify-between gap-2">

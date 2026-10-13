@@ -49,15 +49,18 @@ export function useLeaderboardQuery(period: LeaderboardPeriod) {
 
       const baseList = BASE_COMPETITORS[period].map((item) => ({ ...item }));
       const activeName = userName.trim() || 'Challenger';
+
+      // BUG-08 FIX: Count actual wins — no fake base wins for new players
       const userWins = matchHistory.filter(
         (m) => m.winnerName.toLowerCase() === activeName.toLowerCase()
       ).length;
 
-      const baseScore =
-        period === 'weekly' ? 8400 : period === 'monthly' ? 22000 : 52000;
-      const computedUserScore = Math.round(baseScore + userWins * 450);
+      // BUG-08 FIX: Score starts from 0 (not a fake inflated base).
+      // 600 points per win gives a realistic progression vs competitors.
+      const computedUserScore = userWins * 600;
 
       const combined: Omit<LeaderboardEntry, 'rank'>[] = [
+        // BUG-08 FIX: Filter using same case-insensitive comparison as wins count
         ...baseList.filter(
           (b) => b.name.toLowerCase() !== activeName.toLowerCase()
         ),
@@ -65,7 +68,7 @@ export function useLeaderboardQuery(period: LeaderboardPeriod) {
           name: activeName,
           avatarId: userAvatar,
           score: computedUserScore,
-          wins: 24 + userWins,
+          wins: userWins,
           isCurrentUser: true,
         },
       ];

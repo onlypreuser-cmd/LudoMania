@@ -62,49 +62,84 @@ export const TOKEN_ICON_MAP: Record<string, string> = {
 };
 
 /**
- * 3D Studio Pedestal Platform with glowing neon accent ring and grounded contact shadow.
+ * Modern Clean Studio Pedestal Platform with Pearlescent Acrylic Podium,
+ * Glowing Dynamic LED Accent Ring, and Soft Ground Shadows.
  */
-const StudioPedestal: React.FC<{ glowColor: string }> = ({ glowColor }) => (
-  <group position={[0, -0.5, 0]}>
-    {/* Base Podium Cylinder */}
-    <mesh position={[0, -0.04, 0]}>
-      <cylinderGeometry args={[1.08, 1.18, 0.08, 48]} />
-      <meshStandardMaterial color="#0b1120" metalness={0.88} roughness={0.22} />
+const ModernStudioPedestal: React.FC<{ glowColor: string }> = ({ glowColor }) => (
+  <group position={[0, -0.48, 0]}>
+    {/* Clean White/Pearlescent Acrylic Podium */}
+    <mesh position={[0, -0.035, 0]}>
+      <cylinderGeometry args={[1.06, 1.15, 0.07, 48]} />
+      <meshStandardMaterial color="#f8fafc" roughness={0.15} metalness={0.08} />
     </mesh>
-    {/* Top Rim Bevel */}
+    {/* Glossy Top Surface Plate */}
     <mesh position={[0, 0.002, 0]}>
-      <cylinderGeometry args={[1.05, 1.08, 0.015, 48]} />
-      <meshStandardMaterial color="#1e293b" metalness={0.92} roughness={0.18} />
+      <cylinderGeometry args={[1.04, 1.06, 0.012, 48]} />
+      <meshStandardMaterial color="#ffffff" roughness={0.06} metalness={0.12} />
     </mesh>
-    {/* Glowing Neon Accent Ring */}
-    <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[0.92, 1.02, 48]} />
+    {/* Luminous Neon Ring Inset */}
+    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.92, 1.01, 48]} />
       <meshBasicMaterial color={glowColor} toneMapped={false} />
     </mesh>
-    {/* Soft Contact Shadow Disk */}
-    <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[0.62, 32]} />
-      <meshBasicMaterial color="#020617" transparent opacity={0.52} depthWrite={false} />
+    {/* Soft Ground Contact Shadow on the Podium */}
+    <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[0.55, 32]} />
+      <meshBasicMaterial color="#0f172a" transparent opacity={0.16} depthWrite={false} />
+    </mesh>
+    {/* Subtle Inner Core Shadow */}
+    <mesh position={[0, 0.013, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[0.32, 32]} />
+      <meshBasicMaterial color="#0f172a" transparent opacity={0.25} depthWrite={false} />
     </mesh>
   </group>
 );
 
 /**
- * Turntable Controller that handles smooth 360-degree rotation and idle auto-spin.
+ * High-Performance Turntable Controller.
+ * Operates purely on refs inside useFrame without triggering React component re-renders!
+ * Supports inertia flick physics and gentle idle auto-rotation.
  */
 const TurntableController: React.FC<{
-  rotationY: number;
-  isAutoRotating: boolean;
-  isDragging: boolean;
-  onAutoRotate: (delta: number) => void;
+  rotationTargetRef: React.MutableRefObject<number>;
+  rotationCurrentRef: React.MutableRefObject<number>;
+  isDraggingRef: React.MutableRefObject<boolean>;
+  isAutoRotatingRef: React.MutableRefObject<boolean>;
+  velocityRef: React.MutableRefObject<number>;
   children: React.ReactNode;
-}> = ({ rotationY, isAutoRotating, isDragging, onAutoRotate, children }) => {
+}> = ({
+  rotationTargetRef,
+  rotationCurrentRef,
+  isDraggingRef,
+  isAutoRotatingRef,
+  velocityRef,
+  children,
+}) => {
+  const groupRef = useRef<THREE.Group>(null);
+
   useFrame((_, delta) => {
-    if (isAutoRotating && !isDragging) {
-      onAutoRotate(delta * 0.45);
+    if (!groupRef.current) return;
+
+    if (!isDraggingRef.current) {
+      if (Math.abs(velocityRef.current) > 0.0006) {
+        rotationTargetRef.current += velocityRef.current;
+        velocityRef.current *= 0.92; // smooth friction decay
+      } else if (isAutoRotatingRef.current) {
+        rotationTargetRef.current += delta * 0.55; // gentle idle spin
+      }
     }
+
+    // High refresh rate smooth lerp interpolation
+    rotationCurrentRef.current = THREE.MathUtils.lerp(
+      rotationCurrentRef.current,
+      rotationTargetRef.current,
+      0.22
+    );
+
+    groupRef.current.rotation.y = rotationCurrentRef.current;
   });
-  return <group rotation={[0, rotationY, 0]}>{children}</group>;
+
+  return <group ref={groupRef}>{children}</group>;
 };
 
 /**
@@ -227,13 +262,13 @@ const StudioDie3DMesh: React.FC<{
 StudioDie3DMesh.displayName = 'StudioDie3DMesh';
 
 /**
- * Universal Dedicated 3D Studio Picker Modal for Tokens and Dice.
+ * Universal Modern 3D Studio Picker Modal for Tokens and Dice.
  * Features:
- * - Single WebGL Canvas for 0 background overhead.
- * - Interactive 360° Drag Orbit on the canvas with touch/pointer capture.
- * - Smooth Draggable Preset Ribbon with mouse grab-to-scroll, wheel scroll, and arrow buttons.
- * - Live 3D Pedestal Platform with matching dynamic neon rim lighting.
- * - Live Physics Simulators ("Test Hop" and "Roll Die").
+ * - Ultra-Clean Luminous Studio Lighting (zero dark gloom).
+ * - Butter-smooth 60-120 FPS Mobile Touch 360° Drag Orbit with Momentum.
+ * - Zero React Re-render drag loop for 100% lag-free performance.
+ * - Hardware-accelerated Draggable Preset Ribbon with touch-pan-x, mouse grab, and arrow nav.
+ * - Modern Glassmorphic UI with dynamic color halo and live physics tests.
  */
 export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
   isOpen,
@@ -255,7 +290,7 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
   const isPlayerContext = targetPlayerIndex !== undefined;
   const targetPlayer = isPlayerContext ? players[targetPlayerIndex] : null;
 
-  // Active mode state (user can toggle between Token and Dice inside the modal)
+  // Active mode state (user can toggle between Token and Dice directly inside modal)
   const [currentMode, setCurrentMode] = useState<'token' | 'dice'>(mode);
 
   const [activeSkinId, setActiveSkinId] = useState<string>(() => {
@@ -271,11 +306,13 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
     return isPlayerContext ? targetPlayer?.color || 'blue' : 'blue';
   });
 
-  // 360-degree Orbit & Physics Test States
-  const [rotationY, setRotationY] = useState(0);
-  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
-  const [canvasStartX, setCanvasStartX] = useState(0);
-  const [isAutoRotating, setIsAutoRotating] = useState(true);
+  // Zero-rerender high-FPS 360 orbit rotation refs
+  const rotationTargetRef = useRef(0);
+  const rotationCurrentRef = useRef(0);
+  const isDraggingCanvasRef = useRef(false);
+  const isAutoRotatingRef = useRef(true);
+  const lastPointerXRef = useRef(0);
+  const velocityRef = useRef(0);
   const autoRotateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [testDiceValue, setTestDiceValue] = useState(6);
@@ -313,8 +350,10 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
       } else if (isPlayerContext && targetPlayer) {
         setActiveColor(targetPlayer.color);
       }
-      setRotationY(0);
-      setIsAutoRotating(true);
+      rotationTargetRef.current = 0;
+      rotationCurrentRef.current = 0;
+      velocityRef.current = 0;
+      isAutoRotatingRef.current = true;
       setIsTestRolling(false);
       setIsTestHopping(false);
       setShowEquippedToast(false);
@@ -334,35 +373,39 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
   const restartAutoRotate = useCallback(() => {
     if (autoRotateTimerRef.current) clearTimeout(autoRotateTimerRef.current);
     autoRotateTimerRef.current = setTimeout(() => {
-      setIsAutoRotating(true);
+      isAutoRotatingRef.current = true;
     }, 2200);
   }, []);
 
-  // Canvas 360 Drag Orbit Handlers
+  // Zero-rerender Canvas Pointer Handlers (60-120 FPS buttery smooth on mobile touch!)
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    setIsDraggingCanvas(true);
-    setCanvasStartX(e.clientX);
-    setIsAutoRotating(false);
+    isDraggingCanvasRef.current = true;
+    isAutoRotatingRef.current = false;
+    lastPointerXRef.current = e.clientX;
+    velocityRef.current = 0;
     if (autoRotateTimerRef.current) clearTimeout(autoRotateTimerRef.current);
   };
 
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingCanvas) return;
-    const delta = e.clientX - canvasStartX;
-    setRotationY((prev) => prev + delta * 0.014);
-    setCanvasStartX(e.clientX);
+    if (!isDraggingCanvasRef.current) return;
+    const delta = e.clientX - lastPointerXRef.current;
+    // Responsive touch multiplier (swift & natural on mobile touch)
+    const step = delta * 0.032;
+    rotationTargetRef.current += step;
+    velocityRef.current = step;
+    lastPointerXRef.current = e.clientX;
   };
 
   const handleCanvasPointerUp = (e: React.PointerEvent) => {
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {}
-    setIsDraggingCanvas(false);
+    isDraggingCanvasRef.current = false;
     restartAutoRotate();
   };
 
-  // Draggable Ribbon Mouse Handlers
+  // Draggable Ribbon Handlers
   const handleRibbonMouseDown = (e: React.MouseEvent) => {
     if (!ribbonRef.current) return;
     setIsDraggingRow(true);
@@ -375,8 +418,8 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
     if (!isDraggingRow || !ribbonRef.current) return;
     e.preventDefault();
     const x = e.pageX - ribbonRef.current.offsetLeft;
-    const walk = (x - rowStartX) * 1.5;
-    if (Math.abs(walk) > 4) {
+    const walk = (x - rowStartX) * 1.6;
+    if (Math.abs(walk) > 5) {
       hasDraggedRowRef.current = true;
     }
     ribbonRef.current.scrollLeft = rowScrollLeft - walk;
@@ -426,15 +469,15 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
     const tl = gsap.timeline({
       onComplete: () => {
         setIsTestHopping(false);
-        grp.position.set(0, -0.46, 0);
+        grp.position.set(0, -0.45, 0);
         grp.scale.set(1.4, 1.4, 1.4);
       },
     });
 
     tl.to(grp.scale, { x: 1.55, y: 1.2, z: 1.55, duration: 0.08, ease: 'sine.out' })
-      .to(grp.position, { y: 0.35, duration: 0.22, ease: 'sine.out' })
+      .to(grp.position, { y: 0.38, duration: 0.22, ease: 'sine.out' })
       .to(grp.scale, { x: 1.25, y: 1.55, z: 1.25, duration: 0.22, ease: 'sine.out' }, '<')
-      .to(grp.position, { y: -0.46, duration: 0.22, ease: 'bounce.out' })
+      .to(grp.position, { y: -0.45, duration: 0.22, ease: 'bounce.out' })
       .to(grp.scale, { x: 1.52, y: 1.22, z: 1.52, duration: 0.08, ease: 'power2.out' }, '<0.15')
       .to(grp.scale, { x: 1.4, y: 1.4, z: 1.4, duration: 0.16, ease: 'back.out(2)' });
   }, [isTestHopping]);
@@ -505,19 +548,19 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md select-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xl select-none"
         >
           <motion.div
-            initial={{ scale: 0.92, y: 24, opacity: 0 }}
+            initial={{ scale: 0.94, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.92, y: 16, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 26 }}
-            className="relative w-full max-w-[480px] max-h-[96vh] rounded-[36px] bg-gradient-to-b from-white via-sky-50/95 to-slate-100 p-4 sm:p-5 shadow-[0_28px_70px_rgba(15,23,42,0.5),inset_0_2px_4px_rgba(255,255,255,1)] border-4 border-white flex flex-col justify-between overflow-y-auto"
+            exit={{ scale: 0.94, y: 16, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            className="relative w-full max-w-[480px] max-h-[96vh] rounded-[32px] bg-white/95 backdrop-blur-2xl p-4 sm:p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.06)] border border-white/80 flex flex-col justify-between overflow-y-auto"
           >
             {/* Header & Mode Switcher */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
                   {currentMode === 'token' ? (
                     <Sparkles className="w-5 h-5 text-amber-300" />
                   ) : (
@@ -525,7 +568,7 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                   )}
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-900 leading-tight font-['Fredoka']">
+                  <h2 className="text-base font-black text-slate-900 leading-tight font-['Fredoka']">
                     {currentMode === 'token' ? '3D Token Studio' : '3D Dice Studio'}
                   </h2>
                   <p className="text-[11px] font-semibold text-slate-500">
@@ -536,9 +579,9 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 </div>
               </div>
 
-              {/* Mode Toggle & Close Button */}
+              {/* Segmented Mode Switcher & Close */}
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 p-0.5 bg-slate-200/80 rounded-xl border border-slate-300/50">
+                <div className="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200/80">
                   <button
                     type="button"
                     onClick={() => {
@@ -548,10 +591,10 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                         isPlayerContext ? targetPlayer?.tokenSkin || 'classic' : selectedTokenSkin
                       );
                     }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                       currentMode === 'token'
-                        ? 'bg-white text-blue-600 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     ♟️ Token
@@ -565,10 +608,10 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                         isPlayerContext ? targetPlayer?.diceSkin || 'classic-white' : selectedDiceSkin
                       );
                     }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                       currentMode === 'dice'
-                        ? 'bg-white text-blue-600 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     🎲 Dice
@@ -581,39 +624,39 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                     soundManager.play('ui_click');
                     onClose();
                   }}
-                  className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 flex items-center justify-center cursor-pointer transition-transform active:scale-95"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer transition-transform active:scale-95"
                 >
                   <X className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </div>
 
-            {/* 3D Viewport Studio Stage */}
+            {/* Modern Luminous 3D Viewport Stage */}
             <div
               onPointerDown={handleCanvasPointerDown}
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
               onPointerCancel={handleCanvasPointerUp}
-              className="relative mt-2.5 w-full h-64 sm:h-72 rounded-3xl overflow-hidden border-2 border-indigo-400/40 shadow-[0_12px_36px_rgba(15,23,42,0.35),inset_0_2px_4px_rgba(255,255,255,0.15)] cursor-grab active:cursor-grabbing select-none"
+              className="relative mt-3 w-full h-64 sm:h-72 rounded-3xl overflow-hidden border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.06),inset_0_1px_2px_rgba(255,255,255,0.8)] cursor-grab active:cursor-grabbing select-none"
               style={{
-                background: 'radial-gradient(circle at 50% 35%, #1e1b4b 0%, #0f172a 60%, #020617 100%)',
+                background: 'radial-gradient(circle at 50% 40%, #ffffff 0%, #f1f5f9 65%, #e2e8f0 100%)',
               }}
             >
-              {/* Radial Lighting Glow Overlay */}
+              {/* Soft Atmospheric Color Bloom behind the figurine */}
               <div
-                className="absolute inset-0 pointer-events-none opacity-45 transition-colors duration-500"
+                className="absolute inset-0 pointer-events-none opacity-40 transition-colors duration-500"
                 style={{
-                  background: `radial-gradient(circle at 50% 45%, ${activeGlowColor}66 0%, transparent 68%)`,
+                  background: `radial-gradient(circle at 50% 50%, ${activeGlowColor}44 0%, transparent 65%)`,
                 }}
               />
 
               {/* 360 Drag Pill Hint */}
-              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[10px] font-extrabold text-white/90 pointer-events-none flex items-center gap-1.5 shadow-md">
-                <RotateCcw className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-                <span>Drag 360° to Orbit</span>
+              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-md border border-slate-200/80 text-[10px] font-extrabold text-slate-700 pointer-events-none flex items-center gap-1.5 shadow-sm">
+                <RotateCcw className="w-3.5 h-3.5 text-blue-600 animate-spin" style={{ animationDuration: '6s' }} />
+                <span>Swipe 360° to Orbit</span>
               </div>
 
-              {/* Test Action Floating Pill */}
+              {/* Action Floating Test Button */}
               <div className="absolute bottom-3 right-3 z-10">
                 {currentMode === 'token' ? (
                   <button
@@ -623,9 +666,9 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                       handleTriggerTestHop();
                     }}
                     disabled={isTestHopping}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-black shadow-md shadow-blue-500/25 flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                   >
-                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <Play className="w-3.5 h-3.5 fill-current text-amber-300" />
                     <span>{isTestHopping ? 'Hopping...' : 'Test Hop'}</span>
                   </button>
                 ) : (
@@ -636,44 +679,45 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                       handleTriggerTestRoll();
                     }}
                     disabled={isTestRolling}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-md shadow-emerald-500/25 flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                   >
-                    <Dices className="w-3.5 h-3.5" />
+                    <Dices className="w-3.5 h-3.5 text-amber-300" />
                     <span>{isTestRolling ? 'Rolling...' : `Roll (${testDiceValue})`}</span>
                   </button>
                 )}
               </div>
 
-              {/* Single Dedicated 3D Studio Canvas */}
+              {/* Single Dedicated High-FPS 3D Studio Canvas */}
               <Canvas
-                shadows
                 dpr={[1, 1.5]}
                 camera={
                   currentMode === 'token'
                     ? { position: [0, 0.9, 2.25], fov: 33 }
-                    : { position: [0, 1.35, 2.25], fov: 33 }
+                    : { position: [0, 1.25, 2.2], fov: 34 }
                 }
                 gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
               >
-                <StudioEnvironment intensity={1.25} />
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[4, 6, 4]} intensity={2.0} castShadow />
-                <pointLight position={[-3, 3, 2]} intensity={0.9} color={activeGlowColor} />
+                <StudioEnvironment intensity={0.95} />
+                <ambientLight intensity={0.7} />
+                <directionalLight position={[4, 6, 4]} intensity={1.6} />
+                <pointLight position={[-3, 3, 2]} intensity={0.7} color={activeGlowColor} />
+                <directionalLight position={[-3, -1, -3]} intensity={0.3} color="#ffffff" />
 
                 <Suspense fallback={null}>
                   <TurntableController
-                    rotationY={rotationY}
-                    isAutoRotating={isAutoRotating}
-                    isDragging={isDraggingCanvas}
-                    onAutoRotate={(delta) => setRotationY((prev) => prev + delta)}
+                    rotationTargetRef={rotationTargetRef}
+                    rotationCurrentRef={rotationCurrentRef}
+                    isDraggingRef={isDraggingCanvasRef}
+                    isAutoRotatingRef={isAutoRotatingRef}
+                    velocityRef={velocityRef}
                   >
-                    {/* Glowing Circular Studio Pedestal */}
-                    <StudioPedestal glowColor={activeGlowColor} />
+                    {/* Modern Clean Studio Pedestal */}
+                    <ModernStudioPedestal glowColor={activeGlowColor} />
 
                     {currentMode === 'token' ? (
                       <group
                         ref={tokenContainerRef}
-                        position={[0, -0.46, 0]}
+                        position={[0, -0.45, 0]}
                       >
                         <Token3DModel
                           skin={activeSkinId as TokenSkinId}
@@ -695,22 +739,22 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
             </div>
 
             {/* Model Info Bar & Color Selector */}
-            <div className="mt-2.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div className="mt-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 shadow-xs flex items-center justify-between">
               <div>
                 <span className="block text-xs font-black text-slate-900">
                   {currentMode === 'token' ? activeTokenMeta.name : activeDiceMeta.name}
                 </span>
                 <span className="block text-[10px] font-bold text-blue-600">
                   {currentMode === 'token'
-                    ? `Hop Style: ${activeTokenMeta.moveStyleName}`
-                    : `PBR Material: ${activeDiceMeta.shapeType}`}
+                    ? `Style: ${activeTokenMeta.moveStyleName}`
+                    : `PBR Profile: ${activeDiceMeta.shapeType}`}
                 </span>
               </div>
 
               {/* Color Swatch Selector for Tokens */}
               {currentMode === 'token' && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-extrabold text-slate-500 mr-1">Color:</span>
+                  <span className="text-[10px] font-extrabold text-slate-400 mr-1">Color:</span>
                   {(['blue', 'red', 'green', 'yellow'] as PlayerColor[]).map((c) => (
                     <button
                       key={c}
@@ -720,7 +764,7 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                         setActiveColor(c);
                       }}
                       className={`w-5 h-5 rounded-full ${COLOR_PALETTE[c].bgClass} border-2 border-white shadow transition-transform cursor-pointer ${
-                        activeColor === c ? 'scale-125 ring-2 ring-slate-800' : 'opacity-70 hover:opacity-100'
+                        activeColor === c ? 'scale-125 ring-2 ring-blue-500' : 'opacity-70 hover:opacity-100'
                       }`}
                     />
                   ))}
@@ -728,13 +772,13 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
               )}
             </div>
 
-            {/* Smooth Draggable Preset Ribbon */}
+            {/* Draggable Preset Ribbon */}
             <div className="relative mt-2.5">
               <div className="flex items-center justify-between mb-1.5 px-0.5">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
                   {currentMode === 'token'
-                    ? 'All 17 Tokens (Drag / Swipe to browse)'
-                    : 'All 6 Dice Skins (Drag / Swipe to browse)'}
+                    ? 'All 17 Tokens (Swipe / Drag)'
+                    : 'All 6 Dice Skins (Swipe / Drag)'}
                 </span>
 
                 {/* Left/Right Arrow Navigation Controls */}
@@ -758,7 +802,7 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 </div>
               </div>
 
-              {/* Draggable Row Container */}
+              {/* Draggable Row Container with touch-pan-x for native mobile swipe */}
               <div
                 ref={ribbonRef}
                 onMouseDown={handleRibbonMouseDown}
@@ -766,7 +810,7 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 onMouseUp={handleRibbonMouseUp}
                 onMouseLeave={handleRibbonMouseUp}
                 onWheel={handleRibbonWheel}
-                className={`flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none select-none ${
+                className={`flex items-center gap-2 overflow-x-auto py-1 px-1 scrollbar-none select-none touch-pan-x ${
                   isDraggingRow ? 'cursor-grabbing' : 'cursor-grab'
                 }`}
                 style={{ scrollBehavior: isDraggingRow ? 'auto' : 'smooth' }}
@@ -787,8 +831,8 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                           }}
                           className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 transition-all cursor-pointer ${
                             selected
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-102 ring-2 ring-blue-300'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500 shadow-md shadow-blue-500/20 scale-102 ring-2 ring-blue-300'
+                              : 'bg-white text-slate-700 border-slate-200/90 hover:border-blue-300 hover:bg-slate-50'
                           }`}
                         >
                           <span className="text-xl shrink-0 drop-shadow-xs">{icon}</span>
@@ -824,12 +868,12 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                           }}
                           className={`shrink-0 flex items-center gap-2.5 px-3 py-1.5 rounded-2xl border-2 transition-all cursor-pointer ${
                             selected
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-102 ring-2 ring-blue-300'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500 shadow-md shadow-blue-500/20 scale-102 ring-2 ring-blue-300'
+                              : 'bg-white text-slate-700 border-slate-200/90 hover:border-blue-300 hover:bg-slate-50'
                           }`}
                         >
                           <div
-                            className="w-6 h-6 rounded-lg shadow-sm border border-black/20 flex items-center justify-center shrink-0"
+                            className="w-6 h-6 rounded-lg shadow-sm border border-black/15 flex items-center justify-center shrink-0"
                             style={{
                               backgroundColor: dice.bodyColor,
                               boxShadow: `0 2px 6px ${dice.edgeGlow}55`,
@@ -868,8 +912,8 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 onClick={handleEquip}
                 className={`w-full py-3.5 rounded-2xl text-white font-black text-sm tracking-wide shadow-lg flex items-center justify-center gap-2 transition-transform cursor-pointer active:scale-98 font-['Fredoka'] ${
                   isCurrentlyEquipped
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-blue-600/25'
                 }`}
               >
                 <Check className="w-4 h-4 stroke-[3]" />

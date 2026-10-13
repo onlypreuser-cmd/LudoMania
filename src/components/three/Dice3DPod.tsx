@@ -188,68 +188,68 @@ export interface SkinPBRProfile {
 export const SKIN_PBR_MAP: Record<DiceSkinId, SkinPBRProfile> = {
   'classic-white': {
     metalness: 0.02,
-    roughness: 0.08,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.03,
-    ior: 1.54,
-    sheen: 0.85,
+    roughness: 0.4,
+    clearcoat: 0.0,
+    clearcoatRoughness: 0.1,
+    ior: 1.5,
+    sheen: 0.25,
     pipEmissive: '#000000',
     pipEmissiveIntensity: 0,
-    rimColor: '#cbd5e1',
+    rimColor: '#94a3b8',
   },
   'royal-gold': {
-    metalness: 0.94,
-    roughness: 0.08,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.02,
+    metalness: 0.88,
+    roughness: 0.32,
+    clearcoat: 0.0,
+    clearcoatRoughness: 0.1,
     ior: 1.88,
-    sheen: 0.35,
-    pipEmissive: '#d97706',
-    pipEmissiveIntensity: 0.18,
+    sheen: 0.15,
+    pipEmissive: '#b45309',
+    pipEmissiveIntensity: 0.12,
     rimColor: '#fef08a',
   },
   'ruby-blaze': {
     metalness: 0.15,
-    roughness: 0.04,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.02,
+    roughness: 0.24,
+    clearcoat: 0.12,
+    clearcoatRoughness: 0.15,
     ior: 1.76,
-    sheen: 0.45,
+    sheen: 0.25,
     pipEmissive: '#fda4af',
-    pipEmissiveIntensity: 0.6,
+    pipEmissiveIntensity: 0.45,
     rimColor: '#fecdd3',
   },
   'cyber-neon': {
-    metalness: 0.78,
-    roughness: 0.16,
-    clearcoat: 0.85,
-    clearcoatRoughness: 0.04,
+    metalness: 0.72,
+    roughness: 0.42,
+    clearcoat: 0.0,
+    clearcoatRoughness: 0.1,
     ior: 1.6,
-    sheen: 0.2,
+    sheen: 0.1,
     pipEmissive: '#22d3ee',
-    pipEmissiveIntensity: 3.2,
+    pipEmissiveIntensity: 1.8,
     rimColor: '#38bdf8',
   },
   'emerald-jade': {
     metalness: 0.12,
-    roughness: 0.09,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.04,
+    roughness: 0.35,
+    clearcoat: 0.0,
+    clearcoatRoughness: 0.1,
     ior: 1.66,
-    sheen: 0.82,
+    sheen: 0.3,
     pipEmissive: '#ecfdf5',
-    pipEmissiveIntensity: 0.2,
+    pipEmissiveIntensity: 0.15,
     rimColor: '#6ee7b7',
   },
   'obsidian-galaxy': {
-    metalness: 0.85,
-    roughness: 0.02,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.01,
+    metalness: 0.75,
+    roughness: 0.28,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.12,
     ior: 1.88,
-    sheen: 0.4,
+    sheen: 0.2,
     pipEmissive: '#f472b6',
-    pipEmissiveIntensity: 2.8,
+    pipEmissiveIntensity: 1.6,
     rimColor: '#c084fc',
   },
 };
@@ -269,6 +269,15 @@ const POD_CONTAINER_CLASSES: Record<DicePodTheme, string> = {
     'bg-gradient-to-b from-slate-950 via-purple-950 to-black border-4 border-purple-500 shadow-[0_10px_25px_rgba(168,85,247,0.45),inset_0_4px_8px_rgba(192,132,252,0.25)]',
 };
 
+const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
+  'classic-white': 1.0,
+  'royal-gold': 0.82,
+  'ruby-blaze': 1.35,
+  'cyber-neon': 1.15,
+  'emerald-jade': 0.9,
+  'obsidian-galaxy': 0.72,
+};
+
 interface PhysicsDieMeshProps {
   skinId: DiceSkinId;
   value: number;
@@ -286,15 +295,6 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
       [skinId]
     );
     const pbr = SKIN_PBR_MAP[skinId] ?? SKIN_PBR_MAP['classic-white'];
-
-const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
-  'classic-white': 1.0,
-  'royal-gold': 0.82,
-  'ruby-blaze': 1.35,
-  'cyber-neon': 1.15,
-  'emerald-jade': 0.9,
-  'obsidian-galaxy': 0.72,
-};
 
     useEffect(() => {
       if (!visualGroupRef.current) return;
@@ -599,9 +599,9 @@ const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
                   >
                     <meshPhysicalMaterial
                       color={pipColor}
-                      roughness={0.14}
-                      metalness={0.35}
-                      clearcoat={1}
+                      roughness={0.24}
+                      metalness={0.25}
+                      clearcoat={0}
                       emissive={isClassicAce ? '#991b1b' : pbr.pipEmissive}
                       emissiveIntensity={
                         isClassicAce ? 0.25 : pbr.pipEmissiveIntensity
@@ -684,20 +684,20 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
             : 'cursor-not-allowed opacity-90'
         }`}
       >
-        {/* Luminous Golden/Skin Aura Ring */}
+        {/* Soft Tactile Aura Ring */}
         <div
-          className={`absolute -inset-2 rounded-full transition-opacity duration-300 ${
-            canRoll ? 'opacity-100 animate-pulse' : 'opacity-30'
+          className={`absolute -inset-1.5 rounded-full transition-opacity duration-300 ${
+            canRoll ? 'opacity-100 animate-pulse' : 'opacity-20'
           }`}
           style={{
-            background: `radial-gradient(circle, ${skin.edgeGlow}88 0%, rgba(251,191,36,0.18) 62%, transparent 78%)`,
+            background: `radial-gradient(circle, ${skin.edgeGlow}44 0%, rgba(251,191,36,0.12) 62%, transparent 78%)`,
             boxShadow: canRoll
-              ? `0 0 28px 6px ${skin.edgeGlow}66, inset 0 0 14px #ffffffaa`
+              ? `0 0 16px 2px ${skin.edgeGlow}44, inset 0 0 8px #ffffff66`
               : 'none',
           }}
         />
 
-        {/* Theme-Adaptive Glossy Pod Platform */}
+        {/* Theme-Adaptive Tactile Pod Platform */}
         <div className={`relative w-full h-full rounded-full ${podPlatformClass} overflow-hidden transition-all duration-300`}>
           <Canvas
             shadows
@@ -705,23 +705,23 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
             camera={{ position: [0, 2.25, 1.78], fov: 35 }}
             gl={{ alpha: true, antialias: true }}
           >
-            <StudioEnvironment intensity={1.05} />
-            <ambientLight intensity={0.35} />
+            <StudioEnvironment intensity={0.9} />
+            <ambientLight intensity={0.32} />
             <directionalLight
               position={[4, 6, 4]}
-              intensity={1.35}
+              intensity={1.15}
               castShadow
               shadow-mapSize={[512, 512]}
             />
             <pointLight
               position={[-3, 3, 2]}
-              intensity={0.65}
+              intensity={0.35}
               color={skin.edgeGlow}
             />
             <Suspense fallback={null}>
               <ContactShadows
                 position={[0, -0.66, 0]}
-                opacity={0.42}
+                opacity={0.35}
                 scale={2.4}
                 blur={2.2}
                 far={1.5}

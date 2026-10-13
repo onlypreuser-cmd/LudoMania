@@ -596,8 +596,10 @@ export function reverseTraversePawn3D(params: {
         z: 1,
         duration: 0.16,
         ease: 'back.out(1.6)',
+        onComplete: () => {
+          if (onComplete) onComplete();
+        },
       });
-      if (onComplete) onComplete();
     },
   });
 

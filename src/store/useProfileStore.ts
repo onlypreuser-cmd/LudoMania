@@ -76,6 +76,7 @@ interface ProfileState {
   players: PlayerConfig[];
   matchHistory: MatchRecord[];
   savedGameSession: SavedGameSession | null;
+  _hasHydrated: boolean;
 
   completeInitialSetup: (payload: {
     name: string;
@@ -140,6 +141,7 @@ export const useProfileStore = create<ProfileState>()(
       players: DEFAULT_PLAYERS,
       matchHistory: [],
       savedGameSession: null,
+      _hasHydrated: false,
 
       completeInitialSetup: ({ name, avatar, diceSkin, tokenSkin, color }) => {
         const trimmed = name.trim();
@@ -247,12 +249,21 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: 'ludo-mania-profile-v3',
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<ProfileState>) || {};
+        return {
+          ...currentState,
+          ...persisted,
+          unlockedTokenSkins: ALL_TOKEN_SKINS,
+          unlockedDiceSkins: ALL_DICE_SKINS,
+          unlockedBoardThemes: ALL_BOARD_THEMES,
+          _hasHydrated: true,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           soundManager.setEnabled(state.soundEnabled);
-          state.unlockedTokenSkins = ALL_TOKEN_SKINS;
-          state.unlockedDiceSkins = ALL_DICE_SKINS;
-          state.unlockedBoardThemes = ALL_BOARD_THEMES;
+          state._hasHydrated = true;
         }
       },
     }

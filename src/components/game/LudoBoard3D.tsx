@@ -184,13 +184,16 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
       const distX = Math.abs(groupRef.current.position.x - targetWorld.x);
       const distZ = Math.abs(groupRef.current.position.z - targetWorld.z);
       if (distX > 0.04 || distZ > 0.04) {
-        gsap.to(groupRef.current.position, {
+        // BUG-05 FIX: Store tween reference and kill it on cleanup to prevent
+        // zombie tweens accumulating over hundreds of moves in a long game.
+        const alignTween = gsap.to(groupRef.current.position, {
           x: targetWorld.x,
           y: 0,
           z: targetWorld.z,
           duration: 0.22,
           ease: 'sine.out',
         });
+        return () => { alignTween.kill(); };
       }
     }, [
       activeMove,
@@ -267,6 +270,329 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
 );
 
 AnimatedPawn3DNode.displayName = 'AnimatedPawn3DNode';
+
+/**
+ * Theme-Adaptive Corner Hardware:
+ * - Royal Teakwood: Stamped Burma brass brackets with metallic rivets
+ * - Marble Palace: Stepped Roman rose-gold plinths with acanthus trim
+ * - Midnight Cyber: Carbon-fiber chamfers with cyan & magenta LED indicators
+ * - Classic Kingdom: Victorian gilded tournament acanthus filigree
+ */
+const ThematicCornerDecorations: React.FC<{ themeId: BoardThemeId }> = React.memo(
+  ({ themeId }) => {
+    if (themeId === 'royal-wood') {
+      return (
+        <>
+          <div className="absolute top-1 left-1 w-6 h-6 pointer-events-none z-20 border-t-[3.5px] border-l-[3.5px] border-amber-400 rounded-tl-lg shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-200 border border-amber-800 shadow-sm mt-0.5 ml-0.5" />
+          </div>
+          <div className="absolute top-1 right-1 w-6 h-6 pointer-events-none z-20 border-t-[3.5px] border-r-[3.5px] border-amber-400 rounded-tr-lg shadow-[0_2px_4px_rgba(0,0,0,0.6)] flex justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-200 border border-amber-800 shadow-sm mt-0.5 mr-0.5" />
+          </div>
+          <div className="absolute bottom-1 left-1 w-6 h-6 pointer-events-none z-20 border-b-[3.5px] border-l-[3.5px] border-amber-400 rounded-bl-lg shadow-[0_2px_4px_rgba(0,0,0,0.6)] flex items-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-200 border border-amber-800 shadow-sm mb-0.5 ml-0.5" />
+          </div>
+          <div className="absolute bottom-1 right-1 w-6 h-6 pointer-events-none z-20 border-b-[3.5px] border-r-[3.5px] border-amber-400 rounded-br-lg shadow-[0_2px_4px_rgba(0,0,0,0.6)] flex items-end justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-200 border border-amber-800 shadow-sm mb-0.5 mr-0.5" />
+          </div>
+        </>
+      );
+    }
+    if (themeId === 'marble-palace') {
+      return (
+        <>
+          <div className="absolute top-1 left-1 w-6 h-6 pointer-events-none z-20 border-t-[3px] border-l-[3px] border-rose-300 rounded-tl-lg shadow-[0_2px_4px_rgba(159,18,57,0.25)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-100 border border-rose-400 mt-0.5 ml-0.5" />
+          </div>
+          <div className="absolute top-1 right-1 w-6 h-6 pointer-events-none z-20 border-t-[3px] border-r-[3px] border-rose-300 rounded-tr-lg shadow-[0_2px_4px_rgba(159,18,57,0.25)] flex justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-100 border border-rose-400 mt-0.5 mr-0.5" />
+          </div>
+          <div className="absolute bottom-1 left-1 w-6 h-6 pointer-events-none z-20 border-b-[3px] border-l-[3px] border-rose-300 rounded-bl-lg shadow-[0_2px_4px_rgba(159,18,57,0.25)] flex items-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-100 border border-rose-400 mb-0.5 ml-0.5" />
+          </div>
+          <div className="absolute bottom-1 right-1 w-6 h-6 pointer-events-none z-20 border-b-[3px] border-r-[3px] border-rose-300 rounded-br-lg shadow-[0_2px_4px_rgba(159,18,57,0.25)] flex items-end justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-100 border border-rose-400 mb-0.5 mr-0.5" />
+          </div>
+        </>
+      );
+    }
+    if (themeId === 'midnight-neon') {
+      return (
+        <>
+          <div className="absolute top-1 left-1 w-6 h-6 pointer-events-none z-20 border-t-[2.5px] border-l-[2.5px] border-cyan-400 rounded-tl-md shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_6px_#22d3ee] mt-0.5 ml-0.5 animate-pulse" />
+          </div>
+          <div className="absolute top-1 right-1 w-6 h-6 pointer-events-none z-20 border-t-[2.5px] border-r-[2.5px] border-pink-500 rounded-tr-md shadow-[0_0_8px_rgba(236,72,153,0.6)] flex justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-pink-300 shadow-[0_0_6px_#f472b6] mt-0.5 mr-0.5 animate-pulse" />
+          </div>
+          <div className="absolute bottom-1 left-1 w-6 h-6 pointer-events-none z-20 border-b-[2.5px] border-l-[2.5px] border-pink-500 rounded-bl-md shadow-[0_0_8px_rgba(236,72,153,0.6)] flex items-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-pink-300 shadow-[0_0_6px_#f472b6] mb-0.5 ml-0.5 animate-pulse" />
+          </div>
+          <div className="absolute bottom-1 right-1 w-6 h-6 pointer-events-none z-20 border-b-[2.5px] border-r-[2.5px] border-cyan-400 rounded-br-md shadow-[0_0_8px_rgba(6,182,212,0.6)] flex items-end justify-end">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_6px_#22d3ee] mb-0.5 mr-0.5 animate-pulse" />
+          </div>
+        </>
+      );
+    }
+    // Classic Kingdom
+    return (
+      <>
+        <div className="absolute top-1 left-1 w-6 h-6 pointer-events-none z-20 border-t-[3px] border-l-[3px] border-amber-400/90 rounded-tl-lg shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-300 border border-amber-700 mt-0.5 ml-0.5" />
+        </div>
+        <div className="absolute top-1 right-1 w-6 h-6 pointer-events-none z-20 border-t-[3px] border-r-[3px] border-amber-400/90 rounded-tr-lg shadow-[0_2px_4px_rgba(0,0,0,0.3)] flex justify-end">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-300 border border-amber-700 mt-0.5 mr-0.5" />
+        </div>
+        <div className="absolute bottom-1 left-1 w-6 h-6 pointer-events-none z-20 border-b-[3px] border-l-[3px] border-amber-400/90 rounded-bl-lg shadow-[0_2px_4px_rgba(0,0,0,0.3)] flex items-end">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-300 border border-amber-700 mb-0.5 ml-0.5" />
+        </div>
+        <div className="absolute bottom-1 right-1 w-6 h-6 pointer-events-none z-20 border-b-[3px] border-r-[3px] border-amber-400/90 rounded-br-lg shadow-[0_2px_4px_rgba(0,0,0,0.3)] flex items-end justify-end">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-300 border border-amber-700 mb-0.5 mr-0.5" />
+        </div>
+      </>
+    );
+  }
+);
+ThematicCornerDecorations.displayName = 'ThematicCornerDecorations';
+
+/**
+ * Bespoke Thematic Safe Star Icons:
+ * - Royal Teakwood: Stamped brass medallion with burnt-wood relief
+ * - Marble Palace: Inlaid 8-point rose-gold Roman star with faceted diamond core
+ * - Midnight Cyber: Luminous holographic energy node with cyan hex pulse
+ * - Classic Kingdom: Golden tournament champion coronet star
+ */
+const ThematicSafeStarIcon: React.FC<{ themeId: BoardThemeId; fillClass?: string }> = React.memo(
+  ({ themeId, fillClass }) => {
+    if (themeId === 'royal-wood') {
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 drop-shadow">
+          <circle cx="12" cy="12" r="10.5" fill="#451a03" stroke="#f59e0b" strokeWidth="1.5" />
+          <polygon points="12,3.5 14.5,9 20.5,9.5 16,13.5 17.5,19.5 12,16 6.5,19.5 8,13.5 3.5,9.5 9.5,9" fill="#fef08a" stroke="#d97706" strokeWidth="0.6" />
+          <circle cx="12" cy="12" r="2" fill="#78350f" />
+        </svg>
+      );
+    }
+    if (themeId === 'marble-palace') {
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 drop-shadow">
+          <circle cx="12" cy="12" r="10" fill="#fff1f2" stroke="#fda4af" strokeWidth="1.5" />
+          <polygon points="12,3 14.5,9.5 21,12 14.5,14.5 12,21 9.5,14.5 3,12 9.5,9.5" fill="#f43f5e" />
+          <circle cx="12" cy="12" r="2.5" fill="#ffffff" stroke="#fda4af" strokeWidth="0.5" />
+        </svg>
+      );
+    }
+    if (themeId === 'midnight-neon') {
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 drop-shadow-[0_0_6px_#06b6d4]">
+          <polygon points="12,2 20,6.5 20,17.5 12,22 4,17.5 4,6.5" fill="#030712" stroke="#06b6d4" strokeWidth="1.8" />
+          <polygon points="12,5 14,10 19,10 15,13.5 16.5,18.5 12,15.5 7.5,18.5 9,13.5 5,10 10,10" fill="#22d3ee" />
+          <circle cx="12" cy="12" r="2" fill="#ec4899" />
+        </svg>
+      );
+    }
+    // Classic Kingdom
+    return (
+      <svg viewBox="0 0 24 24" className="w-4 h-4 drop-shadow">
+        <polygon points="12,2 15,8.5 22,9.5 17,14.5 18.5,21.5 12,18 5.5,21.5 7,14.5 2,9.5 9,8.5" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
+        <circle cx="12" cy="12" r="2.5" fill="#fef08a" />
+      </svg>
+    );
+  }
+);
+ThematicSafeStarIcon.displayName = 'ThematicSafeStarIcon';
+
+/**
+ * 4 Bespoke Thematic Center Goal Hubs:
+ * - Royal Teakwood: Hand-carved Burmese Marquetry Inlay with brass compass rose
+ * - Marble Palace: Carrara Crystal & Rose-Gold Prism Mosaic with imperial laurel
+ * - Midnight Cyber: Holographic Quantum Reactor Hub with cybernetic laser lines
+ * - Classic Kingdom: Grand Tournament Championship Crest with royal sunburst
+ */
+const ThematicCenterGoal: React.FC<{
+  themeId: BoardThemeId;
+  dividerColor: string;
+}> = React.memo(({ themeId, dividerColor }) => {
+  if (themeId === 'royal-wood') {
+    return (
+      <svg viewBox="0 0 100 100" className="w-full h-full block">
+        <defs>
+          <radialGradient id="teak-blue" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stopColor="#1e3a8a" />
+            <stop offset="100%" stopColor="#172554" />
+          </radialGradient>
+          <radialGradient id="teak-red" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stopColor="#881337" />
+            <stop offset="100%" stopColor="#4c0519" />
+          </radialGradient>
+          <radialGradient id="teak-green" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stopColor="#14532d" />
+            <stop offset="100%" stopColor="#052e16" />
+          </radialGradient>
+          <radialGradient id="teak-gold" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stopColor="#92400e" />
+            <stop offset="100%" stopColor="#451a03" />
+          </radialGradient>
+          <radialGradient id="brass-finial" cx="35%" cy="35%" r="65%">
+            <stop offset="0%" stopColor="#fef08a" />
+            <stop offset="70%" stopColor="#d97706" />
+            <stop offset="100%" stopColor="#78350f" />
+          </radialGradient>
+        </defs>
+        {/* 4 Rich Wood Marquetry Quadrants */}
+        <polygon points="0,0 50,50 0,100" fill="url(#teak-blue)" stroke="#451a03" strokeWidth="0.5" />
+        <polygon points="0,0 100,0 50,50" fill="url(#teak-red)" stroke="#451a03" strokeWidth="0.5" />
+        <polygon points="100,0 100,100 50,50" fill="url(#teak-green)" stroke="#451a03" strokeWidth="0.5" />
+        <polygon points="0,100 100,100 50,50" fill="url(#teak-gold)" stroke="#451a03" strokeWidth="0.5" />
+
+        {/* Polished Routered Brass Inlay Dividers */}
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#f59e0b" strokeWidth="3" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#f59e0b" strokeWidth="3" />
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#78350f" strokeWidth="1" strokeDasharray="2,3" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#78350f" strokeWidth="1" strokeDasharray="2,3" />
+
+        {/* Central 8-Point Brass Compass Rose Medallion */}
+        <circle cx="50" cy="50" r="19" fill="#451a03" stroke="#f59e0b" strokeWidth="2" />
+        <circle cx="50" cy="50" r="16" fill="#78350f" stroke="#b45309" strokeWidth="1" />
+        <polygon points="50,33 53,47 67,50 53,53 50,67 47,53 33,50 47,47" fill="#fef08a" stroke="#d97706" strokeWidth="0.5" />
+        <polygon points="50,38 52,48 62,50 52,52 50,62 48,52 38,50 48,48" fill="#b45309" />
+        <circle cx="50" cy="50" r="4.5" fill="url(#brass-finial)" stroke="#451a03" strokeWidth="0.8" />
+      </svg>
+    );
+  }
+
+  if (themeId === 'marble-palace') {
+    return (
+      <svg viewBox="0 0 100 100" className="w-full h-full block">
+        <defs>
+          <radialGradient id="marble-blue" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1d4ed8" />
+          </radialGradient>
+          <radialGradient id="marble-red" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#f43f5e" />
+            <stop offset="100%" stopColor="#be123c" />
+          </radialGradient>
+          <radialGradient id="marble-green" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#047857" />
+          </radialGradient>
+          <radialGradient id="marble-amber" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#b45309" />
+          </radialGradient>
+          <radialGradient id="rosegold-medallion" cx="40%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#fff1f2" />
+            <stop offset="50%" stopColor="#fecdd3" />
+            <stop offset="100%" stopColor="#fda4af" />
+          </radialGradient>
+        </defs>
+        {/* Crystal Faceted Quadrants */}
+        <polygon points="0,0 50,50 0,100" fill="url(#marble-blue)" />
+        <polygon points="0,0 25,25 0,50" fill="#60a5fa" opacity="0.45" />
+        <polygon points="0,50 25,75 0,100" fill="#1e40af" opacity="0.35" />
+
+        <polygon points="0,0 100,0 50,50" fill="url(#marble-red)" />
+        <polygon points="0,0 50,0 25,25" fill="#fda4af" opacity="0.45" />
+        <polygon points="50,0 100,0 75,25" fill="#9f1239" opacity="0.35" />
+
+        <polygon points="100,0 100,100 50,50" fill="url(#marble-green)" />
+        <polygon points="100,0 100,50 75,25" fill="#6ee7b7" opacity="0.45" />
+        <polygon points="100,50 100,100 75,75" fill="#065f46" opacity="0.35" />
+
+        <polygon points="0,100 100,100 50,50" fill="url(#marble-amber)" />
+        <polygon points="0,100 50,100 25,75" fill="#fde68a" opacity="0.45" />
+        <polygon points="50,100 100,100 75,75" fill="#78350f" opacity="0.35" />
+
+        {/* Flush Rose-Gold Dividers */}
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#f43f5e" strokeWidth="2.8" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#f43f5e" strokeWidth="2.8" />
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#fff1f2" strokeWidth="1" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#fff1f2" strokeWidth="1" />
+
+        {/* Central Roman Palace Laurel & Diamond Jewel */}
+        <circle cx="50" cy="50" r="19" fill="#ffffff" stroke="#fda4af" strokeWidth="2" />
+        <circle cx="50" cy="50" r="16" fill="url(#rosegold-medallion)" stroke="#f43f5e" strokeWidth="1" />
+        <polygon points="50,37 60,45 50,63 40,45" fill="#ffffff" stroke="#fda4af" strokeWidth="1" />
+        <line x1="43" y1="45" x2="57" y2="45" stroke="#f43f5e" strokeWidth="0.8" />
+        <line x1="50" y1="37" x2="50" y2="63" stroke="#f43f5e" strokeWidth="0.8" />
+      </svg>
+    );
+  }
+
+  if (themeId === 'midnight-neon') {
+    return (
+      <svg viewBox="0 0 100 100" className="w-full h-full block">
+        <defs>
+          <filter id="cyber-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <polygon points="0,0 50,50 0,100" fill="#082f49" />
+        <polygon points="0,0 100,0 50,50" fill="#4c0519" />
+        <polygon points="100,0 100,100 50,50" fill="#052e16" />
+        <polygon points="0,100 100,100 50,50" fill="#451a03" />
+
+        {/* Cyber Circuit Trace Grid Overlay */}
+        <line x1="25" y1="0" x2="25" y2="25" stroke="#06b6d4" strokeWidth="1" opacity="0.6" />
+        <line x1="75" y1="0" x2="75" y2="25" stroke="#ec4899" strokeWidth="1" opacity="0.6" />
+        <line x1="100" y1="25" x2="75" y2="25" stroke="#10b981" strokeWidth="1" opacity="0.6" />
+        <line x1="0" y1="75" x2="25" y2="75" stroke="#f59e0b" strokeWidth="1" opacity="0.6" />
+
+        {/* Luminous Laser Beam Dividers with Neon Glow */}
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#06b6d4" strokeWidth="2.5" filter="url(#cyber-glow)" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#ec4899" strokeWidth="2.5" filter="url(#cyber-glow)" />
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#ffffff" strokeWidth="1" />
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#ffffff" strokeWidth="1" />
+
+        {/* Central Quantum Reactor Singularity Core */}
+        <circle cx="50" cy="50" r="20" fill="#030712" stroke="#06b6d4" strokeWidth="2" filter="url(#cyber-glow)" />
+        <polygon points="50,33 65,41 65,59 50,67 35,59 35,41" fill="none" stroke="#22d3ee" strokeWidth="1.2" strokeDasharray="3,2" />
+        <circle cx="50" cy="50" r="9" fill="#083344" stroke="#ec4899" strokeWidth="1.5" />
+        <circle cx="50" cy="50" r="4.5" fill="#22d3ee" filter="url(#cyber-glow)" />
+      </svg>
+    );
+  }
+
+  // Classic Kingdom
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full block">
+      <defs>
+        <radialGradient id="classic-gold" cx="40%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="70%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#b45309" />
+        </radialGradient>
+      </defs>
+      <polygon points="0,0 50,50 0,100" fill="#2563eb" />
+      <polygon points="0,0 100,0 50,50" fill="#e11d48" />
+      <polygon points="100,0 100,100 50,50" fill="#16a34a" />
+      <polygon points="0,100 100,100 50,50" fill="#f59e0b" />
+
+      {/* Gilded Tournament Dividers */}
+      <line x1="0" y1="0" x2="100" y2="100" stroke="#fbbf24" strokeWidth="3" />
+      <line x1="100" y1="0" x2="0" y2="100" stroke="#fbbf24" strokeWidth="3" />
+      <line x1="0" y1="0" x2="100" y2="100" stroke="#ffffff" strokeWidth="1" strokeDasharray="2,3" />
+      <line x1="100" y1="0" x2="0" y2="100" stroke="#ffffff" strokeWidth="1" strokeDasharray="2,3" />
+
+      {/* Central Royal Sunburst Champion Medallion */}
+      <circle cx="50" cy="50" r="20" fill="#78350f" stroke="#fbbf24" strokeWidth="2.5" />
+      <circle cx="50" cy="50" r="16.5" fill="url(#classic-gold)" stroke="#b45309" strokeWidth="1" />
+      <path
+        d="M 40,55 L 60,55 L 60,52 L 58,45 L 54,49 L 50,42 L 46,49 L 42,45 L 40,52 Z"
+        fill="#78350f"
+      />
+      <circle cx="50" cy="41" r="1.5" fill="#fef08a" />
+      <circle cx="42" cy="44" r="1.2" fill="#fef08a" />
+      <circle cx="58" cy="44" r="1.2" fill="#fef08a" />
+    </svg>
+  );
+});
+ThematicCenterGoal.displayName = 'ThematicCenterGoal';
 
 interface LudoBoard3DProps {
   players: PlayerConfig[];
@@ -419,9 +745,14 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       [legalMoves]
     );
 
+    const activeColors = useMemo(
+      () => new Set(players.map((p) => p.color)),
+      [players]
+    );
+
     // Stable key so stackMap only recomputes when a pawn actually changes position
     const pawnsPositionKey = useMemo(
-      () => pawns.map((p) => `${p.id}:${p.step}`).join('|'),
+      () => pawns.reduce((acc, p) => acc + `${p.id}:${p.step}|`, ''),
       [pawns]
     );
 
@@ -457,22 +788,22 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         if (row === 6 && col === 1) {
           bg = 'bg-blue-500 text-white';
           icon = (
-            <Star className="w-3.5 h-3.5 fill-white text-white drop-shadow" />
+            <ThematicSafeStarIcon themeId={boardTheme} fillClass="fill-white text-white" />
           );
         } else if (row === 1 && col === 8) {
           bg = 'bg-rose-500 text-white';
           icon = (
-            <Star className="w-3.5 h-3.5 fill-white text-white drop-shadow" />
+            <ThematicSafeStarIcon themeId={boardTheme} fillClass="fill-white text-white" />
           );
         } else if (row === 8 && col === 13) {
           bg = 'bg-emerald-500 text-white';
           icon = (
-            <Star className="w-3.5 h-3.5 fill-white text-white drop-shadow" />
+            <ThematicSafeStarIcon themeId={boardTheme} fillClass="fill-white text-white" />
           );
         } else if (row === 13 && col === 6) {
           bg = 'bg-amber-400 text-white';
           icon = (
-            <Star className="w-3.5 h-3.5 fill-white text-white drop-shadow" />
+            <ThematicSafeStarIcon themeId={boardTheme} fillClass="fill-white text-white" />
           );
         }
         // Colored Home Stretch Columns
@@ -485,32 +816,31 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         } else if (col === 7 && row >= 9 && row <= 13) {
           bg = 'bg-amber-400';
         }
-        // 4 Star Safe Squares (Theme-adaptive styling!)
-        else if (row === 2 && col === 6) {
-          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
-        } else if (row === 6 && col === 12) {
-          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
-        } else if (row === 12 && col === 8) {
-          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
-        } else if (row === 8 && col === 2) {
-          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
+        // 4 Star Safe Squares (Theme-adaptive bespoke icons!)
+        else if (
+          (row === 2 && col === 6) ||
+          (row === 6 && col === 12) ||
+          (row === 12 && col === 8) ||
+          (row === 8 && col === 2)
+        ) {
+          icon = <ThematicSafeStarIcon themeId={boardTheme} fillClass={styleTokens.safeStarFill} />;
         }
         // Home Stretch Entry Arrows
         else if (row === 7 && col === 0) {
           icon = (
-            <ArrowRight className="w-3.5 h-3.5 text-blue-500 stroke-[2.8]" />
+            <ArrowRight className={`w-3.5 h-3.5 text-blue-500 stroke-[2.8] ${boardTheme === 'midnight-neon' ? 'drop-shadow-[0_0_6px_#06b6d4]' : ''}`} />
           );
         } else if (row === 0 && col === 7) {
           icon = (
-            <ArrowDown className="w-3.5 h-3.5 text-rose-500 stroke-[2.8]" />
+            <ArrowDown className={`w-3.5 h-3.5 text-rose-500 stroke-[2.8] ${boardTheme === 'midnight-neon' ? 'drop-shadow-[0_0_6px_#ec4899]' : ''}`} />
           );
         } else if (row === 7 && col === 14) {
           icon = (
-            <ArrowLeft className="w-3.5 h-3.5 text-emerald-500 stroke-[2.8]" />
+            <ArrowLeft className={`w-3.5 h-3.5 text-emerald-500 stroke-[2.8] ${boardTheme === 'midnight-neon' ? 'drop-shadow-[0_0_6px_#10b981]' : ''}`} />
           );
         } else if (row === 14 && col === 7) {
           icon = (
-            <ArrowUp className="w-3.5 h-3.5 text-amber-500 stroke-[2.8]" />
+            <ArrowUp className={`w-3.5 h-3.5 text-amber-500 stroke-[2.8] ${boardTheme === 'midnight-neon' ? 'drop-shadow-[0_0_6px_#f59e0b]' : ''}`} />
           );
         }
 
@@ -531,38 +861,99 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       return Array.from({ length: 15 }).map((_, r) =>
         Array.from({ length: 15 }).map((__, c) => renderTrackCell(r, c))
       );
-    }, [styleTokens]);
+    }, [styleTokens, boardTheme]);
 
     const renderYardBox = (
       color: PlayerColor,
       gridAreaClass: string,
       gradientClass: string,
       padClass: string
-    ) => (
-      <div
-        className={`${gridAreaClass} relative ${gradientClass} border ${styleTokens.yardBorderClass} shadow-inner`}
-      >
+    ) => {
+      const isActive = activeColors.has(color);
+
+      // Theme-specific Yard Inner Basin styling:
+      let yardInnerStyle: React.CSSProperties = {};
+      const yardInnerClass = `absolute inset-[10%] rounded-2xl shadow-[inset_0_4px_10px_rgba(0,0,0,0.3)] transition-all`;
+      let tokenPadStyle: React.CSSProperties = {};
+      const tokenPadClass = `absolute -translate-x-1/2 -translate-y-1/2 w-[27%] h-[27%] rounded-full border-2 transition-all flex items-center justify-center`;
+
+      if (boardTheme === 'royal-wood') {
+        yardInnerStyle = {
+          background: 'radial-gradient(circle at 50% 50%, #78350f 0%, #451a03 70%, #291002 100%)',
+          border: '2px solid #b45309',
+        };
+        tokenPadStyle = {
+          background: 'radial-gradient(circle at 35% 35%, #fef08a 0%, #d97706 70%, #78350f 100%)',
+          boxShadow: '0 3px 6px rgba(0,0,0,0.6), inset 0 2px 3px rgba(255,255,255,0.4)',
+          borderColor: '#b45309',
+        };
+      } else if (boardTheme === 'marble-palace') {
+        yardInnerStyle = {
+          background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 65%, #cbd5e1 100%)',
+          border: '2px solid #fda4af',
+        };
+        tokenPadStyle = {
+          background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #ffe4e6 70%, #fda4af 100%)',
+          boxShadow: '0 3px 6px rgba(159,18,57,0.25), inset 0 2px 4px rgba(255,255,255,0.9)',
+          borderColor: '#f43f5e',
+        };
+      } else if (boardTheme === 'midnight-neon') {
+        yardInnerStyle = {
+          background: 'radial-gradient(circle at 50% 50%, #0b0f19 0%, #030712 85%, #000000 100%)',
+          border: '2px solid #06b6d4',
+          boxShadow: 'inset 0 0 15px rgba(6,182,212,0.35)',
+        };
+        tokenPadStyle = {
+          background: 'radial-gradient(circle at 50% 50%, #06b6d433 0%, #090d16 70%, #030712 100%)',
+          boxShadow: '0 0 10px rgba(6,182,212,0.6), inset 0 0 6px #22d3ee',
+          borderColor: '#22d3ee',
+        };
+      } else {
+        // Classic Kingdom
+        yardInnerStyle = {
+          background: 'radial-gradient(circle at 50% 50%, #fffdfa 0%, #fef3c7 70%, #fde68a 100%)',
+          border: '2px solid #eab308',
+        };
+        tokenPadStyle = {
+          background: 'radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 70%, #b45309 100%)',
+          boxShadow: '0 3px 6px rgba(180,83,9,0.35), inset 0 2px 3px rgba(255,255,255,0.7)',
+          borderColor: '#b45309',
+        };
+      }
+
+      return (
         <div
-          className={`absolute inset-[11%] rounded-2xl ${styleTokens.yardInnerBg} shadow-[inset_0_3px_6px_rgba(0,0,0,0.12)]`}
-        />
-        {YARD_PAD_POSITIONS.map(([leftPct, topPct], slotIdx) => (
-          <div
-            key={`${color}-pad-${slotIdx}`}
-            style={{
-              left: `${leftPct}%`,
-              top: `${topPct}%`,
-            }}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 w-[26.5%] h-[26.5%] rounded-full ${padClass} shadow-[inset_0_3px_6px_rgba(0,0,0,0.22),0_2px_4px_rgba(255,255,255,0.8)] border-2 border-white/85`}
-          />
-        ))}
-      </div>
-    );
+          className={`${gridAreaClass} relative ${
+            isActive ? gradientClass : 'bg-slate-300/40 opacity-40'
+          } border ${styleTokens.yardBorderClass} shadow-inner transition-opacity overflow-hidden`}
+        >
+          <div className={yardInnerClass} style={isActive ? yardInnerStyle : undefined} />
+          {YARD_PAD_POSITIONS.map(([leftPct, topPct], slotIdx) => (
+            <div
+              key={`${color}-pad-${slotIdx}`}
+              style={{
+                left: `${leftPct}%`,
+                top: `${topPct}%`,
+                ...(isActive ? tokenPadStyle : {}),
+              }}
+              className={`${tokenPadClass} ${
+                isActive ? '' : 'bg-slate-300/60 border-slate-300/50'
+              }`}
+            />
+          ))}
+        </div>
+      );
+    };
 
     return (
-      <div
-        onClick={actionCamBadge ? handleDismissActionZoom : undefined}
-        className={`relative w-full aspect-square max-w-[430px] mx-auto rounded-[28px] p-2 sm:p-2.5 ${styleTokens.outerContainerBg} border-4 ${styleTokens.outerBorderClass} select-none transition-colors duration-300`}
-      >
+      <div className="relative w-full max-w-[430px] mx-auto flex flex-col items-center select-none">
+        <div
+          onClick={actionCamBadge ? handleDismissActionZoom : undefined}
+          className={`relative w-full aspect-square rounded-[28px] p-2 sm:p-2.5 ${styleTokens.outerContainerBg} border-4 ${styleTokens.outerBorderClass} transition-colors duration-300`}
+        >
+          {/* Thematic Hardware Corner Brackets (Burma Brass / Roman Plinths / Cyber LEDs) */}
+          <ThematicCornerDecorations themeId={boardTheme} />
+
         {/* Dynamic Action Camera Floating Badge */}
         {actionCamBadge && (
           <div
@@ -597,72 +988,51 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
             {/* 15x15 Underlying Tactile Ludo Board */}
             <div
               className={`relative w-full h-full grid grid-cols-15 grid-rows-15 border-2 ${styleTokens.trackBorderClass} ${styleTokens.trackBg} transition-colors duration-300`}
-          style={{
-            gridTemplateColumns: 'repeat(15, minmax(0, 1fr))',
-            gridTemplateRows: 'repeat(15, minmax(0, 1fr))',
-          }}
-        >
-          {/* Top-Left BLUE Yard (rows 1..6, cols 1..6) */}
-          {renderYardBox(
-            'blue',
-            'col-start-1 col-end-7 row-start-1 row-end-7 rounded-tl-[18px]',
-            'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600',
-            'bg-gradient-to-b from-blue-400 to-blue-600'
-          )}
+              style={{
+                gridTemplateColumns: 'repeat(15, minmax(0, 1fr))',
+                gridTemplateRows: 'repeat(15, minmax(0, 1fr))',
+              }}
+            >
+              {/* Top-Left BLUE Yard (rows 1..6, cols 1..6) */}
+              {renderYardBox(
+                'blue',
+                'col-start-1 col-end-7 row-start-1 row-end-7 rounded-tl-[18px]',
+                'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600',
+                'bg-gradient-to-b from-blue-400 to-blue-600'
+              )}
 
-          {/* Top-Right RED Yard (rows 1..6, cols 10..15) */}
-          {renderYardBox(
-            'red',
-            'col-start-10 col-end-16 row-start-1 row-end-7 rounded-tr-[18px]',
-            'bg-gradient-to-br from-rose-400 via-rose-500 to-red-600',
-            'bg-gradient-to-b from-rose-400 to-red-600'
-          )}
+              {/* Top-Right RED Yard (rows 1..6, cols 10..15) */}
+              {renderYardBox(
+                'red',
+                'col-start-10 col-end-16 row-start-1 row-end-7 rounded-tr-[18px]',
+                'bg-gradient-to-br from-rose-400 via-rose-500 to-red-600',
+                'bg-gradient-to-b from-rose-400 to-red-600'
+              )}
 
-          {/* Bottom-Left YELLOW Yard (rows 10..15, cols 1..6) */}
-          {renderYardBox(
-            'yellow',
-            'col-start-1 col-end-7 row-start-10 row-end-16 rounded-bl-[18px]',
-            'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500',
-            'bg-gradient-to-b from-amber-300 to-amber-500'
-          )}
+              {/* Bottom-Left YELLOW Yard (rows 10..15, cols 1..6) */}
+              {renderYardBox(
+                'yellow',
+                'col-start-1 col-end-7 row-start-10 row-end-16 rounded-bl-[18px]',
+                'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500',
+                'bg-gradient-to-b from-amber-300 to-amber-500'
+              )}
 
-          {/* Bottom-Right GREEN Yard (rows 10..15, cols 10..15) */}
-          {renderYardBox(
-            'green',
-            'col-start-10 col-end-16 row-start-10 row-end-16 rounded-br-[18px]',
-            'bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600',
-            'bg-gradient-to-b from-emerald-400 to-green-600'
-          )}
+              {/* Bottom-Right GREEN Yard (rows 10..15, cols 10..15) */}
+              {renderYardBox(
+                'green',
+                'col-start-10 col-end-16 row-start-10 row-end-16 rounded-br-[18px]',
+                'bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600',
+                'bg-gradient-to-b from-emerald-400 to-green-600'
+              )}
 
-          {/* Center 3x3 Home Goal Triangles (rows 7..9, cols 7..9) */}
-          <div className={`col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border ${styleTokens.trackBorderClass} shadow-inner`}>
-            <svg viewBox="0 0 100 100" className="w-full h-full block">
-              <polygon points="0,0 50,50 0,100" fill="#2563eb" />
-              <polygon points="0,0 100,0 50,50" fill="#e11d48" />
-              <polygon points="100,0 100,100 50,50" fill="#16a34a" />
-              <polygon points="0,100 100,100 50,50" fill="#f59e0b" />
-              <line
-                x1="0"
-                y1="0"
-                x2="100"
-                y2="100"
-                stroke={styleTokens.homeDividerColor}
-                strokeWidth="2.5"
-              />
-              <line
-                x1="100"
-                y1="0"
-                x2="0"
-                y2="100"
-                stroke={styleTokens.homeDividerColor}
-                strokeWidth="2.5"
-              />
-            </svg>
-          </div>
+              {/* Center 3x3 Home Goal Triangles (rows 7..9, cols 7..9) */}
+              <div className={`col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border ${styleTokens.trackBorderClass} shadow-inner`}>
+                <ThematicCenterGoal themeId={boardTheme} dividerColor={styleTokens.homeDividerColor} />
+              </div>
 
-          {/* All 52 Track Cells + 20 Home Stretch Cells */}
-          {memoizedTrackCells}
-        </div>
+              {/* All 52 Track Cells + 20 Home Stretch Cells */}
+              {memoizedTrackCells}
+            </div>
 
         {/* 3D Three.js / @react-three/fiber Collectible Token Layer Aligned 1:1 with the 15x15 Grid */}
         <div className="absolute inset-0 pointer-events-none">
@@ -739,6 +1109,11 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                 const stackList = stackMap.get(key) ?? [pawn.id];
                 const stackIndex = Math.max(0, stackList.indexOf(pawn.id));
                 const isSelectable = legalPawnIds.has(pawn.id);
+                // BUG-02 FIX: Only the pawn executing activeMove fires onMoveAnimationComplete.
+                // All other pawns get a no-op so simultaneous callbacks cannot double-trigger
+                // ANIMATION_COMPLETE in the state machine.
+                const handleComplete =
+                  activeMove?.pawnId === pawn.id ? onMoveAnimationComplete : () => {};
 
                 return (
                   <AnimatedPawn3DNode
@@ -750,7 +1125,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                     isSelectable={isSelectable}
                     activeMove={activeMove}
                     onSelectPawn={onSelectPawn}
-                    onAnimationComplete={onMoveAnimationComplete}
+                    onAnimationComplete={handleComplete}
                   />
                 );
               })}
@@ -790,11 +1165,22 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                   >
                     <span className="w-9 h-9 rounded-full border-2 border-amber-300 bg-amber-400/25 animate-ping" />
                   </button>
-                );
-              })}
-          </div>
-        )}
-          </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Active Thematic Tactical Rule Pill */}
+        <div className="mt-1.5 w-full px-3 py-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/15 flex items-center justify-between text-xs shadow-md">
+          <span className="font-black text-amber-300 flex items-center gap-1.5 shrink-0 text-[11px]">
+            <span>{themeMeta.perk.badge}</span>
+          </span>
+          <span className="text-[10px] sm:text-[11px] text-slate-200 font-medium truncate ml-2 text-right">
+            {themeMeta.perk.description}
+          </span>
         </div>
       </div>
     );
