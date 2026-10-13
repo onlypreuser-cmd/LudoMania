@@ -1,11 +1,5 @@
 import { ContactShadows, RoundedBox } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import {
-  CuboidCollider,
-  Physics,
-  RapierRigidBody,
-  RigidBody,
-} from '@react-three/rapier';
 import gsap from 'gsap';
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -16,7 +10,7 @@ import { haptics } from '../../utils/haptics';
 import { StudioEnvironment } from './StudioEnvironment';
 
 /**
- * Target Euler rotations [x, y, z] so that when the camera looks from [0, 2.35, 1.85]
+ * Target Euler rotations [x, y, z] so that when the camera looks from [0, 2.25, 1.78]
  * toward [0, 0, 0], the top/front face clearly displays `value` (1..6).
  * Face mapping on the local cube:
  * +Y (Top)    = 1
@@ -27,12 +21,12 @@ import { StudioEnvironment } from './StudioEnvironment';
  * -X (Left)   = 4
  */
 const FACE_EULER_MAP: Record<number, [number, number, number]> = {
-  1: [0.35, 0.25, 0], // +Y tilted slightly toward camera
-  2: [-Math.PI / 2 + 0.35, 0, 0.2], // +Z facing up/camera
-  3: [0.25, 0, Math.PI / 2 - 0.2], // +X facing up/camera
-  4: [0.25, 0, -Math.PI / 2 + 0.2], // -X facing up/camera
-  5: [Math.PI / 2 + 0.35, 0, -0.2], // -Z facing up/camera
-  6: [Math.PI + 0.35, -0.25, 0], // -Y facing up/camera
+  1: [0.35, 0.25, 0], // +Y Top
+  2: [-Math.PI / 2 + 0.35, 0, 0], // +Z Front
+  3: [0.35, 0, Math.PI / 2], // +X Right
+  4: [0.35, 0, -Math.PI / 2], // -X Left
+  5: [Math.PI / 2 + 0.35, 0, 0], // -Z Back
+  6: [Math.PI + 0.35, -0.25, 0], // -Y Bottom
 };
 
 interface PipPositions {
@@ -212,7 +206,6 @@ interface PhysicsDieMeshProps {
 
 const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
   ({ skinId, value, isRolling, onSettled }) => {
-    const rigidBodyRef = useRef<RapierRigidBody>(null);
     const visualGroupRef = useRef<THREE.Group>(null);
     const hasSettledFiredRef = useRef(false);
 
@@ -239,16 +232,6 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
         grp.rotation.x = grp.rotation.x % (Math.PI * 2);
         grp.rotation.y = grp.rotation.y % (Math.PI * 2);
         grp.rotation.z = grp.rotation.z % (Math.PI * 2);
-
-        // Keep Rapier body anchored at origin so it never drifts or skews the visual die face
-        if (rigidBodyRef.current) {
-          try {
-            rigidBodyRef.current.setTranslation({ x: 0, y: 0, z: 0 }, true);
-            rigidBodyRef.current.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-          } catch {
-            // Safe fallback if physics world is still initializing
-          }
-        }
 
         // Smooth 0.70s multi-bounce ballistic tumble synced with dice_roll audio bounces
         const tl = gsap.timeline({
@@ -427,19 +410,15 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
         const targetEuler = FACE_EULER_MAP[value] ?? FACE_EULER_MAP[1];
         // Subtle lifelike idle hover & gentle micro-precession so HDRI reflections shimmer
         visualGroupRef.current.position.y = Math.sin(t * 2.2) * 0.032;
+        visualGroupRef.current.rotation.x = targetEuler[0];
         visualGroupRef.current.rotation.y =
           targetEuler[1] + Math.sin(t * 1.4) * 0.04;
+        visualGroupRef.current.rotation.z = targetEuler[2];
       }
     });
 
     return (
-      <RigidBody
-        ref={rigidBodyRef}
-        type="kinematicPosition"
-        colliders="cuboid"
-        position={[0, 0, 0]}
-      >
-        <group ref={visualGroupRef}>
+      <group ref={visualGroupRef}>
           {/* Sculpted High-Tessellation Rounded Cube Body */}
           <RoundedBox
             args={[1.06, 1.06, 1.06]}
@@ -518,7 +497,6 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             );
           })}
         </group>
-      </RigidBody>
     );
   }
 );
@@ -612,15 +590,12 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
                 far={1.5}
                 color="#451a03"
               />
-              <Physics gravity={[0, -9.81, 0]} paused={!isRolling}>
-                <CuboidCollider position={[0, -1.2, 0]} args={[2, 0.2, 2]} />
-                <PhysicsDieMesh
-                  skinId={skinId}
-                  value={displayValue}
-                  isRolling={isRolling}
-                  onSettled={onRollSettled}
-                />
-              </Physics>
+              <PhysicsDieMesh
+                skinId={skinId}
+                value={displayValue}
+                isRolling={isRolling}
+                onSettled={onRollSettled}
+              />
             </Suspense>
           </Canvas>
 

@@ -64,6 +64,7 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
     const prevStepRef = useRef<number>(pawn.step);
     const isMovingRef = useRef(false);
     const hasInitializedPos = useRef(false);
+    const executedMoveKeyRef = useRef<string | null>(null);
 
     const targetGrid = useMemo(
       () => getPawnGridCoord(pawn.color, pawn.step, pawn.pawnIndex),
@@ -89,11 +90,25 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
 
       // 1. If this pawn is currently executing `activeMove`, run its skin-specific GSAP hop!
       if (activeMove && activeMove.pawnId === pawn.id) {
+        const moveKey = `${activeMove.pawnId}_${activeMove.fromStep}->${activeMove.toStep}`;
+        if (executedMoveKeyRef.current === moveKey) {
+          return;
+        }
+        executedMoveKeyRef.current = moveKey;
         isMovingRef.current = true;
+
         const coords = activeMove.pathSteps.map((stepIdx) => {
           const g = getPawnGridCoord(pawn.color, stepIdx, pawn.pawnIndex);
           return gridToWorld3D(g, 0, 1);
         });
+
+        // Compute exact destination coordinates (including stack offset)
+        const destGrid = getPawnGridCoord(
+          pawn.color,
+          activeMove.toStep,
+          pawn.pawnIndex
+        );
+        const destWorld = gridToWorld3D(destGrid, stackIndex, stackTotal);
 
         const tl = hopPawn3D({
           group: groupRef.current,
@@ -102,8 +117,9 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
           onComplete: () => {
             isMovingRef.current = false;
             prevStepRef.current = activeMove.toStep;
+            // Firmly lock at destination coordinates — NEVER snap back to old targetWorld!
             if (groupRef.current) {
-              groupRef.current.position.set(targetWorld.x, 0, targetWorld.z);
+              groupRef.current.position.set(destWorld.x, 0, destWorld.z);
             }
             if (activeMove.willKillPawnIds.length > 0) {
               soundManager.play('pawn_kill');
@@ -172,6 +188,8 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
       pawn.pawnIndex,
       pawn.step,
       player.tokenSkin,
+      stackIndex,
+      stackTotal,
       targetWorld.x,
       targetWorld.z,
       onAnimationComplete,

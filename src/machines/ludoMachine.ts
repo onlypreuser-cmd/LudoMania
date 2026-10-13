@@ -20,6 +20,7 @@ export interface LudoMachineContext {
   consecutiveSixes: number;
   legalMoves: MoveEvaluation[];
   activeMove: MoveEvaluation | null;
+  hasExtraTurn: boolean;
   lastCapturedPawnIds: string[];
   captureBonusPoints: number[];
   biasState: DiceBiasState;
@@ -81,13 +82,7 @@ export const ludoMachine = setup({
       );
       return playerPawns.length === 4 && playerPawns.every((p) => p.step === 56);
     },
-    earnedExtraTurn: ({ context }) => {
-      if (!context.activeMove) return false;
-      const rolledSix = context.diceValue === 6;
-      const killedOpponent = context.activeMove.willKillPawnIds.length > 0;
-      const reachedHome = context.activeMove.willReachHome;
-      return rolledSix || killedOpponent || reachedHome;
-    },
+    earnedExtraTurn: ({ context }) => Boolean(context.hasExtraTurn),
   },
   actions: {
     performSmartRoll: assign(({ context }) => {
@@ -113,6 +108,7 @@ export const ludoMachine = setup({
         consecutiveSixes: nextConsecutiveSixes,
         biasState: nextBiasState,
         activeMove: null,
+        hasExtraTurn: false,
         lastCapturedPawnIds: [],
         statusMessage: `${currentPlayer.name} is rolling...`,
       };
@@ -186,12 +182,17 @@ export const ludoMachine = setup({
           move.willKillPawnIds.length * 30;
       }
 
+      const rolledSix = context.diceValue === 6;
+      const killedOpponent = move.willKillPawnIds.length > 0;
+      const reachedHome = move.willReachHome;
+      const earnedExtra = rolledSix || killedOpponent || reachedHome;
+
       let statusMessage = `${currentPlayer.name} moved to step ${move.toStep}.`;
-      if (move.willKillPawnIds.length > 0) {
+      if (killedOpponent) {
         statusMessage = `💥 CAPTURE! ${currentPlayer.name} cut opponent's token & gets a Bonus Roll!`;
-      } else if (move.willReachHome) {
+      } else if (reachedHome) {
         statusMessage = `🏠 HOME! ${currentPlayer.name}'s token reached Home! Bonus Roll!`;
-      } else if (context.diceValue === 6) {
+      } else if (rolledSix) {
         statusMessage = `🎲 Rolled a 6! ${currentPlayer.name} gets an Extra Roll!`;
       } else if (move.landsOnSafeStar) {
         statusMessage = `⭐ Safe Star! ${currentPlayer.name}'s token is protected.`;
@@ -199,6 +200,8 @@ export const ludoMachine = setup({
 
       return {
         pawns: updatedPawns,
+        activeMove: null,
+        hasExtraTurn: earnedExtra,
         lastCapturedPawnIds: move.willKillPawnIds,
         captureBonusPoints: nextBonus,
         legalMoves: [],
@@ -211,6 +214,7 @@ export const ludoMachine = setup({
       return {
         diceValue: null,
         activeMove: null,
+        hasExtraTurn: false,
         legalMoves: [],
         statusMessage: `🔥 Bonus Turn for ${currentPlayer.name}! Roll again!`,
       };
@@ -224,6 +228,7 @@ export const ludoMachine = setup({
         diceValue: null,
         consecutiveSixes: 0,
         activeMove: null,
+        hasExtraTurn: false,
         legalMoves: [],
         lastCapturedPawnIds: [],
         turnNumber: context.turnNumber + 1,
@@ -251,6 +256,7 @@ export const ludoMachine = setup({
         consecutiveSixes: 0,
         legalMoves: [],
         activeMove: null,
+        hasExtraTurn: false,
         lastCapturedPawnIds: [],
         captureBonusPoints: players.map(() => 0),
         biasState: createInitialBiasState(),
@@ -272,6 +278,7 @@ export const ludoMachine = setup({
     consecutiveSixes: 0,
     legalMoves: [],
     activeMove: null,
+    hasExtraTurn: false,
     lastCapturedPawnIds: [],
     captureBonusPoints: input.players.map(() => 0),
     biasState: createInitialBiasState(),
