@@ -1,8 +1,11 @@
 import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Camera,
   ChevronLeft,
   Crown,
+  Maximize,
+  Minimize,
   RotateCcw,
   Settings,
   Sparkles,
@@ -33,11 +36,20 @@ export const GamePage: React.FC = () => {
     selectedBoardTheme,
     soundEnabled,
     toggleSound,
+    actionCameraEnabled,
+    toggleActionCamera,
+    savedGameSession,
+    saveActiveGameSession,
+    clearSavedGameSession,
     recordMatchResult,
   } = useProfileStore();
 
   const [state, send] = useMachine(ludoMachine, {
-    input: { players },
+    input: {
+      players,
+      boardTheme: selectedBoardTheme,
+      savedSession: savedGameSession,
+    },
   });
 
   const missingP1Name = !players[0]?.name.trim();
@@ -46,6 +58,8 @@ export const GamePage: React.FC = () => {
     missingP1Name ? 0 : missingP2Name ? 1 : null
   );
 
+  const hasRestoredSessionRef = useRef(Boolean(savedGameSession));
+
   useEffect(() => {
     if (!players[0]?.name.trim()) {
       setSetupTargetIdx(0);
@@ -53,9 +67,17 @@ export const GamePage: React.FC = () => {
       setSetupTargetIdx(1);
     } else {
       setSetupTargetIdx(null);
-      send({ type: 'CONFIGURE_PLAYERS', players });
+      if (!hasRestoredSessionRef.current) {
+        send({
+          type: 'CONFIGURE_PLAYERS',
+          players,
+          boardTheme: selectedBoardTheme,
+        });
+      } else {
+        hasRestoredSessionRef.current = false;
+      }
     }
-  }, [players, send]);
+  }, [players, selectedBoardTheme, send]);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasRecordedWinRef = useRef(false);
@@ -107,6 +129,140 @@ export const GamePage: React.FC = () => {
     turnNumber,
     recordMatchResult,
   ]);
+
+  // 1. Auto-Save active match progress whenever turn settles on IDLE
+  useEffect(() => {
+    if (isIdle && !isGameOver) {
+      const hasProgressed = pawns.some((p) => p.step > -1) || turnNumber > 1;
+      if (hasProgressed) {
+        saveActiveGameSession({
+          id: savedGameSession?.id || `session-${Date.now()}`,
+          players,
+          pawns,
+          boardTheme: selectedBoardTheme,
+          currentPlayerIndex,
+          diceValue: null,
+          playerLastDiceValues,
+          consecutiveSixes: state.context.consecutiveSixes,
+          captureBonusPoints,
+          turnNumber,
+          statusMessage,
+          timestamp: Date.now(),
+        });
+      }
+    }
+  }, [
+    isIdle,
+    isGameOver,
+    pawns,
+    turnNumber,
+    currentPlayerIndex,
+    playerLastDiceValues,
+    captureBonusPoints,
+    statusMessage,
+    players,
+    selectedBoardTheme,
+    saveActiveGameSession,
+    savedGameSession?.id,
+    state.context.consecutiveSixes,
+  ]);
+
+  // 2. Clear saved match session once the game is won
+  useEffect(() => {
+    if (isGameOver) {
+      clearSavedGameSession();
+    }
+  }, [isGameOver, clearSavedGameSession]);
+
+  // 3. Fullscreen toggle & window state synchronizer
+  const [isFullscreen, setIsFullscreen] = useState(
+    Boolean(
+      typeof document !== 'undefined' &&
+        (document.fullscreenElement ||
+          (document as any).webkitFullscreenElement)
+    )
+  );
+
+  const toggleFullscreen = useCallback(async () => {
+    soundManager.play('ui_click');
+    try {
+      if (
+        !document.fullscreenElement &&
+        !(document as any).webkitFullscreenElement
+      ) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          await (document.documentElement as any).webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen request failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        Boolean(
+          document.fullscreenElement ||
+            (document as any).webkitFullscreenElement
+        )
+      );
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener(
+        'webkitfullscreenchange',
+        handleFullscreenChange
+      );
+    };
+  }, []);
+
+  // 4. Screen Wake Lock API to prevent device from sleeping during match
+  useEffect(() => {
+    let wakeLockSentinel: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && !isGameOver) {
+          wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch (err) {
+        // Silently ignore if not supported or denied
+      }
+    };
+
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isGameOver) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, [isGameOver]);
+
+  const handleRestartMatch = useCallback(() => {
+    soundManager.play('ui_click');
+    clearSavedGameSession();
+    send({ type: 'RESET_MATCH' });
+    setIsSettingsOpen(false);
+  }, [clearSavedGameSession, send]);
 
   const handleTriggerRoll = useCallback(() => {
     if (!isIdle) return;
@@ -346,66 +502,113 @@ export const GamePage: React.FC = () => {
               navigate('/setup');
             }}
             aria-label="Back to Setup"
-            className="w-9 h-9 rounded-full bg-white/90 border border-white shadow-sm flex items-center justify-center text-slate-700 hover:scale-105 cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/90 border border-white shadow-sm flex items-center justify-center text-slate-700 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          <div className="px-3 py-1 rounded-full bg-white/90 border border-white shadow-sm flex items-center gap-1.5 max-w-[240px]">
+          <div className="px-3 py-1 rounded-full bg-white/90 border border-white shadow-sm flex items-center gap-1.5 max-w-[210px] sm:max-w-[240px]">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span className="text-[11px] font-extrabold text-slate-800 truncate">
               {statusMessage}
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              soundManager.play('ui_click');
-              setIsSettingsOpen((v) => !v);
-            }}
-            aria-label="Settings"
-            className="w-9 h-9 rounded-full bg-white/90 border border-white shadow-sm flex items-center justify-center text-slate-700 hover:scale-105 cursor-pointer"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Fullscreen Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              className="w-9 h-9 rounded-full bg-white/90 border border-white shadow-sm flex items-center justify-center text-slate-700 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+            >
+              {isFullscreen ? (
+                <Minimize className="w-4 h-4 text-slate-700" />
+              ) : (
+                <Maximize className="w-4 h-4 text-slate-700" />
+              )}
+            </button>
+
+            {/* Game Settings Button */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.play('ui_click');
+                setIsSettingsOpen((v) => !v);
+              }}
+              aria-label="Settings"
+              className="w-9 h-9 rounded-full bg-white/90 border border-white shadow-sm flex items-center justify-center text-slate-700 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
         </header>
 
         {isSettingsOpen && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-1.5 rounded-2xl bg-white/95 border border-slate-200 p-2.5 shadow-xl flex items-center justify-between z-30"
+            className="mt-1.5 rounded-2xl bg-white/95 border border-slate-200 p-2.5 shadow-xl flex flex-col gap-2 z-30"
           >
-            <button
-              type="button"
-              onClick={toggleSound}
-              className="flex items-center gap-2 text-xs font-extrabold text-slate-700 cursor-pointer"
-            >
-              {soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-blue-600" />
-              ) : (
-                <VolumeX className="w-4 h-4 text-slate-400" />
-              )}
-              <span>{soundEnabled ? 'Sound ON' : 'Sound Muted'}</span>
-            </button>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="flex items-center gap-2 text-xs font-extrabold text-slate-700 cursor-pointer"
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <VolumeX className="w-4 h-4 text-slate-400" />
+                )}
+                <span>{soundEnabled ? 'Sound ON' : 'Sound Muted'}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.play('ui_click');
-                send({ type: 'RESET_MATCH' });
-                setIsSettingsOpen(false);
-              }}
-              className="px-3 py-1 rounded-xl bg-rose-100 text-rose-700 text-xs font-extrabold hover:bg-rose-200 cursor-pointer"
-            >
-              Restart Match
-            </button>
+              {/* Action Camera Toggle */}
+              <button
+                type="button"
+                onClick={toggleActionCamera}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-colors ${
+                  actionCameraEnabled
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                    : 'bg-slate-100 text-slate-500 border border-slate-200'
+                }`}
+                title="Toggle Action Camera Zoom on token cuts and home run"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Action Cam: {actionCameraEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+              <span className="text-[10px] font-bold text-slate-500">
+                Active Turn: #{turnNumber}
+              </span>
+              <button
+                type="button"
+                onClick={handleRestartMatch}
+                className="px-3 py-1 rounded-xl bg-rose-100 text-rose-700 text-xs font-extrabold hover:bg-rose-200 cursor-pointer transition-colors"
+              >
+                Restart Match
+              </button>
+            </div>
           </motion.div>
         )}
 
+        {/* Board Perk Indicator Banner */}
+        <div className="mt-1 flex items-center justify-between px-3 py-1 rounded-full bg-white/80 border border-slate-200/80 shadow-xs">
+          <span className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700">
+            <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Board Perk:</span>
+            <span className="text-amber-700">{boardThemeMeta.perk.badge}</span>
+          </span>
+          <span className="text-[10px] font-semibold text-slate-500 truncate max-w-[170px]" title={boardThemeMeta.perk.description}>
+            {boardThemeMeta.perk.description}
+          </span>
+        </div>
+
         {/* 2. TOP SCOREBOARD (Round Colored Dots for Out & Greyish Dots for In + Score) */}
-        <div className="mt-1.5 flex items-center gap-2">
+        <div className="mt-1 flex items-center gap-2">
           {renderTopScoreCard(0)}
           {renderTopScoreCard(1)}
         </div>
@@ -427,6 +630,7 @@ export const GamePage: React.FC = () => {
             legalMoves={isSelectingPawn ? legalMoves : []}
             activeMove={activeMove}
             boardTheme={selectedBoardTheme}
+            actionCameraEnabled={actionCameraEnabled}
             onSelectPawn={handleSelectPawn}
             onMoveAnimationComplete={handleMoveAnimationComplete}
           />

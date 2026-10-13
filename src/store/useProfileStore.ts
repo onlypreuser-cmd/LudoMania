@@ -8,6 +8,7 @@ import {
   DiceSkinId,
   PlayerColor,
   PlayerConfig,
+  SavedGameSession,
   TokenSkinId,
 } from '../types/game';
 
@@ -66,6 +67,7 @@ interface ProfileState {
   selectedBoardTheme: BoardThemeId;
   preferredColor: PlayerColor;
   soundEnabled: boolean;
+  actionCameraEnabled: boolean;
 
   unlockedTokenSkins: TokenSkinId[];
   unlockedDiceSkins: DiceSkinId[];
@@ -73,6 +75,7 @@ interface ProfileState {
 
   players: PlayerConfig[];
   matchHistory: MatchRecord[];
+  savedGameSession: SavedGameSession | null;
 
   completeInitialSetup: (payload: {
     name: string;
@@ -87,6 +90,9 @@ interface ProfileState {
   setSelectedDiceSkin: (skin: DiceSkinId) => void;
   setSelectedBoardTheme: (theme: BoardThemeId) => void;
   toggleSound: () => void;
+  toggleActionCamera: () => void;
+  saveActiveGameSession: (session: SavedGameSession) => void;
+  clearSavedGameSession: () => void;
   recordMatchResult: (record: Omit<MatchRecord, 'id' | 'timestamp'>) => void;
 }
 
@@ -125,6 +131,7 @@ export const useProfileStore = create<ProfileState>()(
       selectedBoardTheme: 'classic-kingdom',
       preferredColor: 'blue',
       soundEnabled: true,
+      actionCameraEnabled: true,
 
       unlockedTokenSkins: ALL_TOKEN_SKINS,
       unlockedDiceSkins: ALL_DICE_SKINS,
@@ -132,6 +139,7 @@ export const useProfileStore = create<ProfileState>()(
 
       players: DEFAULT_PLAYERS,
       matchHistory: [],
+      savedGameSession: null,
 
       completeInitialSetup: ({ name, avatar, diceSkin, tokenSkin, color }) => {
         const trimmed = name.trim();
@@ -212,6 +220,18 @@ export const useProfileStore = create<ProfileState>()(
         const next = !get().soundEnabled;
         soundManager.setEnabled(next);
         set({ soundEnabled: next });
+      },
+
+      toggleActionCamera: () => {
+        set((state) => ({ actionCameraEnabled: !state.actionCameraEnabled }));
+      },
+
+      saveActiveGameSession: (session) => {
+        set({ savedGameSession: session });
+      },
+
+      clearSavedGameSession: () => {
+        set({ savedGameSession: null });
       },
 
       recordMatchResult: (record) => {

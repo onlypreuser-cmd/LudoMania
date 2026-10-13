@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import * as THREE from 'three';
 import { soundManager } from '../audio/soundManager';
-import { TokenSkinId, WorldCoord3D } from '../types/game';
+import { PlayerColor, TokenSkinId, WorldCoord3D } from '../types/game';
 import { haptics } from '../utils/haptics';
 
 /**
@@ -10,15 +10,17 @@ import { haptics } from '../utils/haptics';
  * - Natural board-game pacing (~0.27s - 0.32s per square) so every jump arc is clearly visible
  * - Seamless landing-cushion-to-takeoff-stretch transitions between consecutive squares (zero stutter)
  * - True 2-part gravity parabola (`sine.out` ascent + `sine.in` descent to exact y = 0)
- * - Signature character flourish on the final destination square
+ * - Solid, wobble-free crisp landing on the destination square
  */
 export function hopPawn3D(params: {
   group: THREE.Group;
   skin: TokenSkinId;
+  color?: PlayerColor;
   stepsCoordinates: WorldCoord3D[];
+  onStepLand?: (coord: WorldCoord3D, stepIndex: number, isLastStep: boolean) => void;
   onComplete: () => void;
 }): gsap.core.Timeline {
-  const { group, skin, stepsCoordinates, onComplete } = params;
+  const { group, skin, stepsCoordinates, onStepLand, onComplete } = params;
 
   gsap.killTweensOf(group.position);
   gsap.killTweensOf(group.rotation);
@@ -160,7 +162,7 @@ export function hopPawn3D(params: {
     tl.to(
       group.position,
       {
-        y: isLastStep ? jumpApex * 1.12 : jumpApex,
+        y: jumpApex,
         duration: half,
         ease: 'sine.out',
       },
@@ -171,6 +173,9 @@ export function hopPawn3D(params: {
         y: 0,
         duration: half,
         ease: 'sine.in',
+        onComplete: () => {
+          onStepLand?.(coord, idx, isLastStep);
+        },
       },
       t0 + half
     );
@@ -260,70 +265,43 @@ export function hopPawn3D(params: {
       }
 
       case 'cat': {
-        // Supple feline bound on intermediate steps + graceful 360° pirouette on final landing step
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: 0.12,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.16 * wagDir,
-              x: 0.18,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.16 * wagDir,
+            x: 0.18,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'panda': {
-        // Cute roly-poly waddle on intermediate steps + celebratory somersault on final step
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              x: `+=${Math.PI * 2}`,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.24 * wagDir,
-              x: 0.2,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.24 * wagDir,
+            x: 0.2,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'robot': {
-        // Precision jet-thruster forward tilt + crisp servo turn on final landing
+        // Precision jet-thruster forward tilt + crisp servo turn
         tl.to(
           group.rotation,
           {
@@ -373,325 +351,185 @@ export function hopPawn3D(params: {
       }
 
       case 'unicorn': {
-        // Proud celestial prance + spiral spin on final landing step
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: -0.22,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              x: -0.24,
-              z: 0.14 * wagDir,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            x: -0.24,
+            z: 0.14 * wagDir,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'bamboo-panda': {
-        // Playful bamboo roll + joyful flip on final landing step
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              x: `+=${Math.PI * 2}`,
-              z: 0.12 * wagDir,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.25 * wagDir,
-              x: 0.22,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.25 * wagDir,
+            x: 0.22,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'cyber-robot': {
-        // Crisp cybernetic thruster boost + 360° gyro spin on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: 0.16,
-              duration: dur,
-              ease: 'power2.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              x: 0.24,
-              z: 0.09 * wagDir,
-              duration: half,
-              ease: 'power1.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { x: 0, z: 0, duration: half, ease: 'power1.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            x: 0.24,
+            z: 0.09 * wagDir,
+            duration: half,
+            ease: 'power1.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0, z: 0, duration: half, ease: 'power1.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'astronomer': {
-        // Low-gravity orbital float + gentle cosmic pirouette on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              z: 0.14 * wagDir,
-              duration: dur,
-              ease: 'sine.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.22 * wagDir,
-              x: -0.2,
-              y: 0.18 * wagDir,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, x: 0, y: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.22 * wagDir,
+            x: -0.2,
+            y: 0.18 * wagDir,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, x: 0, y: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'star-unicorn': {
-        // Regal starlight prance + sparkling 360° spiral on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: -0.24,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              x: -0.26,
-              z: 0.16 * wagDir,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            x: -0.26,
+            z: 0.16 * wagDir,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'fire-dragon': {
-        // Fierce winged pounce + aerial dive-bomb swoop on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              x: -0.32,
-              y: `+=${Math.PI * 2}`,
-              duration: dur,
-              ease: 'power2.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              x: -0.26,
-              z: 0.18 * wagDir,
-              duration: half * 0.8,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { x: 0.14, z: 0, duration: half * 1.2, ease: 'sine.inOut' },
-            t0 + half * 0.8
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            x: -0.26,
+            z: 0.18 * wagDir,
+            duration: half * 0.8,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0.14, z: 0, duration: half * 1.2, ease: 'sine.inOut' },
+          t0 + half * 0.8
+        );
         break;
       }
 
       case 'ice-dragon': {
-        // Crystallinefrost glide + graceful frost-wing spin on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: -0.24,
-              duration: dur,
-              ease: 'sine.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              x: -0.22,
-              z: 0.16 * wagDir,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            x: -0.22,
+            z: 0.16 * wagDir,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0, z: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'pirate': {
-        // Swashbuckling sea-captain swagger + bold boarding leap on final step
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              z: 0.18 * wagDir,
-              duration: dur,
-              ease: 'back.out(1.2)',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.24 * wagDir,
-              x: 0.18,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.24 * wagDir,
+            x: 0.18,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, x: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'magician': {
-        // Arcane levitation spin + grand illusionist bow on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              x: 0.2,
-              duration: dur,
-              ease: 'power2.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              y: 0.28 * wagDir,
-              x: -0.18,
-              z: 0.12 * wagDir,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { y: 0, x: 0, z: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            y: 0.28 * wagDir,
+            x: -0.18,
+            z: 0.12 * wagDir,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { y: 0, x: 0, z: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
 
       case 'alien': {
-        // Cosmic antigravity warp + UFO saucer spin on final landing
-        if (isLastStep) {
-          tl.to(
-            group.rotation,
-            {
-              y: `+=${Math.PI * 2}`,
-              z: 0.15 * wagDir,
-              duration: dur,
-              ease: 'power1.inOut',
-            },
-            t0
-          );
-        } else {
-          tl.to(
-            group.rotation,
-            {
-              z: 0.22 * wagDir,
-              y: 0.22 * wagDir,
-              x: -0.16,
-              duration: half,
-              ease: 'sine.out',
-            },
-            t0
-          ).to(
-            group.rotation,
-            { z: 0, y: 0, x: 0, duration: half, ease: 'sine.inOut' },
-            t0 + half
-          );
-        }
+        tl.to(
+          group.rotation,
+          {
+            z: 0.22 * wagDir,
+            y: 0.22 * wagDir,
+            x: -0.16,
+            duration: half,
+            ease: 'sine.out',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { z: 0, y: 0, x: 0, duration: half, ease: 'sine.inOut' },
+          t0 + half
+        );
         break;
       }
     }
@@ -699,15 +537,15 @@ export function hopPawn3D(params: {
     cursorTime += dur;
   });
 
-  // Final elastic landing recovery on destination cell
+  // Final crisp, solid settle on destination cell (ZERO wobble or elasticity)
   tl.to(
     group.scale,
     {
       x: 1,
       y: 1,
       z: 1,
-      duration: 0.18,
-      ease: 'elastic.out(1.2, 0.55)',
+      duration: 0.08,
+      ease: 'sine.out',
     },
     cursorTime
   ).to(
@@ -716,7 +554,7 @@ export function hopPawn3D(params: {
       x: 0,
       y: 0,
       z: 0,
-      duration: 0.15,
+      duration: 0.08,
       ease: 'sine.out',
     },
     cursorTime

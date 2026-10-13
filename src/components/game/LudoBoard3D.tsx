@@ -1,7 +1,7 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Star } from 'lucide-react';
-import React, { Suspense, useEffect, useMemo, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
   hopPawn3D,
@@ -9,6 +9,7 @@ import {
 } from '../../animations/pawnHop3D';
 import { soundManager } from '../../audio/soundManager';
 import {
+  BOARD_THEMES,
   buildReverseStepPath,
   COLOR_PALETTE,
   getPawnGridCoord,
@@ -24,6 +25,7 @@ import {
 import { haptics, triggerHomeReachConfetti } from '../../utils/haptics';
 import { StudioEnvironment } from '../three/StudioEnvironment';
 import { Token3DModel } from '../three/Token3DModel';
+import { StepEffects3D, stepEffectsManager } from '../three/StepEffects3D';
 
 const BOARD_CAM_Y = 14.5;
 const BOARD_CAM_Z = 3.25;
@@ -113,7 +115,16 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
         const tl = hopPawn3D({
           group: groupRef.current,
           skin: player.tokenSkin,
+          color: pawn.color,
           stepsCoordinates: coords,
+          onStepLand: (coord) => {
+            stepEffectsManager.trigger(
+              coord.x,
+              coord.z,
+              player.tokenSkin,
+              pawn.color
+            );
+          },
           onComplete: () => {
             isMovingRef.current = false;
             prevStepRef.current = activeMove.toStep;
@@ -263,6 +274,7 @@ interface LudoBoard3DProps {
   legalMoves: MoveEvaluation[];
   activeMove: MoveEvaluation | null;
   boardTheme: BoardThemeId;
+  actionCameraEnabled?: boolean;
   onSelectPawn: (pawnId: string) => void;
   onMoveAnimationComplete: () => void;
 }
@@ -274,10 +286,133 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     legalMoves,
     activeMove,
     boardTheme,
+    actionCameraEnabled = true,
     onSelectPawn,
     onMoveAnimationComplete,
   }) => {
-    const isDarkTheme = boardTheme === 'midnight-neon';
+    const themeMeta = useMemo(
+      () => BOARD_THEMES.find((t) => t.id === boardTheme) ?? BOARD_THEMES[0],
+      [boardTheme]
+    );
+    const { styleTokens, lighting } = themeMeta;
+
+    const actionZoomLayerRef = useRef<HTMLDivElement>(null);
+    const [actionCamBadge, setActionCamBadge] = useState<{
+      type: 'cut' | 'home';
+      text: string;
+      subtitle: string;
+    } | null>(null);
+
+    // Dynamic Action Camera Zoom: ONLY triggers when a pawn cuts an opponent or reaches home!
+    useEffect(() => {
+      if (!actionCameraEnabled || !activeMove) {
+        if (actionZoomLayerRef.current) {
+          gsap.killTweensOf(actionZoomLayerRef.current);
+          gsap.to(actionZoomLayerRef.current, {
+            scale: 1,
+            transformOrigin: '50% 50%',
+            x: 0,
+            y: 0,
+            duration: 0.35,
+            ease: 'power2.inOut',
+            onComplete: () => setActionCamBadge(null),
+          });
+        }
+        return;
+      }
+
+      const isCut = activeMove.willKillPawnIds.length > 0;
+      const isHome = activeMove.willReachHome;
+
+      if (!isCut && !isHome) {
+        return;
+      }
+
+      // Calculate focal target coordinates
+      const movingPawn = pawns.find((p) => p.id === activeMove.pawnId);
+      const targetGrid = isHome
+        ? { row: 7, col: 7 }
+        : movingPawn
+        ? getPawnGridCoord(
+            movingPawn.color,
+            activeMove.toStep,
+            movingPawn.pawnIndex
+          )
+        : { row: 7, col: 7 };
+
+      const originX = ((targetGrid.col + 0.5) / 15) * 100;
+      const originY = ((targetGrid.row + 0.5) / 15) * 100;
+
+      // Set Action Cam Banner
+      if (isCut) {
+        setActionCamBadge({
+          type: 'cut',
+          text: 'ACTION CAM • TOKEN CAPTURE!',
+          subtitle: 'Opponent Cut! Bonus Turn Earned',
+        });
+      } else {
+        setActionCamBadge({
+          type: 'home',
+          text: 'ACTION CAM • REACHED HOME!',
+          subtitle: 'Kingdom Triumph! Bonus Turn Earned',
+        });
+      }
+
+      if (actionZoomLayerRef.current) {
+        gsap.killTweensOf(actionZoomLayerRef.current);
+
+        // 1. Smooth rapid zoom in to focus on the target square
+        gsap.to(actionZoomLayerRef.current, {
+          scale: 1.42,
+          transformOrigin: `${originX.toFixed(1)}% ${originY.toFixed(1)}%`,
+          duration: 0.38,
+          ease: 'power2.out',
+        });
+
+        // 2. Impact camera rumble right when the pawn lands
+        gsap.to(actionZoomLayerRef.current, {
+          duration: 0.22,
+          delay: 0.28,
+          ease: 'rough',
+          keyframes: [
+            { x: -3.5, y: 2.5, duration: 0.05 },
+            { x: 3, y: -2, duration: 0.05 },
+            { x: -2, y: 1.5, duration: 0.05 },
+            { x: 0, y: 0, duration: 0.07 },
+          ],
+        });
+      }
+
+      return () => {
+        if (actionZoomLayerRef.current) {
+          gsap.killTweensOf(actionZoomLayerRef.current);
+          gsap.to(actionZoomLayerRef.current, {
+            scale: 1,
+            transformOrigin: '50% 50%',
+            x: 0,
+            y: 0,
+            duration: 0.35,
+            ease: 'power2.inOut',
+            onComplete: () => setActionCamBadge(null),
+          });
+        }
+      };
+    }, [activeMove, actionCameraEnabled, pawns]);
+
+    const handleDismissActionZoom = () => {
+      if (actionZoomLayerRef.current) {
+        gsap.killTweensOf(actionZoomLayerRef.current);
+        gsap.to(actionZoomLayerRef.current, {
+          scale: 1,
+          transformOrigin: '50% 50%',
+          x: 0,
+          y: 0,
+          duration: 0.2,
+          ease: 'sine.out',
+          onComplete: () => setActionCamBadge(null),
+        });
+      }
+    };
 
     const legalPawnIds = useMemo(
       () => new Set(legalMoves.map((m) => m.pawnId)),
@@ -314,7 +449,8 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         if (row > 8 && col > 8) return null;
         if (row >= 6 && row <= 8 && col >= 6 && col <= 8) return null;
 
-        let bg = isDarkTheme ? 'bg-slate-800/95' : 'bg-white';
+        let bg = styleTokens.cellDefaultBg;
+        let borderClass = styleTokens.cellBorderClass;
         let icon: React.ReactNode = null;
 
         // Colored Start Squares
@@ -349,17 +485,15 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         } else if (col === 7 && row >= 9 && row <= 13) {
           bg = 'bg-amber-400';
         }
-        // 4 Star Safe Squares
+        // 4 Star Safe Squares (Theme-adaptive styling!)
         else if (row === 2 && col === 6) {
-          icon = <Star className="w-3.5 h-3.5 fill-rose-400 text-rose-500" />;
+          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
         } else if (row === 6 && col === 12) {
-          icon = (
-            <Star className="w-3.5 h-3.5 fill-emerald-400 text-emerald-500" />
-          );
+          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
         } else if (row === 12 && col === 8) {
-          icon = <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />;
+          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
         } else if (row === 8 && col === 2) {
-          icon = <Star className="w-3.5 h-3.5 fill-blue-400 text-blue-500" />;
+          icon = <Star className={`w-3.5 h-3.5 ${styleTokens.safeStarFill} drop-shadow`} />;
         }
         // Home Stretch Entry Arrows
         else if (row === 7 && col === 0) {
@@ -387,9 +521,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               gridRowStart: row + 1,
               gridColumnStart: col + 1,
             }}
-            className={`relative flex items-center justify-center border-[0.5px] ${
-              isDarkTheme ? 'border-slate-700' : 'border-slate-200/90'
-            } ${bg} shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)]`}
+            className={`relative flex items-center justify-center border-[0.5px] ${borderClass} ${bg} shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]`}
           >
             {icon}
           </div>
@@ -399,7 +531,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       return Array.from({ length: 15 }).map((_, r) =>
         Array.from({ length: 15 }).map((__, c) => renderTrackCell(r, c))
       );
-    }, [isDarkTheme]);
+    }, [styleTokens]);
 
     const renderYardBox = (
       color: PlayerColor,
@@ -408,12 +540,10 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       padClass: string
     ) => (
       <div
-        className={`${gridAreaClass} relative ${gradientClass} border border-white/40 shadow-inner`}
+        className={`${gridAreaClass} relative ${gradientClass} border ${styleTokens.yardBorderClass} shadow-inner`}
       >
         <div
-          className={`absolute inset-[11%] rounded-2xl ${
-            isDarkTheme ? 'bg-slate-900/90' : 'bg-white/92'
-          } shadow-[inset_0_3px_6px_rgba(0,0,0,0.12)]`}
+          className={`absolute inset-[11%] rounded-2xl ${styleTokens.yardInnerBg} shadow-[inset_0_3px_6px_rgba(0,0,0,0.12)]`}
         />
         {YARD_PAD_POSITIONS.map(([leftPct, topPct], slotIdx) => (
           <div
@@ -429,14 +559,44 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     );
 
     return (
-      <div className="relative w-full aspect-square max-w-[430px] mx-auto rounded-[28px] p-2 sm:p-2.5 bg-gradient-to-b from-white via-slate-50 to-slate-200 shadow-[0_18px_40px_rgba(15,23,42,0.24),inset_0_2px_4px_rgba(255,255,255,1)] border-4 border-white select-none">
-        {/* 15x15 Underlying Tactile Ludo Board */}
-        <div
-          className={`relative w-full h-full rounded-[20px] overflow-hidden grid grid-cols-15 grid-rows-15 border-2 ${
-            isDarkTheme
-              ? 'border-slate-700 bg-slate-900'
-              : 'border-slate-300 bg-white'
-          }`}
+      <div
+        onClick={actionCamBadge ? handleDismissActionZoom : undefined}
+        className={`relative w-full aspect-square max-w-[430px] mx-auto rounded-[28px] p-2 sm:p-2.5 ${styleTokens.outerContainerBg} border-4 ${styleTokens.outerBorderClass} select-none transition-colors duration-300`}
+      >
+        {/* Dynamic Action Camera Floating Badge */}
+        {actionCamBadge && (
+          <div
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.4)] border border-white/70 flex items-center gap-2 pointer-events-none animate-bounce backdrop-blur-md"
+            style={{
+              background:
+                actionCamBadge.type === 'cut'
+                  ? 'linear-gradient(135deg, rgba(225, 29, 72, 0.95), rgba(185, 28, 28, 0.95))'
+                  : 'linear-gradient(135deg, rgba(234, 179, 8, 0.95), rgba(217, 119, 6, 0.95))',
+            }}
+          >
+            <span className="text-sm">
+              {actionCamBadge.type === 'cut' ? '⚡' : '👑'}
+            </span>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-[10px] font-black tracking-wider uppercase text-white drop-shadow">
+                {actionCamBadge.text}
+              </span>
+              <span className="text-[9px] font-bold text-white/85">
+                {actionCamBadge.subtitle}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Overflow boundary wrapper so zoom stays cleanly inside rounded board frame */}
+        <div className="relative w-full h-full rounded-[20px] overflow-hidden">
+          <div
+            ref={actionZoomLayerRef}
+            className="relative w-full h-full will-change-transform"
+          >
+            {/* 15x15 Underlying Tactile Ludo Board */}
+            <div
+              className={`relative w-full h-full grid grid-cols-15 grid-rows-15 border-2 ${styleTokens.trackBorderClass} ${styleTokens.trackBg} transition-colors duration-300`}
           style={{
             gridTemplateColumns: 'repeat(15, minmax(0, 1fr))',
             gridTemplateRows: 'repeat(15, minmax(0, 1fr))',
@@ -475,7 +635,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
           )}
 
           {/* Center 3x3 Home Goal Triangles (rows 7..9, cols 7..9) */}
-          <div className="col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border border-slate-300 shadow-inner">
+          <div className={`col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border ${styleTokens.trackBorderClass} shadow-inner`}>
             <svg viewBox="0 0 100 100" className="w-full h-full block">
               <polygon points="0,0 50,50 0,100" fill="#2563eb" />
               <polygon points="0,0 100,0 50,50" fill="#e11d48" />
@@ -486,7 +646,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                 y1="0"
                 x2="100"
                 y2="100"
-                stroke="#ffffff"
+                stroke={styleTokens.homeDividerColor}
                 strokeWidth="2.5"
               />
               <line
@@ -494,7 +654,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                 y1="0"
                 x2="0"
                 y2="100"
-                stroke="#ffffff"
+                stroke={styleTokens.homeDividerColor}
                 strokeWidth="2.5"
               />
             </svg>
@@ -505,7 +665,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         </div>
 
         {/* 3D Three.js / @react-three/fiber Collectible Token Layer Aligned 1:1 with the 15x15 Grid */}
-        <div className="absolute inset-2 sm:inset-2.5 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none">
           <Canvas
             orthographic
             shadows
@@ -521,28 +681,35 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
             }}
             gl={{ alpha: true, antialias: true }}
           >
-            <StudioEnvironment intensity={1.18} />
-            <ambientLight intensity={0.45} />
-            <hemisphereLight
-              args={['#ffffff', '#cbd5e1', 0.55]}
-              position={[0, 15, 0]}
+            <StudioEnvironment intensity={lighting.exposure} />
+            <ambientLight
+              intensity={lighting.ambientIntensity}
+              color={lighting.ambientColor}
             />
             <directionalLight
-              position={[6, 15, 8]}
-              intensity={2.1}
+              position={[6, 14, 8]}
+              intensity={lighting.keyIntensity}
+              color={lighting.keyColor}
               castShadow
               shadow-mapSize={[1024, 1024]}
               shadow-camera-left={-9}
               shadow-camera-right={9}
               shadow-camera-top={9}
               shadow-camera-bottom={-9}
-              shadow-bias={-0.0008}
+              shadow-bias={-0.0006}
             />
             <pointLight
               position={[-6, 8, -4]}
-              intensity={0.75}
-              color="#fde047"
+              intensity={lighting.rimIntensity}
+              color={lighting.rimColor}
             />
+            {lighting.secondaryRimColor && (
+              <pointLight
+                position={[6, 8, -4]}
+                intensity={lighting.secondaryRimIntensity ?? 0.45}
+                color={lighting.secondaryRimColor}
+              />
+            )}
 
             {/* Transparent Shadow-Catcher Floor Plane so jumping tokens cast real dynamic shadows */}
             <mesh
@@ -551,11 +718,16 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               receiveShadow
             >
               <planeGeometry args={[16, 16]} />
-              <shadowMaterial transparent opacity={0.28} color="#0f172a" />
+              <shadowMaterial
+                transparent
+                opacity={boardTheme === 'midnight-neon' ? 0.22 : 0.28}
+                color="#0f172a"
+              />
             </mesh>
 
             <Suspense fallback={null}>
               <AutoZoomOrthographicController />
+              <StepEffects3D />
               {pawns.map((pawn) => {
                 const player = players[pawn.playerIndex] ?? players[0];
                 const g = getPawnGridCoord(
@@ -588,7 +760,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
 
         {/* Responsive 2D Touch/Click Hit Targets for Legal Movable Pawns */}
         {legalMoves.length > 0 && !activeMove && (
-          <div className="absolute inset-2 sm:inset-2.5 pointer-events-none">
+          <div className="absolute inset-0 pointer-events-none">
             {pawns
               .filter((p) => legalPawnIds.has(p.id))
               .map((pawn) => {
@@ -622,6 +794,8 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               })}
           </div>
         )}
+          </div>
+        </div>
       </div>
     );
   }

@@ -5,9 +5,60 @@ import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { soundManager } from '../../audio/soundManager';
 import { DICE_SKINS } from '../../engine/boardConfig';
-import { DiceSkinId } from '../../types/game';
+import { DicePodTheme, DiceSkinId } from '../../types/game';
 import { haptics } from '../../utils/haptics';
 import { StudioEnvironment } from './StudioEnvironment';
+
+function createStarPipGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  const rOuter = 0.088;
+  const rInner = 0.034;
+  for (let i = 0; i < 8; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const a = (i * Math.PI) / 4;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.018,
+    bevelEnabled: false,
+  });
+}
+
+function createDiamondPipGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0.095);
+  shape.lineTo(0.068, 0);
+  shape.lineTo(0, -0.095);
+  shape.lineTo(-0.068, 0);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.018,
+    bevelEnabled: false,
+  });
+}
+
+function createCrownAceGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.105, -0.065);
+  shape.lineTo(0.105, -0.065);
+  shape.lineTo(0.115, 0.038);
+  shape.lineTo(0.055, -0.01);
+  shape.lineTo(0, 0.075);
+  shape.lineTo(-0.055, -0.01);
+  shape.lineTo(-0.115, 0.038);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.018,
+    bevelEnabled: true,
+    bevelThickness: 0.003,
+    bevelSize: 0.003,
+    bevelSegments: 2,
+  });
+}
 
 /**
  * Target Euler rotations [x, y, z] so that when the camera looks from [0, 2.25, 1.78]
@@ -20,7 +71,7 @@ import { StudioEnvironment } from './StudioEnvironment';
  * +X (Right)  = 3
  * -X (Left)   = 4
  */
-const FACE_EULER_MAP: Record<number, [number, number, number]> = {
+export const FACE_EULER_MAP: Record<number, [number, number, number]> = {
   1: [0.35, 0.25, 0], // +Y Top
   2: [-Math.PI / 2 + 0.35, 0, 0], // +Z Front
   3: [0.35, 0, Math.PI / 2], // +X Right
@@ -29,14 +80,14 @@ const FACE_EULER_MAP: Record<number, [number, number, number]> = {
   6: [Math.PI + 0.35, -0.25, 0], // -Y Bottom
 };
 
-interface PipPositions {
+export interface PipPositions {
   faceValue: number;
   normal: [number, number, number];
   rotation: [number, number, number];
   pips: [number, number][];
 }
 
-const DICE_FACE_PIPS: PipPositions[] = [
+export const DICE_FACE_PIPS: PipPositions[] = [
   // 1 (+Y Top)
   {
     faceValue: 1,
@@ -109,14 +160,20 @@ const DICE_FACE_PIPS: PipPositions[] = [
 /**
  * Pre-allocated shared geometries for Dice pips & beveled rims (zero runtime allocation)
  */
-const SHARED_DICE_GEO = {
+export const SHARED_DICE_GEO = {
   pipWell: new THREE.CylinderGeometry(0.092, 0.076, 0.018, 24),
   pipAceWell: new THREE.CylinderGeometry(0.125, 0.105, 0.02, 28),
   pipRim: new THREE.RingGeometry(0.088, 0.106, 24),
   pipAceRim: new THREE.RingGeometry(0.118, 0.142, 28),
+  starPip: createStarPipGeometry(),
+  diamondPip: createDiamondPipGeometry(),
+  crownAce: createCrownAceGeometry(),
+  squarePip: new THREE.BoxGeometry(0.125, 0.125, 0.018),
+  lotusPip: new THREE.TorusGeometry(0.065, 0.024, 12, 22),
+  runePip: new THREE.CylinderGeometry(0.062, 0.062, 0.018, 6),
 };
 
-interface SkinPBRProfile {
+export interface SkinPBRProfile {
   metalness: number;
   roughness: number;
   clearcoat: number;
@@ -128,73 +185,88 @@ interface SkinPBRProfile {
   rimColor: string;
 }
 
-const SKIN_PBR_MAP: Record<DiceSkinId, SkinPBRProfile> = {
+export const SKIN_PBR_MAP: Record<DiceSkinId, SkinPBRProfile> = {
   'classic-white': {
-    metalness: 0.06,
-    roughness: 0.14,
+    metalness: 0.02,
+    roughness: 0.08,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
-    ior: 1.55,
-    sheen: 0.45,
+    clearcoatRoughness: 0.03,
+    ior: 1.54,
+    sheen: 0.85,
     pipEmissive: '#000000',
     pipEmissiveIntensity: 0,
     rimColor: '#cbd5e1',
   },
   'royal-gold': {
-    metalness: 0.88,
-    roughness: 0.12,
+    metalness: 0.94,
+    roughness: 0.08,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.04,
-    ior: 1.7,
-    sheen: 0.3,
-    pipEmissive: '#451a03',
-    pipEmissiveIntensity: 0.15,
+    clearcoatRoughness: 0.02,
+    ior: 1.88,
+    sheen: 0.35,
+    pipEmissive: '#d97706',
+    pipEmissiveIntensity: 0.18,
     rimColor: '#fef08a',
   },
   'ruby-blaze': {
-    metalness: 0.35,
-    roughness: 0.09,
+    metalness: 0.15,
+    roughness: 0.04,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.03,
-    ior: 1.75,
-    sheen: 0.5,
-    pipEmissive: '#ffffff',
-    pipEmissiveIntensity: 0.25,
+    clearcoatRoughness: 0.02,
+    ior: 1.76,
+    sheen: 0.45,
+    pipEmissive: '#fda4af',
+    pipEmissiveIntensity: 0.6,
     rimColor: '#fecdd3',
   },
   'cyber-neon': {
-    metalness: 0.68,
-    roughness: 0.1,
-    clearcoat: 1.0,
+    metalness: 0.78,
+    roughness: 0.16,
+    clearcoat: 0.85,
     clearcoatRoughness: 0.04,
     ior: 1.6,
     sheen: 0.2,
     pipEmissive: '#22d3ee',
-    pipEmissiveIntensity: 2.2,
+    pipEmissiveIntensity: 3.2,
     rimColor: '#38bdf8',
   },
   'emerald-jade': {
-    metalness: 0.24,
-    roughness: 0.12,
+    metalness: 0.12,
+    roughness: 0.09,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
+    clearcoatRoughness: 0.04,
     ior: 1.66,
-    sheen: 0.65,
+    sheen: 0.82,
     pipEmissive: '#ecfdf5',
     pipEmissiveIntensity: 0.2,
     rimColor: '#6ee7b7',
   },
   'obsidian-galaxy': {
-    metalness: 0.78,
-    roughness: 0.06,
+    metalness: 0.85,
+    roughness: 0.02,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.02,
-    ior: 1.8,
-    sheen: 0.35,
+    clearcoatRoughness: 0.01,
+    ior: 1.88,
+    sheen: 0.4,
     pipEmissive: '#f472b6',
-    pipEmissiveIntensity: 2.0,
+    pipEmissiveIntensity: 2.8,
     rimColor: '#c084fc',
   },
+};
+
+const POD_CONTAINER_CLASSES: Record<DicePodTheme, string> = {
+  'alabaster-brass':
+    'bg-gradient-to-b from-stone-50 via-amber-50 to-stone-200 border-4 border-amber-300 shadow-[0_10px_25px_rgba(180,83,9,0.25),inset_0_4px_8px_rgba(255,255,255,0.9)]',
+  'scarlet-velvet-gold':
+    'bg-gradient-to-b from-amber-300 via-rose-900 to-red-950 border-4 border-amber-400 shadow-[0_10px_25px_rgba(225,29,72,0.4),inset_0_4px_8px_rgba(255,255,255,0.4)]',
+  'rosegold-jeweler':
+    'bg-gradient-to-b from-rose-100 via-rose-200 to-rose-300 border-4 border-rose-300 shadow-[0_10px_25px_rgba(244,63,94,0.35),inset_0_4px_8px_rgba(255,255,255,0.8)]',
+  'cyber-hex-dock':
+    'bg-gradient-to-b from-slate-900 via-cyan-950 to-slate-950 border-4 border-cyan-400 shadow-[0_10px_25px_rgba(6,182,212,0.45),inset_0_4px_8px_rgba(34,211,238,0.25)]',
+  'celadon-lotus':
+    'bg-gradient-to-b from-emerald-100 via-teal-100 to-emerald-200 border-4 border-emerald-400 shadow-[0_10px_25px_rgba(5,150,105,0.3),inset_0_4px_8px_rgba(255,255,255,0.9)]',
+  'meteorite-suspension':
+    'bg-gradient-to-b from-slate-950 via-purple-950 to-black border-4 border-purple-500 shadow-[0_10px_25px_rgba(168,85,247,0.45),inset_0_4px_8px_rgba(192,132,252,0.25)]',
 };
 
 interface PhysicsDieMeshProps {
@@ -215,6 +287,15 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
     );
     const pbr = SKIN_PBR_MAP[skinId] ?? SKIN_PBR_MAP['classic-white'];
 
+const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
+  'classic-white': 1.0,
+  'royal-gold': 0.82,
+  'ruby-blaze': 1.35,
+  'cyber-neon': 1.15,
+  'emerald-jade': 0.9,
+  'obsidian-galaxy': 0.72,
+};
+
     useEffect(() => {
       if (!visualGroupRef.current) return;
       const grp = visualGroupRef.current;
@@ -225,7 +306,7 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
 
       if (isRolling) {
         hasSettledFiredRef.current = false;
-        soundManager.play('dice_roll');
+        soundManager.play('dice_roll', DICE_AUDIO_PITCH_MAP[skinId] ?? 1.0);
         const targetEuler = FACE_EULER_MAP[value] ?? FACE_EULER_MAP[1];
 
         // Normalize current rotation to [0..2PI) before launching smooth multi-axis spin
@@ -417,86 +498,138 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
       }
     });
 
+    const cubeConfig = useMemo(() => {
+      switch (skin.shapeType) {
+        case 'chamfered-bullion':
+          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.12, smoothness: 3 };
+        case 'cushion-gem':
+          return { args: [1.04, 1.04, 1.04] as [number, number, number], radius: 0.14, smoothness: 6 };
+        case 'sci-fi-datacube':
+          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.08, smoothness: 4 };
+        case 'worn-seal':
+          return { args: [1.05, 1.05, 1.05] as [number, number, number], radius: 0.15, smoothness: 8 };
+        case 'monolith-glass':
+          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.09, smoothness: 8 };
+        default:
+          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.165, smoothness: 10 };
+      }
+    }, [skin.shapeType]);
+
+    const getPipGeo = (faceVal: number) => {
+      if (faceVal === 1) {
+        if (skinId === 'classic-white') return SHARED_DICE_GEO.crownAce;
+        if (skinId === 'royal-gold') return SHARED_DICE_GEO.starPip;
+        if (skinId === 'ruby-blaze') return SHARED_DICE_GEO.diamondPip;
+        if (skinId === 'cyber-neon') return SHARED_DICE_GEO.squarePip;
+        if (skinId === 'emerald-jade') return SHARED_DICE_GEO.lotusPip;
+        if (skinId === 'obsidian-galaxy') return SHARED_DICE_GEO.runePip;
+        return SHARED_DICE_GEO.pipAceWell;
+      }
+      switch (skin.pipShape) {
+        case 'star-pyramid':
+          return SHARED_DICE_GEO.starPip;
+        case 'crystal-diamond':
+          return SHARED_DICE_GEO.diamondPip;
+        case 'digital-square':
+          return SHARED_DICE_GEO.squarePip;
+        case 'lotus-spiral':
+          return SHARED_DICE_GEO.lotusPip;
+        case 'constellation-rune':
+          return SHARED_DICE_GEO.runePip;
+        default:
+          return SHARED_DICE_GEO.pipWell;
+      }
+    };
+
     return (
       <group ref={visualGroupRef}>
-          {/* Sculpted High-Tessellation Rounded Cube Body */}
-          <RoundedBox
-            args={[1.06, 1.06, 1.06]}
-            radius={0.135}
-            smoothness={8}
-            castShadow
-            receiveShadow
-          >
-            <meshPhysicalMaterial
-              color={skin.bodyColor}
-              metalness={pbr.metalness}
-              roughness={pbr.roughness}
-              clearcoat={pbr.clearcoat}
-              clearcoatRoughness={pbr.clearcoatRoughness}
-              ior={pbr.ior}
-              sheen={pbr.sheen}
-              sheenColor="#ffffff"
-            />
-          </RoundedBox>
+        {/* Sculpted High-Tessellation Custom Shaped Cube Body */}
+        <RoundedBox
+          args={cubeConfig.args}
+          radius={cubeConfig.radius}
+          smoothness={cubeConfig.smoothness}
+          castShadow
+          receiveShadow
+        >
+          <meshPhysicalMaterial
+            color={skin.bodyColor}
+            metalness={skin.metalness}
+            roughness={skin.roughness}
+            clearcoat={pbr.clearcoat}
+            clearcoatRoughness={pbr.clearcoatRoughness}
+            ior={pbr.ior}
+            sheen={pbr.sheen}
+            sheenColor={
+              skinId === 'emerald-jade'
+                ? '#d1fae5'
+                : skinId === 'classic-white'
+                ? '#fef3c7'
+                : '#ffffff'
+            }
+            transmission={skin.transmission ?? 0}
+            thickness={skin.thickness ?? 0}
+          />
+        </RoundedBox>
 
-          {/* Engraved Recessed 3D Pips + Metallic Bevel Rims on all 6 faces */}
-          {DICE_FACE_PIPS.map((face, fIdx) => {
-            const isClassicAce =
-              skinId === 'classic-white' && face.faceValue === 1;
-            const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
-            const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
+        {/* Engraved Recessed 3D Pips + Metallic Bevel Rims on all 6 faces */}
+        {DICE_FACE_PIPS.map((face, fIdx) => {
+          const isAce = face.faceValue === 1;
+          const isClassicAce = skinId === 'classic-white' && isAce;
+          const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
+          const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
+          const pipGeo = getPipGeo(face.faceValue);
 
-            return (
-              <group
-                key={fIdx}
-                position={face.normal}
-                rotation={face.rotation}
-              >
-                {face.pips.map(([px, py], pIdx) => (
-                  <group key={pIdx} position={[px, py, 0]}>
-                    {/* Recessed Engraved Pip Well */}
-                    <mesh
-                      geometry={
-                        isClassicAce
-                          ? SHARED_DICE_GEO.pipAceWell
-                          : SHARED_DICE_GEO.pipWell
+          return (
+            <group
+              key={fIdx}
+              position={face.normal}
+              rotation={face.rotation}
+            >
+              {face.pips.map(([px, py], pIdx) => (
+                <group key={pIdx} position={[px, py, 0]}>
+                  {/* Recessed Engraved Custom Pip Well */}
+                  <mesh
+                    geometry={pipGeo}
+                    position={[0, 0, -0.004]}
+                    rotation={
+                      skin.pipShape === 'digital-square'
+                        ? [0, 0, 0]
+                        : [Math.PI / 2, 0, 0]
+                    }
+                  >
+                    <meshPhysicalMaterial
+                      color={pipColor}
+                      roughness={0.14}
+                      metalness={0.35}
+                      clearcoat={1}
+                      emissive={isClassicAce ? '#991b1b' : pbr.pipEmissive}
+                      emissiveIntensity={
+                        isClassicAce ? 0.25 : pbr.pipEmissiveIntensity
                       }
-                      position={[0, 0, -0.004]}
-                      rotation={[Math.PI / 2, 0, 0]}
-                    >
-                      <meshPhysicalMaterial
-                        color={pipColor}
-                        roughness={0.14}
-                        metalness={0.35}
-                        clearcoat={1}
-                        emissive={isClassicAce ? '#991b1b' : pbr.pipEmissive}
-                        emissiveIntensity={
-                          isClassicAce ? 0.25 : pbr.pipEmissiveIntensity
-                        }
-                      />
-                    </mesh>
-                    {/* Fine Metallic / Luminous Bevel Rim Around Pip */}
-                    <mesh
-                      geometry={
-                        isClassicAce
-                          ? SHARED_DICE_GEO.pipAceRim
-                          : SHARED_DICE_GEO.pipRim
-                      }
-                      position={[0, 0, 0.006]}
-                    >
-                      <meshStandardMaterial
-                        color={rimColor}
-                        metalness={0.8}
-                        roughness={0.18}
-                        side={THREE.DoubleSide}
-                      />
-                    </mesh>
-                  </group>
-                ))}
-              </group>
-            );
-          })}
-        </group>
+                    />
+                  </mesh>
+                  {/* Fine Metallic / Luminous Bevel Rim Around Pip */}
+                  <mesh
+                    geometry={
+                      isClassicAce
+                        ? SHARED_DICE_GEO.pipAceRim
+                        : SHARED_DICE_GEO.pipRim
+                    }
+                    position={[0, 0, 0.006]}
+                  >
+                    <meshStandardMaterial
+                      color={rimColor}
+                      metalness={0.8}
+                      roughness={0.18}
+                      side={THREE.DoubleSide}
+                    />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          );
+        })}
+      </group>
     );
   }
 );
@@ -535,6 +668,10 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
         ? 'w-20 h-20'
         : 'w-24 h-24 sm:w-28 sm:h-28';
 
+    const podPlatformClass =
+      POD_CONTAINER_CLASSES[skin.podTheme] ??
+      POD_CONTAINER_CLASSES['alabaster-brass'];
+
     return (
       <button
         type="button"
@@ -560,35 +697,35 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
           }}
         />
 
-        {/* Glossy Pod Platform */}
-        <div className="relative w-full h-full rounded-full bg-gradient-to-b from-amber-50/95 via-amber-100/90 to-amber-200/95 border-4 border-amber-300/90 shadow-[0_10px_25px_rgba(180,83,9,0.35),inset_0_4px_8px_rgba(255,255,255,0.9)] overflow-hidden">
+        {/* Theme-Adaptive Glossy Pod Platform */}
+        <div className={`relative w-full h-full rounded-full ${podPlatformClass} overflow-hidden transition-all duration-300`}>
           <Canvas
             shadows
             dpr={[1, 2]}
             camera={{ position: [0, 2.25, 1.78], fov: 35 }}
             gl={{ alpha: true, antialias: true }}
           >
-            <StudioEnvironment intensity={1.25} />
-            <ambientLight intensity={0.45} />
+            <StudioEnvironment intensity={1.05} />
+            <ambientLight intensity={0.35} />
             <directionalLight
               position={[4, 6, 4]}
-              intensity={2.1}
+              intensity={1.35}
               castShadow
               shadow-mapSize={[512, 512]}
             />
             <pointLight
               position={[-3, 3, 2]}
-              intensity={1.1}
+              intensity={0.65}
               color={skin.edgeGlow}
             />
             <Suspense fallback={null}>
               <ContactShadows
                 position={[0, -0.66, 0]}
-                opacity={0.5}
+                opacity={0.42}
                 scale={2.4}
                 blur={2.2}
                 far={1.5}
-                color="#451a03"
+                color="#261005"
               />
               <PhysicsDieMesh
                 skinId={skinId}

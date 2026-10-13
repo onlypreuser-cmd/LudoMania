@@ -2,7 +2,10 @@ import { motion } from 'framer-motion';
 import {
   ChevronRight,
   Palette,
+  Play,
+  RotateCcw,
   Settings,
+  Trash2,
   Trophy,
   Users,
   Volume2,
@@ -20,6 +23,8 @@ export const HomePage: React.FC = () => {
   const userAvatar = useProfileStore((s) => s.userAvatar);
   const soundEnabled = useProfileStore((s) => s.soundEnabled);
   const toggleSound = useProfileStore((s) => s.toggleSound);
+  const savedGameSession = useProfileStore((s) => s.savedGameSession);
+  const clearSavedGameSession = useProfileStore((s) => s.clearSavedGameSession);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -117,6 +122,70 @@ export const HomePage: React.FC = () => {
             className="w-full h-auto max-h-[380px] object-contain mx-auto block select-none"
           />
         </div>
+
+        {/* Unfinished Match Resume Card */}
+        {savedGameSession &&
+          (savedGameSession.pawns.some((p) => p.step > -1) ||
+            savedGameSession.turnNumber > 1) && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="my-2 rounded-[24px] p-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-[0_12px_28px_rgba(249,115,22,0.35)] border-2 border-white/80 flex flex-col gap-2.5 z-10"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-ping" />
+                  <span className="text-[11px] font-black tracking-wider uppercase text-amber-100">
+                    Unfinished Match
+                  </span>
+                </div>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-black/25 backdrop-blur-sm">
+                  Turn {savedGameSession.turnNumber}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between px-1">
+                <div className="text-left">
+                  <p className="text-sm font-black truncate max-w-[220px]">
+                    {savedGameSession.players[0]?.name || 'Player 1'} vs{' '}
+                    {savedGameSession.players[1]?.name || 'Player 2'}
+                  </p>
+                  <p className="text-[11px] text-white/85 font-semibold">
+                    {savedGameSession.players[savedGameSession.currentPlayerIndex]
+                      ?.name || 'Current Player'}
+                    's Turn
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.play('ui_click');
+                    navigate('/game');
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-white text-slate-900 font-extrabold text-xs shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-600 stroke-[2.8]" />
+                  Resume Match
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.play('ui_click');
+                    clearSavedGameSession();
+                  }}
+                  className="py-2 px-3 rounded-xl bg-black/30 hover:bg-black/45 text-white/90 font-bold text-xs backdrop-blur-sm transition-all cursor-pointer flex items-center justify-center gap-1"
+                  title="Discard Saved Match"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Discard
+                </button>
+              </div>
+            </motion.div>
+          )}
 
         {/* Main CTA Section (Local Play Only) */}
         <div className="space-y-3 z-10">

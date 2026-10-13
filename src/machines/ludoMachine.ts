@@ -1,19 +1,23 @@
 import { assign, setup } from 'xstate';
+import { BOARD_THEMES } from '../engine/boardConfig';
 import {
   createInitialBiasState,
   getLegalMovesForPlayer,
   rollSmartDice,
 } from '../engine/diceEngine';
 import {
+  BoardThemeId,
   DiceBiasState,
   MoveEvaluation,
   Pawn,
   PlayerConfig,
+  SavedGameSession,
 } from '../types/game';
 
 export interface LudoMachineContext {
   players: PlayerConfig[];
   pawns: Pawn[];
+  boardTheme: BoardThemeId;
   currentPlayerIndex: number;
   diceValue: number | null;
   playerLastDiceValues: number[];
@@ -30,7 +34,8 @@ export interface LudoMachineContext {
 }
 
 export type LudoMachineEvent =
-  | { type: 'CONFIGURE_PLAYERS'; players: PlayerConfig[] }
+  | { type: 'CONFIGURE_PLAYERS'; players: PlayerConfig[]; boardTheme?: BoardThemeId }
+  | { type: 'RESTORE_SESSION'; session: SavedGameSession }
   | { type: 'ROLL_DICE' }
   | { type: 'DICE_SETTLED' }
   | { type: 'SELECT_PAWN'; pawnId: string }
@@ -57,7 +62,11 @@ export const ludoMachine = setup({
   types: {
     context: {} as LudoMachineContext,
     events: {} as LudoMachineEvent,
-    input: {} as { players: PlayerConfig[] },
+    input: {} as {
+      players: PlayerConfig[];
+      boardTheme?: BoardThemeId;
+      savedSession?: SavedGameSession | null;
+    },
   },
   guards: {
     isThirdConsecutiveSix: ({ context }) => context.consecutiveSixes >= 3,
@@ -175,11 +184,32 @@ export const ludoMachine = setup({
         return pawn;
       });
 
+      const activeTheme =
+        BOARD_THEMES.find((t) => t.id === context.boardTheme) ?? BOARD_THEMES[0];
+      const perk = activeTheme.perk;
+
       const nextBonus = [...context.captureBonusPoints];
+      let moveBonusEarned = 0;
+
+      // 1. Capture Bounties (base 30 + theme captureBountyBonus)
       if (move.willKillPawnIds.length > 0) {
+        const bountyEach = 30 + (perk.captureBountyBonus || 0);
+        moveBonusEarned += move.willKillPawnIds.length * bountyEach;
+      }
+
+      // 2. Safe Star Fortitude Bonus
+      if (move.landsOnSafeStar && perk.safeStarFortitudeBonus > 0) {
+        moveBonusEarned += perk.safeStarFortitudeBonus;
+      }
+
+      // 3. Home Stretch Overdrive Surge Bonus
+      if (move.toStep >= 51 && move.fromStep < 51 && perk.homeStretchSurgeBonus > 0) {
+        moveBonusEarned += perk.homeStretchSurgeBonus;
+      }
+
+      if (moveBonusEarned > 0) {
         nextBonus[context.currentPlayerIndex] =
-          (nextBonus[context.currentPlayerIndex] ?? 0) +
-          move.willKillPawnIds.length * 30;
+          (nextBonus[context.currentPlayerIndex] ?? 0) + moveBonusEarned;
       }
 
       const rolledSix = context.diceValue === 6;
@@ -189,13 +219,23 @@ export const ludoMachine = setup({
 
       let statusMessage = `${currentPlayer.name} moved to step ${move.toStep}.`;
       if (killedOpponent) {
-        statusMessage = `💥 CAPTURE! ${currentPlayer.name} cut opponent's token & gets a Bonus Roll!`;
+        const perkTag =
+          perk.captureBountyBonus > 0
+            ? ` (+${30 + perk.captureBountyBonus} ${perk.perkName})`
+            : '';
+        statusMessage = `💥 CAPTURE! ${currentPlayer.name} cut opponent token${perkTag} & gets a Bonus Roll!`;
       } else if (reachedHome) {
         statusMessage = `🏠 HOME! ${currentPlayer.name}'s token reached Home! Bonus Roll!`;
+      } else if (move.landsOnSafeStar) {
+        const fortTag =
+          perk.safeStarFortitudeBonus > 0
+            ? ` (+${perk.safeStarFortitudeBonus} ${perk.perkName})`
+            : '';
+        statusMessage = `⭐ Safe Star! ${currentPlayer.name} is fortified${fortTag}.`;
+      } else if (move.toStep >= 51 && move.fromStep < 51 && perk.homeStretchSurgeBonus > 0) {
+        statusMessage = `⚡ Overdrive! ${currentPlayer.name} entered Home Stretch (+${perk.homeStretchSurgeBonus} Surge)!`;
       } else if (rolledSix) {
         statusMessage = `🎲 Rolled a 6! ${currentPlayer.name} gets an Extra Roll!`;
-      } else if (move.landsOnSafeStar) {
-        statusMessage = `⭐ Safe Star! ${currentPlayer.name}'s token is protected.`;
       }
 
       return {
@@ -238,8 +278,20 @@ export const ludoMachine = setup({
 
     declareWinner: assign(({ context }) => {
       const winner = context.players[context.currentPlayerIndex];
+      const activeTheme =
+        BOARD_THEMES.find((t) => t.id === context.boardTheme) ?? BOARD_THEMES[0];
+      const nextBonus = [...context.captureBonusPoints];
+
+      // Clean match check: if no opponent captured the winner's pawns
+      if (activeTheme.perk.cleanMatchBounty > 0) {
+        nextBonus[context.currentPlayerIndex] =
+          (nextBonus[context.currentPlayerIndex] ?? 0) +
+          activeTheme.perk.cleanMatchBounty;
+      }
+
       return {
         winnerIndex: context.currentPlayerIndex,
+        captureBonusPoints: nextBonus,
         statusMessage: `🏆 ${winner.name} wins the match!`,
       };
     }),
@@ -247,9 +299,14 @@ export const ludoMachine = setup({
     resetMatchState: assign(({ context, event }) => {
       const players =
         event.type === 'CONFIGURE_PLAYERS' ? event.players : context.players;
+      const boardTheme =
+        event.type === 'CONFIGURE_PLAYERS' && event.boardTheme
+          ? event.boardTheme
+          : context.boardTheme;
       return {
         players,
         pawns: createInitialPawns(players),
+        boardTheme,
         currentPlayerIndex: 0,
         diceValue: null,
         playerLastDiceValues: players.map(() => 1),
@@ -265,31 +322,86 @@ export const ludoMachine = setup({
         statusMessage: `${players[0]?.name || 'Player 1'}'s turn to roll!`,
       };
     }),
+
+    restoreSessionState: assign(({ event }) => {
+      if (event.type !== 'RESTORE_SESSION') return {};
+      const s = event.session;
+      return {
+        players: s.players,
+        pawns: s.pawns,
+        boardTheme: s.boardTheme ?? 'classic-kingdom',
+        currentPlayerIndex: s.currentPlayerIndex,
+        diceValue: null,
+        playerLastDiceValues: s.playerLastDiceValues ?? s.players.map(() => 1),
+        consecutiveSixes: s.consecutiveSixes ?? 0,
+        legalMoves: [],
+        activeMove: null,
+        hasExtraTurn: false,
+        lastCapturedPawnIds: [],
+        captureBonusPoints: s.captureBonusPoints ?? s.players.map(() => 0),
+        biasState: createInitialBiasState(),
+        winnerIndex: null,
+        turnNumber: s.turnNumber ?? 1,
+        statusMessage:
+          s.statusMessage ||
+          `${s.players[s.currentPlayerIndex]?.name || 'Player'}'s turn to roll!`,
+      };
+    }),
   },
 }).createMachine({
   id: 'ludoMania',
   initial: 'IDLE',
-  context: ({ input }) => ({
-    players: input.players,
-    pawns: createInitialPawns(input.players),
-    currentPlayerIndex: 0,
-    diceValue: null,
-    playerLastDiceValues: input.players.map(() => 1),
-    consecutiveSixes: 0,
-    legalMoves: [],
-    activeMove: null,
-    hasExtraTurn: false,
-    lastCapturedPawnIds: [],
-    captureBonusPoints: input.players.map(() => 0),
-    biasState: createInitialBiasState(),
-    winnerIndex: null,
-    turnNumber: 1,
-    statusMessage: `${input.players[0]?.name || 'Player 1'}'s turn to roll!`,
-  }),
+  context: ({ input }) => {
+    if (input.savedSession) {
+      const s = input.savedSession;
+      return {
+        players: s.players,
+        pawns: s.pawns,
+        boardTheme: s.boardTheme ?? input.boardTheme ?? 'classic-kingdom',
+        currentPlayerIndex: s.currentPlayerIndex,
+        diceValue: null,
+        playerLastDiceValues: s.playerLastDiceValues ?? s.players.map(() => 1),
+        consecutiveSixes: s.consecutiveSixes ?? 0,
+        legalMoves: [],
+        activeMove: null,
+        hasExtraTurn: false,
+        lastCapturedPawnIds: [],
+        captureBonusPoints: s.captureBonusPoints ?? s.players.map(() => 0),
+        biasState: createInitialBiasState(),
+        winnerIndex: null,
+        turnNumber: s.turnNumber ?? 1,
+        statusMessage:
+          s.statusMessage ||
+          `${s.players[s.currentPlayerIndex]?.name || 'Player'}'s turn to roll!`,
+      };
+    }
+    return {
+      players: input.players,
+      pawns: createInitialPawns(input.players),
+      boardTheme: input.boardTheme ?? 'classic-kingdom',
+      currentPlayerIndex: 0,
+      diceValue: null,
+      playerLastDiceValues: input.players.map(() => 1),
+      consecutiveSixes: 0,
+      legalMoves: [],
+      activeMove: null,
+      hasExtraTurn: false,
+      lastCapturedPawnIds: [],
+      captureBonusPoints: input.players.map(() => 0),
+      biasState: createInitialBiasState(),
+      winnerIndex: null,
+      turnNumber: 1,
+      statusMessage: `${input.players[0]?.name || 'Player 1'}'s turn to roll!`,
+    };
+  },
   on: {
     CONFIGURE_PLAYERS: {
       target: '.IDLE',
       actions: 'resetMatchState',
+    },
+    RESTORE_SESSION: {
+      target: '.IDLE',
+      actions: 'restoreSessionState',
     },
     RESET_MATCH: {
       target: '.IDLE',

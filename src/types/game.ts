@@ -57,6 +57,30 @@ export interface TokenSkinOption {
   unlockedByDefault: boolean;
 }
 
+export type DiceShapeType =
+  | 'pillowed-cube'
+  | 'chamfered-bullion'
+  | 'cushion-gem'
+  | 'sci-fi-datacube'
+  | 'worn-seal'
+  | 'monolith-glass';
+
+export type DicePipShape =
+  | 'classic-circle'
+  | 'star-pyramid'
+  | 'crystal-diamond'
+  | 'digital-square'
+  | 'lotus-spiral'
+  | 'constellation-rune';
+
+export type DicePodTheme =
+  | 'alabaster-brass'
+  | 'scarlet-velvet-gold'
+  | 'rosegold-jeweler'
+  | 'cyber-hex-dock'
+  | 'celadon-lotus'
+  | 'meteorite-suspension';
+
 export interface DiceSkinOption {
   id: DiceSkinId;
   name: string;
@@ -67,6 +91,49 @@ export interface DiceSkinOption {
   roughness: number;
   price: number;
   unlockedByDefault: boolean;
+  shapeType: DiceShapeType;
+  pipShape: DicePipShape;
+  transmission: number;
+  thickness: number;
+  podTheme: DicePodTheme;
+  soundId: string;
+}
+
+export interface BoardPerk {
+  perkName: string;
+  badge: string;
+  description: string;
+  captureBountyBonus: number;
+  safeStarFortitudeBonus: number;
+  homeStretchSurgeBonus: number;
+  cleanMatchBounty: number;
+}
+
+export interface BoardLightingRig {
+  ambientIntensity: number;
+  ambientColor: string;
+  keyIntensity: number;
+  keyColor: string;
+  rimIntensity: number;
+  rimColor: string;
+  secondaryRimColor?: string;
+  secondaryRimIntensity?: number;
+  exposure: number;
+}
+
+export interface BoardStyleTokens {
+  outerContainerBg: string;
+  outerBorderClass: string;
+  trackBg: string;
+  trackBorderClass: string;
+  cellDefaultBg: string;
+  cellBorderClass: string;
+  yardBorderClass: string;
+  yardInnerBg: string;
+  safeStarFill: string;
+  safeStarText: string;
+  homeDividerColor: string;
+  homeCenterSvgBg: string;
 }
 
 export interface BoardThemeOption {
@@ -78,6 +145,9 @@ export interface BoardThemeOption {
   bgGradient: string;
   cellBg: string;
   borderAccent: string;
+  perk: BoardPerk;
+  lighting: BoardLightingRig;
+  styleTokens: BoardStyleTokens;
 }
 
 /**
@@ -150,3 +220,19 @@ export interface MoveEvaluation {
   willReachHome: boolean;
   landsOnSafeStar: boolean;
 }
+
+export interface SavedGameSession {
+  id: string;
+  players: PlayerConfig[];
+  pawns: Pawn[];
+  boardTheme: BoardThemeId;
+  currentPlayerIndex: number;
+  diceValue: number | null;
+  playerLastDiceValues: number[];
+  consecutiveSixes: number;
+  captureBonusPoints: number[];
+  turnNumber: number;
+  statusMessage: string;
+  timestamp: number;
+}
+

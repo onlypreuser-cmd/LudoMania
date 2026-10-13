@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Dices,
+  Eye,
   Palette,
   Pencil,
   Sparkles,
@@ -12,7 +13,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { soundManager } from '../audio/soundManager';
 import { PlayerSetupModal } from '../components/modals/PlayerSetupModal';
-import { TokenPreviewCanvas } from '../components/three/TokenPreviewCanvas';
+import { SkinPickerModal } from '../components/modals/SkinPickerModal';
 import {
   AVATAR_OPTIONS,
   BOARD_THEMES,
@@ -30,6 +31,41 @@ const CORNER_LABELS: Record<PlayerColor, string> = {
   yellow: 'Bottom-Left Corner',
 };
 
+const FUN_GAMER_NAMES = [
+  'ThunderAce',
+  'DiceMaster',
+  'PandaKing',
+  'GoldenRoll',
+  'ShadowNinja',
+  'StarStriker',
+  'TitanClaw',
+  'MysticRoll',
+  'CyberHero',
+  'DragonLord',
+  'LuckyStrike',
+  'SpeedyPawn',
+];
+
+const TOKEN_ICON_MAP: Record<string, string> = {
+  classic: '♟️',
+  knight: '🐴',
+  dog: '🐶',
+  cat: '🐱',
+  panda: '🐼',
+  robot: '🤖',
+  astronaut: '🧑‍🚀',
+  unicorn: '🦄',
+  'bamboo-panda': '🎋',
+  'cyber-robot': '🦾',
+  astronomer: '🔭',
+  'star-unicorn': '✨',
+  'fire-dragon': '🐉',
+  'ice-dragon': '❄️',
+  pirate: '🏴‍☠️',
+  magician: '🧙',
+  alien: '👽',
+};
+
 export const MatchSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -38,15 +74,20 @@ export const MatchSetupPage: React.FC = () => {
     selectedBoardTheme,
     setSelectedBoardTheme,
     unlockedBoardThemes,
-    unlockedTokenSkins,
-    unlockedDiceSkins,
     soundEnabled,
     toggleSound,
+    clearSavedGameSession,
   } = useProfileStore();
 
   const [editingPlayerModalIdx, setEditingPlayerModalIdx] = useState<0 | 1 | null>(
     null
   );
+  const [studioModal, setStudioModal] = useState<{
+    isOpen: boolean;
+    mode: 'token' | 'dice';
+    playerIdx: 0 | 1;
+    skinId: string;
+  } | null>(null);
   const [validationAlert, setValidationAlert] = useState<string>('');
 
   const cycleAvatar = (playerIdx: 0 | 1, dir: -1 | 1) => {
@@ -55,28 +96,6 @@ export const MatchSetupPage: React.FC = () => {
     const idx = AVATAR_OPTIONS.findIndex((a) => a.id === current.avatarId);
     const nextIdx = (idx + dir + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;
     updatePlayerConfig(playerIdx, { avatarId: AVATAR_OPTIONS[nextIdx].id });
-  };
-
-  const cycleTokenSkin = (playerIdx: 0 | 1) => {
-    soundManager.play('ui_click');
-    const available = TOKEN_SKINS.filter((s) =>
-      unlockedTokenSkins.includes(s.id)
-    );
-    const current = players[playerIdx];
-    const idx = available.findIndex((s) => s.id === current.tokenSkin);
-    const next = available[(idx + 1) % available.length] ?? TOKEN_SKINS[0];
-    updatePlayerConfig(playerIdx, { tokenSkin: next.id });
-  };
-
-  const cycleDiceSkin = (playerIdx: 0 | 1) => {
-    soundManager.play('ui_click');
-    const available = DICE_SKINS.filter((d) =>
-      unlockedDiceSkins.includes(d.id)
-    );
-    const current = players[playerIdx];
-    const idx = available.findIndex((d) => d.id === current.diceSkin);
-    const next = available[(idx + 1) % available.length] ?? DICE_SKINS[0];
-    updatePlayerConfig(playerIdx, { diceSkin: next.id });
   };
 
   const handleStartMatch = () => {
@@ -96,6 +115,7 @@ export const MatchSetupPage: React.FC = () => {
     }
 
     setValidationAlert('');
+    clearSavedGameSession(); // Ensure fresh start
     navigate('/game');
   };
 
@@ -108,12 +128,13 @@ export const MatchSetupPage: React.FC = () => {
       TOKEN_SKINS.find((t) => t.id === player.tokenSkin) ?? TOKEN_SKINS[0];
     const diceMeta =
       DICE_SKINS.find((d) => d.id === player.diceSkin) ?? DICE_SKINS[0];
+    const tokenIcon = TOKEN_ICON_MAP[player.tokenSkin] || '♟️';
 
     return (
       <div
         className={`relative rounded-[28px] p-4 border-2 border-white shadow-[0_12px_28px_rgba(15,23,42,0.07),inset_0_2px_4px_rgba(255,255,255,0.9)] ${bgTone}`}
       >
-        {/* Subtle Corner Position Badge (Shows Cross Allocation clearly, no Setup/VIP tag!) */}
+        {/* Subtle Corner Position Badge */}
         <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-white/85 border border-slate-200/80 text-[10px] font-extrabold text-slate-600">
           {CORNER_LABELS[player.color]}
         </span>
@@ -131,19 +152,15 @@ export const MatchSetupPage: React.FC = () => {
 
           <div
             onClick={() => setEditingPlayerModalIdx(playerIdx)}
-            className="relative w-20 h-20 rounded-full p-1 bg-white shadow-lg cursor-pointer group"
+            className="relative w-18 h-18 rounded-full p-1 bg-white shadow-lg cursor-pointer group hover:scale-105 transition-transform"
           >
             <img
               src={avatar.src}
               alt={player.name || `Player ${playerIdx + 1}`}
               className="w-full h-full rounded-full object-cover"
             />
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white shadow border border-slate-100 flex items-center justify-center">
-              <TokenPreviewCanvas
-                skin={player.tokenSkin}
-                color={player.color}
-                className="w-7 h-7"
-              />
+            <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-blue-600 text-white shadow border-2 border-white flex items-center justify-center">
+              <Pencil className="w-3 h-3" />
             </div>
           </div>
 
@@ -157,9 +174,9 @@ export const MatchSetupPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Editable Player Name Input (Clean, no tags) */}
+        {/* Editable Player Name Input + Quick Random Name Roll */}
         <div className="mt-2.5 flex items-center justify-center">
-          <div className="relative w-52">
+          <div className="relative w-56 flex items-center">
             <input
               type="text"
               value={player.name}
@@ -169,14 +186,29 @@ export const MatchSetupPage: React.FC = () => {
               }}
               placeholder={`Enter Player ${playerIdx + 1} Name`}
               maxLength={16}
-              className="w-full text-center px-3 py-1.5 rounded-xl bg-white/95 border border-slate-200/90 focus:border-blue-500 focus:ring-2 focus:ring-blue-400/20 outline-none text-base font-extrabold text-slate-900 placeholder:text-slate-400 placeholder:font-semibold"
+              className="w-full text-center pl-3 pr-9 py-1.5 rounded-xl bg-white/95 border border-slate-200/90 focus:border-blue-500 focus:ring-2 focus:ring-blue-400/20 outline-none text-sm font-extrabold text-slate-900 placeholder:text-slate-400 shadow-inner"
             />
-            <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.play('ui_click');
+                const randName =
+                  FUN_GAMER_NAMES[
+                    Math.floor(Math.random() * FUN_GAMER_NAMES.length)
+                  ];
+                updatePlayerConfig(playerIdx, { name: randName });
+                if (validationAlert) setValidationAlert('');
+              }}
+              title="Roll Random Gamer Name"
+              className="absolute right-1.5 w-6 h-6 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            >
+              <Dices className="w-3.5 h-3.5 text-amber-600" />
+            </button>
           </div>
         </div>
 
         {/* 4 Color Selectors (Automatically Pairs Opposite Cross Corner!) */}
-        <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="mt-2.5 flex items-center justify-center gap-3">
           {(['blue', 'red', 'green', 'yellow'] as PlayerColor[]).map((c) => {
             const active = player.color === c;
             return (
@@ -187,12 +219,12 @@ export const MatchSetupPage: React.FC = () => {
                   soundManager.play('ui_click');
                   updatePlayerConfig(playerIdx, { color: c });
                 }}
-                className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-transform cursor-pointer ${
+                className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-transform cursor-pointer ${
                   active ? 'scale-125' : 'opacity-65 hover:opacity-100'
                 }`}
               >
                 <span
-                  className={`w-6 h-6 rounded-full ${COLOR_PALETTE[c].bgClass} border-2 border-white shadow-md`}
+                  className={`w-5.5 h-5.5 rounded-full ${COLOR_PALETTE[c].bgClass} border-2 border-white shadow-md`}
                 />
                 {active && (
                   <span className="absolute -inset-0.5 rounded-full border-2 border-slate-800/80" />
@@ -202,24 +234,81 @@ export const MatchSetupPage: React.FC = () => {
           })}
         </div>
 
-        {/* Quick Skin & Dice Pills */}
-        <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
+        {/* Dedicated Pro Equipment Loadout Pods (Zero WebGL overhead, One-tap 3D Studio) */}
+        <div className="mt-3 pt-2.5 border-t border-slate-200/60 grid grid-cols-2 gap-2 text-xs">
+          {/* Token Slot */}
           <button
             type="button"
-            onClick={() => cycleTokenSkin(playerIdx)}
-            className="flex-1 py-1.5 px-2.5 rounded-xl bg-white/85 border border-slate-200/80 flex items-center justify-center gap-1.5 font-bold text-slate-700 hover:bg-white cursor-pointer"
+            onClick={() => {
+              soundManager.play('ui_click');
+              setStudioModal({
+                isOpen: true,
+                mode: 'token',
+                playerIdx,
+                skinId: player.tokenSkin,
+              });
+            }}
+            className="p-2 rounded-2xl bg-white/95 border border-slate-200 shadow-sm flex items-center gap-2 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer text-left group"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-            <span className="truncate">Token: {tokenMeta.name}</span>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-inner border border-slate-200/60"
+              style={{
+                background: `radial-gradient(circle, ${COLOR_PALETTE[player.color].primary}25 0%, #f1f5f9 85%)`,
+              }}
+            >
+              {tokenIcon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  Token
+                </span>
+                <span className="text-[9px] font-extrabold text-blue-600 group-hover:underline flex items-center gap-0.5">
+                  <Eye className="w-2.5 h-2.5" /> 3D
+                </span>
+              </div>
+              <span className="block text-xs font-black text-slate-800 truncate">
+                {tokenMeta.name}
+              </span>
+            </div>
           </button>
 
+          {/* Dice Slot */}
           <button
             type="button"
-            onClick={() => cycleDiceSkin(playerIdx)}
-            className="flex-1 py-1.5 px-2.5 rounded-xl bg-white/85 border border-slate-200/80 flex items-center justify-center gap-1.5 font-bold text-slate-700 hover:bg-white cursor-pointer"
+            onClick={() => {
+              soundManager.play('ui_click');
+              setStudioModal({
+                isOpen: true,
+                mode: 'dice',
+                playerIdx,
+                skinId: player.diceSkin,
+              });
+            }}
+            className="p-2 rounded-2xl bg-white/95 border border-slate-200 shadow-sm flex items-center gap-2 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer text-left group"
           >
-            <Dices className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="truncate">Dice: {diceMeta.name}</span>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-inner border border-slate-200/80 font-black text-sm"
+              style={{
+                backgroundColor: diceMeta.bodyColor,
+                color: diceMeta.pipColor,
+              }}
+            >
+              6
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  Dice
+                </span>
+                <span className="text-[9px] font-extrabold text-blue-600 group-hover:underline flex items-center gap-0.5">
+                  <Eye className="w-2.5 h-2.5" /> 3D
+                </span>
+              </div>
+              <span className="block text-xs font-black text-slate-800 truncate">
+                {diceMeta.name}
+              </span>
+            </div>
           </button>
         </div>
       </div>
@@ -349,8 +438,22 @@ export const MatchSetupPage: React.FC = () => {
         isOpen={editingPlayerModalIdx !== null}
         onClose={() => setEditingPlayerModalIdx(null)}
         targetPlayerIndex={editingPlayerModalIdx ?? 0}
-        title={`Player ${(editingPlayerModalIdx ?? 0) + 1} Setup`}
-        subtitle="Enter player name, select 3D avatar, dice skin & token animation style!"
+        title={`Player ${(editingPlayerModalIdx ?? 0) + 1} Profile`}
+        subtitle="Edit player name, select 2D avatar & corner color!"
+      />
+
+      {/* Universal 3D Studio Modal for Match Setup */}
+      <SkinPickerModal
+        isOpen={studioModal !== null}
+        onClose={() => setStudioModal(null)}
+        mode={studioModal?.mode || 'token'}
+        targetPlayerIndex={studioModal?.playerIdx}
+        initialSkinId={studioModal?.skinId}
+        initialColor={
+          studioModal?.playerIdx !== undefined
+            ? players[studioModal.playerIdx].color
+            : 'blue'
+        }
       />
     </div>
   );

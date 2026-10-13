@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, Sparkles } from 'lucide-react';
+import { Check, ChevronLeft, Dices, Eye, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { soundManager } from '../audio/soundManager';
-import { TokenPreviewCanvas } from '../components/three/TokenPreviewCanvas';
+import { SkinPickerModal } from '../components/modals/SkinPickerModal';
 import {
   BOARD_THEMES,
   COLOR_PALETTE,
@@ -14,6 +14,26 @@ import { useProfileStore } from '../store/useProfileStore';
 import { PlayerColor } from '../types/game';
 
 type CustomizeTab = 'tokens' | 'dice' | 'boards';
+
+const TOKEN_ICON_MAP: Record<string, string> = {
+  classic: '♟️',
+  knight: '🐴',
+  dog: '🐶',
+  cat: '🐱',
+  panda: '🐼',
+  robot: '🤖',
+  astronaut: '🧑‍🚀',
+  unicorn: '🦄',
+  'bamboo-panda': '🎋',
+  'cyber-robot': '🦾',
+  astronomer: '🔭',
+  'star-unicorn': '✨',
+  'fire-dragon': '🐉',
+  'ice-dragon': '❄️',
+  pirate: '🏴‍☠️',
+  magician: '🧙',
+  alien: '👽',
+};
 
 export const CustomizePage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +53,11 @@ export const CustomizePage: React.FC = () => {
     preferredColor || 'blue'
   );
   const [toast, setToast] = useState<string>('');
+  const [studioModal, setStudioModal] = useState<{
+    isOpen: boolean;
+    mode: 'token' | 'dice';
+    skinId: string;
+  } | null>(null);
 
   const visibleTokens = React.useMemo(() => {
     const newHdrPart1 = [
@@ -175,7 +200,7 @@ export const CustomizePage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Grid of Tokens */}
+              {/* Grid of Tokens - Lightweight 2D Cards (Zero WebGL Canvases on Page) */}
               <div
                 className={`grid ${
                   tokenSeries === 'classic'
@@ -185,6 +210,7 @@ export const CustomizePage: React.FC = () => {
               >
                 {visibleTokens.map((skin) => {
                   const isSelected = selectedTokenSkin === skin.id;
+                  const icon = TOKEN_ICON_MAP[skin.id] || '♟️';
 
                   return (
                     <button
@@ -192,15 +218,16 @@ export const CustomizePage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         soundManager.play('ui_click');
-                        setSelectedTokenSkin(skin.id);
-                        showToast(
-                          `Equipped ${skin.name} (${skin.moveStyleName})!`
-                        );
+                        setStudioModal({
+                          isOpen: true,
+                          mode: 'token',
+                          skinId: skin.id,
+                        });
                       }}
                       className={`relative rounded-[22px] p-2.5 flex flex-col items-center justify-between border-2 transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-gradient-to-b from-sky-50 to-blue-100/90 border-blue-500 shadow-[0_8px_20px_rgba(37,99,235,0.2)] scale-[1.02]'
-                          : 'bg-white border-white shadow-sm hover:border-slate-200'
+                          : 'bg-white border-white shadow-sm hover:border-slate-200 hover:shadow-md'
                       }`}
                     >
                       {isSelected && (
@@ -209,12 +236,19 @@ export const CustomizePage: React.FC = () => {
                         </span>
                       )}
 
-                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100/80 flex items-center justify-center overflow-hidden">
-                        <TokenPreviewCanvas
-                          skin={skin.id}
-                          color={previewColor}
-                          className="w-20 h-20"
-                        />
+                      <div
+                        className="w-20 h-20 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-inner border border-slate-200/60"
+                        style={{
+                          background: `radial-gradient(circle at 50% 40%, ${COLOR_PALETTE[previewColor].primary}25 0%, #f1f5f9 85%)`,
+                        }}
+                      >
+                        <span className="text-3xl select-none drop-shadow-md">
+                          {icon}
+                        </span>
+                        <span className="mt-1 px-1.5 py-0.2 rounded-full bg-white/90 border border-slate-200 text-[9px] font-black text-slate-600 flex items-center gap-0.5 shadow-xs">
+                          <Eye className="w-2.5 h-2.5 text-blue-600" />
+                          <span>3D View</span>
+                        </span>
                       </div>
 
                       <div className="mt-1.5 text-center w-full">
@@ -232,23 +266,40 @@ export const CustomizePage: React.FC = () => {
             </div>
 
             {/* Active Token Move Animation Callout */}
-            <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-amber-300 shrink-0" />
-              <div className="text-xs">
-                <p className="font-extrabold">
-                  Active 3D Token:{' '}
-                  {
-                    TOKEN_SKINS.find((t) => t.id === selectedTokenSkin)?.name
-                  }
-                </p>
-                <p className="text-blue-100 font-medium">
-                  Board Hop Physics:{' '}
-                  {
-                    TOKEN_SKINS.find((t) => t.id === selectedTokenSkin)
-                      ?.moveStyleName
-                  }
-                </p>
+            <div
+              onClick={() => {
+                soundManager.play('ui_click');
+                setStudioModal({
+                  isOpen: true,
+                  mode: 'token',
+                  skinId: selectedTokenSkin,
+                });
+              }}
+              className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md flex items-center justify-between cursor-pointer hover:shadow-lg transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-amber-300 shrink-0" />
+                <div className="text-xs">
+                  <p className="font-extrabold">
+                    Active Token:{' '}
+                    {
+                      TOKEN_SKINS.find((t) => t.id === selectedTokenSkin)?.name
+                    }
+                  </p>
+                  <p className="text-blue-100 font-medium">
+                    Move Style:{' '}
+                    {
+                      TOKEN_SKINS.find((t) => t.id === selectedTokenSkin)
+                        ?.moveStyleName
+                    }
+                  </p>
+                </div>
               </div>
+
+              <span className="px-2.5 py-1 rounded-xl bg-white/20 text-white text-[11px] font-black flex items-center gap-1 border border-white/30 shrink-0">
+                <Eye className="w-3.5 h-3.5 text-amber-300" />
+                <span>Open 3D Studio</span>
+              </span>
             </div>
           </div>
         )}
@@ -258,6 +309,14 @@ export const CustomizePage: React.FC = () => {
           <div className="mt-4 grid grid-cols-2 gap-3 flex-1 content-start">
             {DICE_SKINS.map((dice) => {
               const isSelected = selectedDiceSkin === dice.id;
+              const shapeLabels: Record<string, string> = {
+                'pillowed-cube': 'Pillowed Bone • Crown Ace',
+                'chamfered-bullion': '45° Bullion • Star Pips',
+                'cushion-gem': 'Faceted Gem • Crystal Pips',
+                'sci-fi-datacube': 'Datacube • Digital Glyphs',
+                'worn-seal': 'Dynasty Seal • Lotus Spirals',
+                'monolith-glass': 'Monolith • Star Runes',
+              };
 
               return (
                 <button
@@ -265,13 +324,16 @@ export const CustomizePage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     soundManager.play('ui_click');
-                    setSelectedDiceSkin(dice.id);
-                    showToast(`Equipped ${dice.name} 3D Dice!`);
+                    setStudioModal({
+                      isOpen: true,
+                      mode: 'dice',
+                      skinId: dice.id,
+                    });
                   }}
-                  className={`relative rounded-[24px] p-4 flex flex-col items-center gap-2 border-2 transition-all cursor-pointer ${
+                  className={`relative rounded-[24px] p-3.5 flex flex-col items-center gap-1.5 border-2 transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-sky-50 border-blue-500 shadow-md'
-                      : 'bg-white border-white shadow-sm'
+                      : 'bg-white border-white shadow-sm hover:border-slate-200 hover:shadow-md'
                   }`}
                 >
                   {isSelected && (
@@ -281,23 +343,31 @@ export const CustomizePage: React.FC = () => {
                   )}
 
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner border border-slate-200"
+                    className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center shadow-inner border border-slate-200 relative overflow-hidden"
                     style={{ backgroundColor: dice.bodyColor }}
                   >
                     <span
-                      className="text-2xl font-black"
+                      className="text-2xl font-black drop-shadow-sm"
                       style={{ color: dice.pipColor }}
                     >
-                      6
+                      {dice.id === 'classic-white' ? '👑' : dice.id === 'royal-gold' ? '★' : dice.id === 'ruby-blaze' ? '◆' : dice.id === 'cyber-neon' ? '■' : dice.id === 'emerald-jade' ? '☯' : '✦'}
+                    </span>
+                    <span className="absolute bottom-1 px-1 py-0.2 rounded-full bg-black/40 text-[8px] font-black text-white flex items-center gap-0.5">
+                      <Eye className="w-2 h-2 text-amber-300" />
+                      <span>3D View</span>
                     </span>
                   </div>
 
-                  <span className="text-sm font-extrabold text-slate-900">
+                  <span className="text-sm font-extrabold text-slate-900 truncate w-full text-center">
                     {dice.name}
                   </span>
 
-                  <span className="text-[11px] font-bold text-emerald-600">
-                    {isSelected ? 'Equipped' : 'Tap to Equip'}
+                  <span className="text-[10px] font-bold text-slate-500 truncate w-full text-center">
+                    {shapeLabels[dice.shapeType] || 'Physics Die'}
+                  </span>
+
+                  <span className="text-[11px] font-bold text-blue-600">
+                    {isSelected ? 'Equipped (Tap to Inspect)' : 'Tap to Inspect & Equip'}
                   </span>
                 </button>
               );
@@ -323,7 +393,7 @@ export const CustomizePage: React.FC = () => {
                   className={`w-full rounded-[24px] p-4 flex items-center justify-between border-2 text-left transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-sky-50 border-blue-500 shadow-md'
-                      : 'bg-white border-white shadow-sm'
+                      : 'bg-white border-white shadow-sm hover:border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
@@ -342,6 +412,15 @@ export const CustomizePage: React.FC = () => {
                       <p className="text-xs font-medium text-slate-500">
                         {theme.description}
                       </p>
+                      {/* Unique Board Perk Badge */}
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 text-[10px] font-black border border-amber-300/50">
+                          {theme.perk.badge}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500 truncate max-w-[190px]">
+                          {theme.perk.description}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -355,6 +434,14 @@ export const CustomizePage: React.FC = () => {
             })}
           </div>
         )}
+        {/* Universal Dedicated 3D Studio Modal */}
+        <SkinPickerModal
+          isOpen={studioModal !== null}
+          onClose={() => setStudioModal(null)}
+          mode={studioModal?.mode || 'token'}
+          initialSkinId={studioModal?.skinId}
+          initialColor={previewColor}
+        />
       </motion.div>
     </div>
   );
