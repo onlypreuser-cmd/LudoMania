@@ -1,0 +1,152 @@
+export type PlayerColor = 'blue' | 'red' | 'green' | 'yellow';
+
+export type TokenSkinId =
+  | 'classic'
+  | 'knight'
+  | 'dog'
+  | 'cat'
+  | 'panda'
+  | 'robot'
+  | 'astronaut'
+  | 'unicorn'
+  | 'bamboo-panda'
+  | 'cyber-robot'
+  | 'astronomer'
+  | 'star-unicorn'
+  | 'fire-dragon'
+  | 'ice-dragon'
+  | 'pirate'
+  | 'magician'
+  | 'alien';
+
+export type DiceSkinId =
+  | 'classic-white'
+  | 'royal-gold'
+  | 'ruby-blaze'
+  | 'cyber-neon'
+  | 'emerald-jade'
+  | 'obsidian-galaxy';
+
+export type BoardThemeId =
+  | 'classic-kingdom'
+  | 'royal-wood'
+  | 'marble-palace'
+  | 'midnight-neon';
+
+export type AvatarId =
+  | 'avatar-1'
+  | 'avatar-2'
+  | 'avatar-3'
+  | 'avatar-4'
+  | 'avatar-5'
+  | 'avatar-6';
+
+export interface AvatarOption {
+  id: AvatarId;
+  name: string;
+  src: string;
+  accent: string;
+}
+
+export interface TokenSkinOption {
+  id: TokenSkinId;
+  name: string;
+  subtitle: string;
+  moveStyleName: string;
+  price: number;
+  unlockedByDefault: boolean;
+}
+
+export interface DiceSkinOption {
+  id: DiceSkinId;
+  name: string;
+  bodyColor: string;
+  pipColor: string;
+  edgeGlow: string;
+  metalness: number;
+  roughness: number;
+  price: number;
+  unlockedByDefault: boolean;
+}
+
+export interface BoardThemeOption {
+  id: BoardThemeId;
+  name: string;
+  description: string;
+  price: number;
+  unlockedByDefault: boolean;
+  bgGradient: string;
+  cellBg: string;
+  borderAccent: string;
+}
+
+/**
+ * Pawn step progress:
+ * -1 = Inside Yard / Base (locked until 6 is rolled)
+ * 0..50 = On main 52-cell perimeter track (relative to player's start index)
+ * 51..55 = Inside player's colored Home Stretch column (5 cells)
+ * 56 = Reached center Home Triangle (completed!)
+ */
+export interface Pawn {
+  id: string; // e.g., "blue-0", "blue-1", "blue-2", "blue-3"
+  playerIndex: number;
+  color: PlayerColor;
+  pawnIndex: number;
+  step: number; // -1..56
+}
+
+export interface PlayerConfig {
+  id: string;
+  name: string;
+  avatarId: AvatarId;
+  color: PlayerColor;
+  tokenSkin: TokenSkinId;
+  diceSkin: DiceSkinId;
+}
+
+export interface GridCoord {
+  row: number; // 0..14
+  col: number; // 0..14
+}
+
+export interface WorldCoord3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface DiceBiasState {
+  rahulRollCount: number;
+  queuedComboRolls: number[];
+  chaseWindowCounter: number;
+  chaseWindowTarget: number;
+  lastBiasReason: string | null;
+}
+
+export interface CapturedPawnInfo {
+  pawnId: string;
+  color: PlayerColor;
+  pawnIndex: number;
+  fromStep: number;
+}
+
+export interface TurnSnapshot {
+  pawns: Pawn[];
+  currentPlayerIndex: number;
+  consecutiveSixes: number;
+  diceValue: number | null;
+  biasState: DiceBiasState;
+  captureBonusPoints: number[];
+  moveDescription: string;
+}
+
+export interface MoveEvaluation {
+  pawnId: string;
+  fromStep: number;
+  toStep: number;
+  pathSteps: number[]; // Step-by-step indices for GSAP hop animation
+  willKillPawnIds: string[];
+  capturedPawnsInfo: CapturedPawnInfo[];
+  willReachHome: boolean;
+  landsOnSafeStar: boolean;
+}
