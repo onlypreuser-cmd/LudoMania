@@ -35,21 +35,12 @@ export function hopPawn3D(params: {
 
   const tl = gsap.timeline({
     onComplete: () => {
-      gsap.to(group.position, { y: 0, duration: 0.08, ease: 'sine.out' });
-      gsap.to(group.rotation, {
-        x: 0,
-        y: 0,
-        z: 0,
-        duration: 0.14,
-        ease: 'sine.out',
-      });
-      gsap.to(group.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.14,
-        ease: 'back.out(1.6)',
-      });
+      gsap.killTweensOf(group.position);
+      gsap.killTweensOf(group.rotation);
+      gsap.killTweensOf(group.scale);
+      group.position.y = 0;
+      group.rotation.set(0, 0, 0);
+      group.scale.set(1, 1, 1);
       onComplete();
     },
   });

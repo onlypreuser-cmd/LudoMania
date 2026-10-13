@@ -1,10 +1,7 @@
 import { motion } from 'framer-motion';
 import {
-  BookOpen,
   ChevronRight,
-  Medal,
   Palette,
-  Plus,
   Settings,
   Trophy,
   Users,
@@ -19,14 +16,10 @@ import { useProfileStore } from '../store/useProfileStore';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    userName,
-    userAvatar,
-    coins,
-    soundEnabled,
-    toggleSound,
-    addCoins,
-  } = useProfileStore();
+  const userName = useProfileStore((s) => s.userName);
+  const userAvatar = useProfileStore((s) => s.userAvatar);
+  const soundEnabled = useProfileStore((s) => s.soundEnabled);
+  const toggleSound = useProfileStore((s) => s.toggleSound);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -35,7 +28,6 @@ export const HomePage: React.FC = () => {
 
   const handlePlayClick = () => {
     soundManager.play('ui_click');
-    // Setup happens at play-time on /setup, never interrupting app launch!
     navigate('/setup');
   };
 
@@ -46,7 +38,7 @@ export const HomePage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="relative w-full max-w-[430px] min-h-screen sm:min-h-[840px] sm:rounded-[42px] bg-gradient-to-b from-[#f8faff] via-[#f3f6fc] to-[#eef2f9] sm:shadow-[0_28px_70px_rgba(15,23,42,0.28),inset_0_2px_4px_rgba(255,255,255,1)] sm:border-[6px] sm:border-white flex flex-col justify-between p-4 sm:p-5 overflow-hidden"
       >
-        {/* Top Bar: Profile + Coins + Settings */}
+        {/* Top Bar: Profile + Settings */}
         <header className="flex items-center justify-between gap-2 z-10">
           <button
             type="button"
@@ -70,41 +62,18 @@ export const HomePage: React.FC = () => {
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
-            {/* Coin Pill */}
-            <div className="flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-full bg-white/95 border border-slate-200/80 shadow-[0_4px_12px_rgba(15,23,42,0.06),inset_0_2px_4px_rgba(255,255,255,1)]">
-              <span className="w-6 h-6 rounded-full bg-gradient-to-b from-amber-300 to-amber-500 flex items-center justify-center text-amber-950 font-black text-xs shadow-inner border border-amber-200">
-                ★
-              </span>
-              <span className="text-sm font-extrabold text-slate-800 tabular-nums">
-                {coins.toLocaleString()}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  soundManager.play('safe_star');
-                  addCoins(500);
-                }}
-                title="Claim +500 Bonus Coins"
-                className="w-6 h-6 rounded-full bg-gradient-to-b from-blue-500 to-blue-600 text-white flex items-center justify-center shadow hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              </button>
-            </div>
-
-            {/* Settings Gear Button */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.play('ui_click');
-                setIsSettingsOpen((v) => !v);
-              }}
-              aria-label="Game Settings"
-              className="w-10 h-10 rounded-full bg-white/95 border border-slate-200/80 shadow-[0_4px_12px_rgba(15,23,42,0.06)] flex items-center justify-center text-slate-700 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
+          {/* Settings Gear Button */}
+          <button
+            type="button"
+            onClick={() => {
+              soundManager.play('ui_click');
+              setIsSettingsOpen((v) => !v);
+            }}
+            aria-label="Game Settings"
+            className="w-10 h-10 rounded-full bg-white/95 border border-slate-200/80 shadow-[0_4px_12px_rgba(15,23,42,0.06)] flex items-center justify-center text-slate-700 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </header>
 
         {/* Quick Settings Popover */}
@@ -140,7 +109,7 @@ export const HomePage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Center Hero Artwork Card — Uncropped Full Aspect Ratio */}
+        {/* Center Hero Artwork Card */}
         <div className="my-2.5 relative rounded-[30px] overflow-hidden shadow-[0_16px_36px_rgba(30,64,175,0.15)] border-4 border-white bg-[#fdf6e9]">
           <img
             src="/assets/hero/home-hero-banner.png"
@@ -149,9 +118,8 @@ export const HomePage: React.FC = () => {
           />
         </div>
 
-        {/* Main CTA Section (Strictly Local Play — No Online/Create Room/Quick Play) */}
+        {/* Main CTA Section (Local Play Only) */}
         <div className="space-y-3 z-10">
-          {/* Primary Gold/Orange 3D Button: Play with Friend */}
           <motion.button
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}
@@ -178,7 +146,6 @@ export const HomePage: React.FC = () => {
             </div>
           </motion.button>
 
-          {/* Local Play Offline Card */}
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
@@ -203,20 +170,20 @@ export const HomePage: React.FC = () => {
           </motion.button>
         </div>
 
-        {/* Bottom Navigation Dock */}
-        <nav className="mt-3 pt-3 pb-1 px-2 rounded-[26px] bg-white/95 border-2 border-white shadow-[0_10px_30px_rgba(15,23,42,0.08)] grid grid-cols-4 gap-1 z-10">
+        {/* Bottom Navigation Dock: Leaderboard & Customize */}
+        <nav className="mt-3 pt-2.5 pb-1 px-3 rounded-[26px] bg-white/95 border-2 border-white shadow-[0_10px_30px_rgba(15,23,42,0.08)] grid grid-cols-2 gap-3 z-10">
           <button
             type="button"
             onClick={() => {
               soundManager.play('ui_click');
               navigate('/leaderboard');
             }}
-            className="flex flex-col items-center gap-1 py-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
-              <Trophy className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
+              <Trophy className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">
+            <span className="text-xs font-extrabold text-slate-800">
               Leaderboard
             </span>
           </button>
@@ -227,45 +194,13 @@ export const HomePage: React.FC = () => {
               soundManager.play('ui_click');
               navigate('/customize');
             }}
-            className="flex flex-col items-center gap-1 py-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm">
-              <Palette className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm">
+              <Palette className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">
+            <span className="text-xs font-extrabold text-slate-800">
               Customize
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundManager.play('ui_click');
-              navigate('/achievements');
-            }}
-            className="flex flex-col items-center gap-1 py-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-sm">
-              <Medal className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold text-slate-700">
-              Achievements
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundManager.play('ui_click');
-              navigate('/how-to-play');
-            }}
-            className="flex flex-col items-center gap-1 py-1.5 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-bold text-slate-700">
-              How to Play
             </span>
           </button>
         </nav>
@@ -273,3 +208,5 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
+
+export default HomePage;

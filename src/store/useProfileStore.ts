@@ -21,6 +21,42 @@ export interface MatchRecord {
   turnsPlayed: number;
 }
 
+export const ALL_TOKEN_SKINS: TokenSkinId[] = [
+  'classic',
+  'knight',
+  'dog',
+  'cat',
+  'panda',
+  'robot',
+  'astronaut',
+  'unicorn',
+  'bamboo-panda',
+  'cyber-robot',
+  'astronomer',
+  'star-unicorn',
+  'fire-dragon',
+  'ice-dragon',
+  'pirate',
+  'magician',
+  'alien',
+];
+
+export const ALL_DICE_SKINS: DiceSkinId[] = [
+  'classic-white',
+  'royal-gold',
+  'ruby-blaze',
+  'cyber-neon',
+  'emerald-jade',
+  'obsidian-galaxy',
+];
+
+export const ALL_BOARD_THEMES: BoardThemeId[] = [
+  'classic-kingdom',
+  'royal-wood',
+  'marble-palace',
+  'midnight-neon',
+];
+
 interface ProfileState {
   hasCompletedSetup: boolean;
   userName: string;
@@ -29,7 +65,6 @@ interface ProfileState {
   selectedDiceSkin: DiceSkinId;
   selectedBoardTheme: BoardThemeId;
   preferredColor: PlayerColor;
-  coins: number;
   soundEnabled: boolean;
 
   unlockedTokenSkins: TokenSkinId[];
@@ -51,12 +86,6 @@ interface ProfileState {
   setSelectedTokenSkin: (skin: TokenSkinId) => void;
   setSelectedDiceSkin: (skin: DiceSkinId) => void;
   setSelectedBoardTheme: (theme: BoardThemeId) => void;
-  unlockItem: (
-    category: 'token' | 'dice' | 'board',
-    id: string,
-    price: number
-  ) => boolean;
-  addCoins: (amount: number) => void;
   toggleSound: () => void;
   recordMatchResult: (record: Omit<MatchRecord, 'id' | 'timestamp'>) => void;
 }
@@ -95,26 +124,11 @@ export const useProfileStore = create<ProfileState>()(
       selectedDiceSkin: 'classic-white',
       selectedBoardTheme: 'classic-kingdom',
       preferredColor: 'blue',
-      coins: 12450,
       soundEnabled: true,
 
-      unlockedTokenSkins: [
-        'classic',
-        'knight',
-        'dog',
-        'cat',
-        'bamboo-panda',
-        'cyber-robot',
-        'astronomer',
-        'star-unicorn',
-        'fire-dragon',
-        'ice-dragon',
-        'pirate',
-        'magician',
-        'alien',
-      ],
-      unlockedDiceSkins: ['classic-white', 'royal-gold', 'ruby-blaze'],
-      unlockedBoardThemes: ['classic-kingdom', 'royal-wood'],
+      unlockedTokenSkins: ALL_TOKEN_SKINS,
+      unlockedDiceSkins: ALL_DICE_SKINS,
+      unlockedBoardThemes: ALL_BOARD_THEMES,
 
       players: DEFAULT_PLAYERS,
       matchHistory: [],
@@ -164,15 +178,15 @@ export const useProfileStore = create<ProfileState>()(
           }
         }
 
+        // Sync main user profile preferences when player 0 updates
         if (index === 0) {
-          set({
-            players: next,
-            userName: next[0].name || get().userName,
-            userAvatar: next[0].avatarId,
-            selectedDiceSkin: next[0].diceSkin,
-            selectedTokenSkin: next[0].tokenSkin,
-            preferredColor: next[0].color,
-          });
+          const updates: Partial<ProfileState> = {};
+          if (partial.name !== undefined) updates.userName = partial.name;
+          if (partial.avatarId) updates.userAvatar = partial.avatarId;
+          if (partial.color) updates.preferredColor = partial.color;
+          if (partial.tokenSkin) updates.selectedTokenSkin = partial.tokenSkin;
+          if (partial.diceSkin) updates.selectedDiceSkin = partial.diceSkin;
+          set({ players: next, ...updates });
         } else {
           set({ players: next });
         }
@@ -194,43 +208,6 @@ export const useProfileStore = create<ProfileState>()(
 
       setSelectedBoardTheme: (theme) => set({ selectedBoardTheme: theme }),
 
-      unlockItem: (category, id, price) => {
-        const state = get();
-        if (state.coins < price) return false;
-        const nextCoins = state.coins - price;
-        if (category === 'token') {
-          const tokenId = id as TokenSkinId;
-          set({
-            coins: nextCoins,
-            unlockedTokenSkins: Array.from(
-              new Set([...state.unlockedTokenSkins, tokenId])
-            ),
-            selectedTokenSkin: tokenId,
-          });
-        } else if (category === 'dice') {
-          const diceId = id as DiceSkinId;
-          set({
-            coins: nextCoins,
-            unlockedDiceSkins: Array.from(
-              new Set([...state.unlockedDiceSkins, diceId])
-            ),
-            selectedDiceSkin: diceId,
-          });
-        } else if (category === 'board') {
-          const boardId = id as BoardThemeId;
-          set({
-            coins: nextCoins,
-            unlockedBoardThemes: Array.from(
-              new Set([...state.unlockedBoardThemes, boardId])
-            ),
-            selectedBoardTheme: boardId,
-          });
-        }
-        return true;
-      },
-
-      addCoins: (amount) => set({ coins: get().coins + amount }),
-
       toggleSound: () => {
         const next = !get().soundEnabled;
         soundManager.setEnabled(next);
@@ -249,31 +226,13 @@ export const useProfileStore = create<ProfileState>()(
       },
     }),
     {
-      name: 'ludo-mania-profile-v2',
+      name: 'ludo-mania-profile-v3',
       onRehydrateStorage: () => (state) => {
         if (state) {
           soundManager.setEnabled(state.soundEnabled);
-          const defaultUnlocked: TokenSkinId[] = [
-            'classic',
-            'knight',
-            'dog',
-            'cat',
-            'bamboo-panda',
-            'cyber-robot',
-            'astronomer',
-            'star-unicorn',
-            'fire-dragon',
-            'ice-dragon',
-            'pirate',
-            'magician',
-            'alien',
-          ];
-          const merged = Array.from(
-            new Set([...(state.unlockedTokenSkins ?? []), ...defaultUnlocked])
-          );
-          if (merged.length !== (state.unlockedTokenSkins?.length ?? 0)) {
-            state.unlockedTokenSkins = merged;
-          }
+          state.unlockedTokenSkins = ALL_TOKEN_SKINS;
+          state.unlockedDiceSkins = ALL_DICE_SKINS;
+          state.unlockedBoardThemes = ALL_BOARD_THEMES;
         }
       },
     }

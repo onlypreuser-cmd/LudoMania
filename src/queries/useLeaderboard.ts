@@ -39,10 +39,10 @@ const BASE_COMPETITORS: Record<LeaderboardPeriod, Omit<LeaderboardEntry, 'rank'>
 };
 
 export function useLeaderboardQuery(period: LeaderboardPeriod) {
-  const { userName, userAvatar, coins, matchHistory } = useProfileStore();
+  const { userName, userAvatar, matchHistory } = useProfileStore();
 
   return useQuery({
-    queryKey: ['leaderboard', period, userName, userAvatar, coins, matchHistory.length],
+    queryKey: ['leaderboard', period, userName, userAvatar, matchHistory.length],
     queryFn: async (): Promise<LeaderboardEntry[]> => {
       // Simulate fast local query resolution with real match stats merged
       await new Promise((r) => setTimeout(r, 80));
@@ -53,9 +53,9 @@ export function useLeaderboardQuery(period: LeaderboardPeriod) {
         (m) => m.winnerName.toLowerCase() === activeName.toLowerCase()
       ).length;
 
-      const periodMultiplier =
-        period === 'weekly' ? 1 : period === 'monthly' ? 2.4 : 5.5;
-      const computedUserScore = Math.round(coins * periodMultiplier + userWins * 250);
+      const baseScore =
+        period === 'weekly' ? 8400 : period === 'monthly' ? 22000 : 52000;
+      const computedUserScore = Math.round(baseScore + userWins * 450);
 
       const combined: Omit<LeaderboardEntry, 'rank'>[] = [
         ...baseList.filter(

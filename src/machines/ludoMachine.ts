@@ -9,7 +9,6 @@ import {
   MoveEvaluation,
   Pawn,
   PlayerConfig,
-  TurnSnapshot,
 } from '../types/game';
 
 export interface LudoMachineContext {
@@ -24,7 +23,6 @@ export interface LudoMachineContext {
   lastCapturedPawnIds: string[];
   captureBonusPoints: number[];
   biasState: DiceBiasState;
-  historyStack: TurnSnapshot[];
   winnerIndex: number | null;
   statusMessage: string;
   turnNumber: number;
@@ -36,7 +34,6 @@ export type LudoMachineEvent =
   | { type: 'DICE_SETTLED' }
   | { type: 'SELECT_PAWN'; pawnId: string }
   | { type: 'ANIMATION_COMPLETE' }
-  | { type: 'UNDO_TURN' }
   | { type: 'RESET_MATCH' };
 
 export function createInitialPawns(players: PlayerConfig[]): Pawn[] {
@@ -91,23 +88,10 @@ export const ludoMachine = setup({
       const reachedHome = context.activeMove.willReachHome;
       return rolledSix || killedOpponent || reachedHome;
     },
-    canUndo: ({ context }) => context.historyStack.length > 0,
   },
   actions: {
     performSmartRoll: assign(({ context }) => {
       const currentPlayer = context.players[context.currentPlayerIndex];
-      const snapshot: TurnSnapshot = {
-        pawns: context.pawns.map((p) => ({ ...p })),
-        currentPlayerIndex: context.currentPlayerIndex,
-        consecutiveSixes: context.consecutiveSixes,
-        diceValue: context.diceValue,
-        biasState: {
-          ...context.biasState,
-          queuedComboRolls: [...context.biasState.queuedComboRolls],
-        },
-        captureBonusPoints: [...context.captureBonusPoints],
-        moveDescription: `${currentPlayer.name}'s turn`,
-      };
 
       const { diceValue, nextBiasState } = rollSmartDice({
         players: context.players,
@@ -124,7 +108,6 @@ export const ludoMachine = setup({
       nextLastDiceValues[context.currentPlayerIndex] = diceValue;
 
       return {
-        historyStack: [...context.historyStack.slice(-14), snapshot],
         diceValue,
         playerLastDiceValues: nextLastDiceValues,
         consecutiveSixes: nextConsecutiveSixes,
@@ -256,25 +239,6 @@ export const ludoMachine = setup({
       };
     }),
 
-    restorePreviousTurn: assign(({ context }) => {
-      if (context.historyStack.length === 0) return {};
-      const lastSnapshot = context.historyStack[context.historyStack.length - 1];
-      const restoredPlayer = context.players[lastSnapshot.currentPlayerIndex];
-      return {
-        pawns: lastSnapshot.pawns,
-        currentPlayerIndex: lastSnapshot.currentPlayerIndex,
-        consecutiveSixes: lastSnapshot.consecutiveSixes,
-        diceValue: null,
-        activeMove: null,
-        legalMoves: [],
-        lastCapturedPawnIds: [],
-        captureBonusPoints: lastSnapshot.captureBonusPoints,
-        biasState: lastSnapshot.biasState,
-        historyStack: context.historyStack.slice(0, -1),
-        statusMessage: `⏪ Undid last turn. ${restoredPlayer.name}'s turn to roll.`,
-      };
-    }),
-
     resetMatchState: assign(({ context, event }) => {
       const players =
         event.type === 'CONFIGURE_PLAYERS' ? event.players : context.players;
@@ -290,7 +254,6 @@ export const ludoMachine = setup({
         lastCapturedPawnIds: [],
         captureBonusPoints: players.map(() => 0),
         biasState: createInitialBiasState(),
-        historyStack: [],
         winnerIndex: null,
         turnNumber: 1,
         statusMessage: `${players[0]?.name || 'Player 1'}'s turn to roll!`,
@@ -312,7 +275,6 @@ export const ludoMachine = setup({
     lastCapturedPawnIds: [],
     captureBonusPoints: input.players.map(() => 0),
     biasState: createInitialBiasState(),
-    historyStack: [],
     winnerIndex: null,
     turnNumber: 1,
     statusMessage: `${input.players[0]?.name || 'Player 1'}'s turn to roll!`,
@@ -333,11 +295,6 @@ export const ludoMachine = setup({
         ROLL_DICE: {
           target: 'ROLLING',
           actions: 'performSmartRoll',
-        },
-        UNDO_TURN: {
-          guard: 'canUndo',
-          target: 'IDLE',
-          actions: 'restorePreviousTurn',
         },
       },
     },
@@ -394,11 +351,6 @@ export const ludoMachine = setup({
           guard: 'isValidPawnSelection',
           target: 'MOVING',
           actions: 'selectChosenPawnMove',
-        },
-        UNDO_TURN: {
-          guard: 'canUndo',
-          target: 'IDLE',
-          actions: 'restorePreviousTurn',
         },
       },
     },

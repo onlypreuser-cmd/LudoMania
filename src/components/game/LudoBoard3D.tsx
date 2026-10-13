@@ -62,6 +62,8 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
   }) => {
     const groupRef = useRef<THREE.Group>(null);
     const prevStepRef = useRef<number>(pawn.step);
+    const isMovingRef = useRef(false);
+    const hasInitializedPos = useRef(false);
 
     const targetGrid = useMemo(
       () => getPawnGridCoord(pawn.color, pawn.step, pawn.pawnIndex),
@@ -73,12 +75,21 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
       [targetGrid, stackIndex, stackTotal]
     );
 
-    // Set initial or animated position
+    // Initial mount position anchor
+    useEffect(() => {
+      if (groupRef.current && !hasInitializedPos.current) {
+        hasInitializedPos.current = true;
+        groupRef.current.position.set(targetWorld.x, 0, targetWorld.z);
+      }
+    }, [targetWorld.x, targetWorld.z]);
+
+    // Set animated position
     useEffect(() => {
       if (!groupRef.current) return;
 
       // 1. If this pawn is currently executing `activeMove`, run its skin-specific GSAP hop!
       if (activeMove && activeMove.pawnId === pawn.id) {
+        isMovingRef.current = true;
         const coords = activeMove.pathSteps.map((stepIdx) => {
           const g = getPawnGridCoord(pawn.color, stepIdx, pawn.pawnIndex);
           return gridToWorld3D(g, 0, 1);
@@ -89,7 +100,11 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
           skin: player.tokenSkin,
           stepsCoordinates: coords,
           onComplete: () => {
+            isMovingRef.current = false;
             prevStepRef.current = activeMove.toStep;
+            if (groupRef.current) {
+              groupRef.current.position.set(targetWorld.x, 0, targetWorld.z);
+            }
             if (activeMove.willKillPawnIds.length > 0) {
               soundManager.play('pawn_kill');
               haptics.pawnCaptured();
@@ -111,6 +126,7 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
 
       // 2. If this pawn was just captured (step dropped from >= 0 back to -1), run Ludo King style track retreat!
       if (prevStepRef.current >= 0 && pawn.step === -1) {
+        isMovingRef.current = true;
         const capturedFromStep = prevStepRef.current;
         prevStepRef.current = -1;
         const reverseSteps = buildReverseStepPath(capturedFromStep);
@@ -122,6 +138,12 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
         const retreatTl = reverseTraversePawn3D({
           group: groupRef.current,
           reverseCoordinates,
+          onComplete: () => {
+            isMovingRef.current = false;
+            if (groupRef.current) {
+              groupRef.current.position.set(targetWorld.x, 0, targetWorld.z);
+            }
+          },
         });
 
         return () => {
@@ -129,15 +151,20 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
         };
       }
 
-      // 3. Smooth stack adjustment or undo placement
+      // 3. Smooth stack adjustment or alignment (ONLY if not actively moving and offset exists)
+      if (isMovingRef.current) return;
       prevStepRef.current = pawn.step;
-      gsap.to(groupRef.current.position, {
-        x: targetWorld.x,
-        y: 0,
-        z: targetWorld.z,
-        duration: 0.22,
-        ease: 'sine.out',
-      });
+      const distX = Math.abs(groupRef.current.position.x - targetWorld.x);
+      const distZ = Math.abs(groupRef.current.position.z - targetWorld.z);
+      if (distX > 0.04 || distZ > 0.04) {
+        gsap.to(groupRef.current.position, {
+          x: targetWorld.x,
+          y: 0,
+          z: targetWorld.z,
+          duration: 0.22,
+          ease: 'sine.out',
+        });
+      }
     }, [
       activeMove,
       pawn.id,
@@ -163,7 +190,6 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
     return (
       <group
         ref={groupRef}
-        position={[targetWorld.x, 0, targetWorld.z]}
         onClick={(e) => {
           e.stopPropagation();
           if (isSelectable) {

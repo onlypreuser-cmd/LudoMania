@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronLeft,
   Crown,
-  MessageCircle,
   RotateCcw,
   Settings,
   Sparkles,
@@ -27,15 +26,6 @@ import { ludoMachine } from '../machines/ludoMachine';
 import { useProfileStore } from '../store/useProfileStore';
 import { triggerMatchWinConfetti } from '../utils/haptics';
 
-const QUICK_CHATS = [
-  '🎲 Need a 6!',
-  '🔥 Too easy!',
-  '😱 Don’t cut me!',
-  '🎯 Target locked!',
-  '⚡ Roll faster!',
-  '👑 GG Well Played!',
-];
-
 export const GamePage: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -43,7 +33,6 @@ export const GamePage: React.FC = () => {
     selectedBoardTheme,
     soundEnabled,
     toggleSound,
-    addCoins,
     recordMatchResult,
   } = useProfileStore();
 
@@ -68,13 +57,7 @@ export const GamePage: React.FC = () => {
     }
   }, [players, send]);
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [chatBubble, setChatBubble] = useState<{
-    playerIndex: number;
-    text: string;
-  } | null>(null);
-
   const hasRecordedWinRef = useRef(false);
 
   const isIdle = state.matches('IDLE');
@@ -90,15 +73,11 @@ export const GamePage: React.FC = () => {
     playerLastDiceValues,
     legalMoves,
     activeMove,
-    historyStack,
     winnerIndex,
     statusMessage,
     turnNumber,
     captureBonusPoints,
   } = state.context;
-
-  const canUndoNow =
-    historyStack.length > 0 && !isRolling && !isMoving && !activeMove;
 
   const boardThemeMeta =
     BOARD_THEMES.find((b) => b.id === selectedBoardTheme) ?? BOARD_THEMES[0];
@@ -108,7 +87,6 @@ export const GamePage: React.FC = () => {
       hasRecordedWinRef.current = true;
       soundManager.play('win_fanfare');
       triggerMatchWinConfetti();
-      addCoins(50);
 
       const winner = players[winnerIndex] ?? players[0];
       const loser = players[winnerIndex === 0 ? 1 : 0] ?? players[1];
@@ -127,7 +105,6 @@ export const GamePage: React.FC = () => {
     winnerIndex,
     players,
     turnNumber,
-    addCoins,
     recordMatchResult,
   ]);
 
@@ -150,15 +127,6 @@ export const GamePage: React.FC = () => {
   const handleMoveAnimationComplete = useCallback(() => {
     send({ type: 'ANIMATION_COMPLETE' });
   }, [send]);
-
-  const handleSendChat = (text: string) => {
-    soundManager.play('ui_click');
-    setChatBubble({ playerIndex: currentPlayerIndex, text });
-    setIsChatOpen(false);
-    setTimeout(() => {
-      setChatBubble(null);
-    }, 2600);
-  };
 
   /**
    * Memoized live scores for each player
@@ -347,21 +315,6 @@ export const GamePage: React.FC = () => {
           onRollSettled={isMyTurn ? handleRollSettled : undefined}
           size="md"
         />
-
-        <AnimatePresence>
-          {chatBubble && chatBubble.playerIndex === playerIdx && (
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.85 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              className={`absolute -top-9 ${
-                isRightSideCorner ? 'right-2' : 'left-2'
-              } z-30 px-3 py-1 rounded-2xl bg-slate-900 text-white text-xs font-extrabold shadow-lg whitespace-nowrap`}
-            >
-              {chatBubble.text}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     );
   };
@@ -485,60 +438,8 @@ export const GamePage: React.FC = () => {
             bottomPlayer.color === 'yellow' ? 'flex-row-reverse' : 'flex-row'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={!canUndoNow}
-              onClick={() => {
-                soundManager.play('ui_click');
-                send({ type: 'UNDO_TURN' });
-              }}
-              className={`w-13 h-14 rounded-2xl bg-white/92 border-2 border-white shadow-md flex flex-col items-center justify-center gap-0.5 transition-all ${
-                canUndoNow
-                  ? 'text-slate-800 hover:scale-105 active:scale-95 cursor-pointer'
-                  : 'text-slate-400 opacity-55 cursor-not-allowed'
-              }`}
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span className="text-[10px] font-extrabold">Undo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.play('ui_click');
-                setIsChatOpen((v) => !v);
-              }}
-              className="w-13 h-14 rounded-2xl bg-white/92 border-2 border-white shadow-md flex flex-col items-center justify-center gap-0.5 text-slate-800 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="text-[10px] font-extrabold">Chat</span>
-            </button>
-          </div>
-
+          <div className="flex-1" />
           {renderCornerDiceDock(bottomPlayerIndex)}
-
-          <AnimatePresence>
-            {isChatOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute bottom-20 left-2 z-30 w-52 rounded-2xl bg-white/95 border-2 border-white p-2 shadow-2xl grid grid-cols-1 gap-1"
-              >
-                {QUICK_CHATS.map((phrase) => (
-                  <button
-                    key={phrase}
-                    type="button"
-                    onClick={() => handleSendChat(phrase)}
-                    className="text-left px-3 py-1.5 rounded-xl hover:bg-blue-50 text-xs font-extrabold text-slate-800 transition-colors cursor-pointer"
-                  >
-                    {phrase}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </footer>
       </div>
 
@@ -590,8 +491,8 @@ export const GamePage: React.FC = () => {
                       </span>
                       <Crown className="w-4 h-4 fill-amber-400 text-amber-500" />
                     </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-black text-amber-600">
-                      + 50 ★
+                    <span className="text-xs font-bold text-amber-600">
+                      Winner
                     </span>
                   </div>
                 </div>
@@ -608,8 +509,8 @@ export const GamePage: React.FC = () => {
                     <span className="block text-sm font-extrabold text-slate-700">
                       {loserPlayer.name}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-black text-slate-500">
-                      + 20 ★
+                    <span className="text-xs font-bold text-slate-400">
+                      Runner-up
                     </span>
                   </div>
                 </div>
