@@ -1,398 +1,33 @@
 import {
-  BoardThemeId,
-  CapturedPawnInfo,
   DiceBiasState,
-  MoveEvaluation,
   Pawn,
-  PlayerColor,
   PlayerConfig,
 } from '../types/game';
+import { isSafeStep } from './boardConfig';
 import {
-  buildStepPath,
-  getGlobalTrackIndex,
-  isSafeStep,
-  SAFE_TRACK_INDICES,
-} from './boardConfig';
+  getCaptureDistanceBetweenPawns,
+  getLegalMovesForPlayer,
+} from './dice/diceMovementRules';
+import { fairRandomInt, isRahulName } from './dice/diceRNG';
+import {
+  calculatePlayerBoardScore,
+  createInitialBiasState,
+  evaluateFaceTacticalScore,
+} from './dice/diceTactics';
 
-/**
- * Cryptographically uniform integer in [min, max] inclusive.
- * BUG-01 FIX: Uses rejection-sampling to eliminate modulo bias.
- * Uint32Array max (4,294,967,295) is not divisible by all ranges,
- * so we discard any values above the largest multiple of `range`
- * that fits in Uint32 — giving each outcome exactly equal probability.
- */
-export function fairRandomInt(min: number, max: number): number {
-  const range = max - min + 1;
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-    // Largest multiple of `range` that fits within Uint32
-    const limit = Math.floor(0x100000000 / range) * range;
-    let val: number;
-    do {
-      const arr = new Uint32Array(1);
-      window.crypto.getRandomValues(arr);
-      val = arr[0];
-    } while (val >= limit); // Reject biased tail — loops < 2 times on average
-    return min + (val % range);
-  }
-  return Math.floor(Math.random() * range) + min;
-}
-
-/**
- * Stealth check whether a player's name triggers the smart dice engine
- */
-export function isRahulName(name: string | undefined | null): boolean {
-  if (!name) return false;
-  const n = name.trim().toLowerCase();
-  if (n === 'jinwooo') return true;
-  return n === 'rahul' || n.startsWith('rahul ');
-}
-
-/**
- * Computes all legal pawn moves for a given player and dice value (1..6)
- * Incorporates active thematic board rule mechanics:
- * - Tournament Cut-to-Enter (Classic Kingdom)
- * - Roman Phalanx Blockade (Marble Palace)
- * - Timber Sanctuary Leap (Royal Teakwood)
- * - Quantum Warp Speedpads (Midnight Cyber)
- */
-export function getLegalMovesForPlayer(
-  pawns: Pawn[],
-  playerIndex: number,
-  playerColor: PlayerColor,
-  diceValue: number,
-  boardThemeId: BoardThemeId = 'classic-kingdom',
-  hasCapturedOpponent: boolean = false
-): MoveEvaluation[] {
-  const playerPawns = pawns.filter((p) => p.playerIndex === playerIndex);
-  const legalMoves: MoveEvaluation[] = [];
-
-  for (const pawn of playerPawns) {
-    // 1. Pawn in Yard (-1): requires a 6 to deploy to start square (step 0)
-    if (pawn.step === -1) {
-      if (diceValue === 6) {
-        const toStep = 0;
-        const targetGlobalIdx = getGlobalTrackIndex(playerColor, toStep);
-        const landsOnSafeStar =
-          targetGlobalIdx !== null && SAFE_TRACK_INDICES.has(targetGlobalIdx);
-
-        // Check for opponent Phalanx blockade on target square (Marble Palace)
-        let isBlockaded = false;
-        if (boardThemeId === 'marble-palace' && targetGlobalIdx !== null) {
-          const opponentOccupants = pawns.filter(
-            (o) =>
-              o.playerIndex !== playerIndex &&
-              o.step >= 0 &&
-              o.step <= 50 &&
-              getGlobalTrackIndex(o.color, o.step) === targetGlobalIdx
-          );
-          if (opponentOccupants.length >= 2) {
-            isBlockaded = true;
-          }
-        }
-
-        if (!isBlockaded) {
-          const killedPawns = landsOnSafeStar
-            ? []
-            : pawns.filter(
-                (other) =>
-                  other.playerIndex !== playerIndex &&
-                  other.step >= 0 &&
-                  other.step <= 50 &&
-                  getGlobalTrackIndex(other.color, other.step) === targetGlobalIdx
-              );
-
-          const capturedPawnsInfo: CapturedPawnInfo[] = killedPawns.map((o) => ({
-            pawnId: o.id,
-            color: o.color,
-            pawnIndex: o.pawnIndex,
-            fromStep: o.step,
-          }));
-
-          legalMoves.push({
-            pawnId: pawn.id,
-            fromStep: -1,
-            toStep: 0,
-            pathSteps: [0],
-            willKillPawnIds: killedPawns.map((o) => o.id),
-            capturedPawnsInfo,
-            willReachHome: false,
-            landsOnSafeStar,
-          });
-        }
-
-        // Royal Teakwood Timber Sanctuary Leap:
-        // Rolling a 6 grants optional direct leap to Safe Star at step 8
-        if (boardThemeId === 'royal-wood') {
-          legalMoves.push({
-            pawnId: pawn.id,
-            fromStep: -1,
-            toStep: 8,
-            pathSteps: [0, 1, 2, 3, 4, 5, 6, 7, 8],
-            willKillPawnIds: [],
-            capturedPawnsInfo: [],
-            willReachHome: false,
-            landsOnSafeStar: true,
-            perkRuleTag: '🛡️ Timber Sanctuary Leap',
-          });
-        }
-      }
-      continue;
-    }
-
-    // 2. Pawn already in Home Goal (56): cannot move
-    if (pawn.step >= 56) {
-      continue;
-    }
-
-    // 3. Pawn on Main Track (0..50) or Home Stretch (51..55)
-    let toStep = pawn.step + diceValue;
-    if (toStep > 56) {
-      continue;
-    }
-
-    // Tournament Cut-to-Enter Rule (Classic Kingdom):
-    // Must capture at least 1 opponent pawn to enter the Home Stretch (step 51..56)
-    if (
-      boardThemeId === 'classic-kingdom' &&
-      !hasCapturedOpponent &&
-      toStep >= 51
-    ) {
-      continue; // Blocked until player gets at least 1 capture
-    }
-
-    // Check Phalanx Blockade (Marble Palace):
-    if (boardThemeId === 'marble-palace' && toStep <= 50) {
-      const targetGlobalIdx = getGlobalTrackIndex(playerColor, toStep);
-      if (targetGlobalIdx !== null) {
-        const opponentOccupants = pawns.filter(
-          (o) =>
-            o.playerIndex !== playerIndex &&
-            o.step >= 0 &&
-            o.step <= 50 &&
-            getGlobalTrackIndex(o.color, otherStepOr(o.step)) === targetGlobalIdx
-        );
-        if (opponentOccupants.length >= 2) {
-          const byColor = new Set(opponentOccupants.map((o) => o.color));
-          if (byColor.size === 1) {
-            continue; // Impenetrable Phalanx!
-          }
-        }
-      }
-    }
-
-    let pathSteps = buildStepPath(pawn.step, toStep);
-    let willReachHome = toStep === 56;
-    let landsOnSafeStar = false;
-    let killedPawns: Pawn[] = [];
-    let perkRuleTag: string | undefined = undefined;
-
-    if (toStep <= 50) {
-      let targetGlobalIdx = getGlobalTrackIndex(playerColor, toStep);
-      landsOnSafeStar =
-        targetGlobalIdx !== null && SAFE_TRACK_INDICES.has(targetGlobalIdx);
-
-      // Midnight Cyber: Quantum Warp Speedpads
-      // Landing on a Star Safe Square relays the token +2 steps along the cyber grid
-      if (
-        boardThemeId === 'midnight-neon' &&
-        landsOnSafeStar &&
-        toStep <= 48
-      ) {
-        const warpedToStep = toStep + 2;
-        pathSteps = buildStepPath(pawn.step, warpedToStep);
-        toStep = warpedToStep;
-        targetGlobalIdx = getGlobalTrackIndex(playerColor, toStep);
-        landsOnSafeStar =
-          targetGlobalIdx !== null && SAFE_TRACK_INDICES.has(targetGlobalIdx);
-        perkRuleTag = '⚡ Quantum Warp +2 Relay';
-      }
-
-      if (!landsOnSafeStar && targetGlobalIdx !== null) {
-        killedPawns = pawns.filter(
-          (other) =>
-            other.playerIndex !== playerIndex &&
-            other.step >= 0 &&
-            other.step <= 50 &&
-            getGlobalTrackIndex(other.color, other.step) === targetGlobalIdx
-        );
-      }
-    }
-
-    const capturedPawnsInfo: CapturedPawnInfo[] = killedPawns.map((o) => ({
-      pawnId: o.id,
-      color: o.color,
-      pawnIndex: o.pawnIndex,
-      fromStep: o.step,
-    }));
-
-    legalMoves.push({
-      pawnId: pawn.id,
-      fromStep: pawn.step,
-      toStep,
-      pathSteps,
-      willKillPawnIds: killedPawns.map((o) => o.id),
-      capturedPawnsInfo,
-      willReachHome,
-      landsOnSafeStar,
-      perkRuleTag,
-    });
-  }
-
-  return legalMoves;
-}
-
-function otherStepOr(step: number): number {
-  return step;
-}
-
-/**
- * Helper: finds clockwise step distance `d` (1..51) from a chaser pawn to a target pawn on the main track.
- */
-export function getCaptureDistanceBetweenPawns(
-  chaser: Pawn,
-  target: Pawn
-): number | null {
-  if (chaser.step < 0 || chaser.step > 50) return null;
-  if (target.step < 0 || target.step > 50) return null;
-  if (isSafeStep(target.color, target.step)) return null;
-
-  const chaserGlobal = getGlobalTrackIndex(chaser.color, chaser.step);
-  const targetGlobal = getGlobalTrackIndex(target.color, target.step);
-  if (chaserGlobal === null || targetGlobal === null) return null;
-
-  const dist = (targetGlobal - chaserGlobal + 52) % 52;
-  if (dist <= 0) return null;
-
-  // Ensure chaser does not enter its own home stretch (step > 50) before reaching target
-  if (chaser.step + dist > 50) return null;
-
-  return dist;
-}
-
-export function createInitialBiasState(): DiceBiasState {
-  return {
-    rahulRollCount: 0,
-    queuedComboRolls: [],
-    chaseWindowCounter: 0,
-    chaseWindowTarget: fairRandomInt(2, 4),
-    lastBiasReason: null,
-  };
-}
+export {
+  calculatePlayerBoardScore,
+  createInitialBiasState,
+  evaluateFaceTacticalScore,
+  fairRandomInt,
+  getCaptureDistanceBetweenPawns,
+  getLegalMovesForPlayer,
+  isRahulName,
+};
 
 export interface SmartDiceResult {
   diceValue: number;
   nextBiasState: DiceBiasState;
-}
-
-/**
- * Calculates a player's total board progress score.
- * Used for dynamic rubber-banding and game-state awareness.
- */
-export function calculatePlayerBoardScore(pawns: Pawn[], playerIndex: number): number {
-  return pawns
-    .filter((p) => p.playerIndex === playerIndex)
-    .reduce((total, p) => {
-      if (p.step < 0) return total; // In Yard
-      if (p.step >= 56) return total + 120; // Reached Home Goal!
-      if (p.step >= 51) return total + p.step + 20; // Home stretch
-      return total + p.step;
-    }, 0);
-}
-
-/**
- * Evaluates the tactical strength of a candidate dice face for Rahul.
- * Higher score = more strategic, safe, and progress-accelerating move.
- */
-export function evaluateFaceTacticalScore(
-  face: number,
-  pawns: Pawn[],
-  playerIndex: number,
-  playerColor: PlayerColor,
-  opponentPawns: Pawn[]
-): number {
-  const moves = getLegalMovesForPlayer(pawns, playerIndex, playerColor, face);
-  if (moves.length === 0) return -500;
-
-  let bestMoveScore = -500;
-
-  for (const move of moves) {
-    let score = 20 + (move.toStep - move.fromStep);
-
-    // 1. Reaching Home Goal (Ultimate Objective - Instant win step!)
-    if (move.willReachHome) {
-      score += 350;
-    }
-
-    // 2. Capturing an Opponent Token (High Priority)
-    if (move.willKillPawnIds.length > 0) {
-      score += 260;
-    }
-
-    // 3. Landing on a Safe Star (Fortress position)
-    if (move.landsOnSafeStar) {
-      score += 140;
-    }
-
-    // 4. Entering Home Stretch (safe zone step >= 51)
-    if (move.toStep >= 51 && move.fromStep < 51) {
-      score += 120;
-    }
-
-    // 5. Deploying from Yard (Face = 6)
-    if (move.fromStep === -1 && face === 6) {
-      score += 100;
-    }
-
-    // 6. Threat assessment on landing square (only for main track 0..50, non-safe)
-    if (move.toStep <= 50 && !move.landsOnSafeStar) {
-      const landingGlobal = getGlobalTrackIndex(playerColor, move.toStep);
-      let inDirectThreat = false;
-      if (landingGlobal !== null) {
-        for (const opp of opponentPawns) {
-          if (opp.step >= 0 && opp.step <= 50) {
-            const oppGlobal = getGlobalTrackIndex(opp.color, opp.step);
-            if (oppGlobal !== null) {
-              const chaserDist = (landingGlobal - oppGlobal + 52) % 52;
-              if (chaserDist >= 1 && chaserDist <= 6) {
-                inDirectThreat = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-      if (inDirectThreat) {
-        score -= 110; // Blunder penalty: walking into opponent crosshairs!
-      } else {
-        score += 35; // Safe advance
-      }
-    }
-
-    // 7. Escape an existing threat
-    if (move.fromStep >= 0 && move.fromStep <= 50 && !isSafeStep(playerColor, move.fromStep)) {
-      const fromGlobal = getGlobalTrackIndex(playerColor, move.fromStep);
-      if (fromGlobal !== null) {
-        for (const opp of opponentPawns) {
-          if (opp.step >= 0 && opp.step <= 50) {
-            const oppGlobal = getGlobalTrackIndex(opp.color, opp.step);
-            if (oppGlobal !== null) {
-              const currentThreatDist = (fromGlobal - oppGlobal + 52) % 52;
-              if (currentThreatDist >= 1 && currentThreatDist <= 6) {
-                score += 85; // Escaped!
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (score > bestMoveScore) {
-      bestMoveScore = score;
-    }
-  }
-
-  return bestMoveScore;
 }
 
 /**
@@ -591,7 +226,6 @@ export function rollSmartDice(params: {
   }
 
   // CASE 3: Opponent Rolling in a Match Against "Rahul"
-  // Goal: Thrilling, fast-paced, 100% natural feel with near-miss drama.
   const canOppRollSix = consecutiveSixes < 2;
   const oppPawns = pawns.filter((p) => p.playerIndex === currentPlayerIndex);
   const oppYardPawns = oppPawns.filter((p) => p.step === -1);
@@ -705,12 +339,10 @@ export function rollSmartDice(params: {
   }
 
   // B. OPPONENT WIN DELAY (Photo-Finish Guarantee):
-  // If opponent has 3 pawns home and this roll reaches home with the 4th pawn:
   const wouldWinMatch =
     oppHomePawns.length >= 3 && moves.some((m) => m.willReachHome);
 
   if (wouldWinMatch) {
-    // Steer to a face that advances another pawn or stops at step 54/55 (near-miss)
     const nonWinningPool = basePool.filter((f) => {
       const altMoves = getLegalMovesForPlayer(pawns, currentPlayerIndex, currentPlayer.color, f);
       return !altMoves.some((m) => m.willReachHome);

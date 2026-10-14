@@ -1,0 +1,92 @@
+import React from 'react';
+import { AVATAR_OPTIONS, COLOR_PALETTE } from '../../../engine/boardConfig';
+import { Pawn, PlayerConfig } from '../../../types/game';
+
+interface TopScoreCardProps {
+  playerIdx: number;
+  player: PlayerConfig;
+  playerPawns: Pawn[];
+  score: number;
+  isTurn: boolean;
+}
+
+export const TopScoreCard: React.FC<TopScoreCardProps> = ({
+  playerIdx,
+  player,
+  playerPawns,
+  score,
+  isTurn,
+}) => {
+  const avatar =
+    AVATAR_OPTIONS.find((a) => a.id === player.avatarId) ??
+    AVATAR_OPTIONS[playerIdx];
+  const palette = COLOR_PALETTE[player.color];
+  const isRight = playerIdx === 1;
+
+  // Sort dots so Out/Home colored circles appear first, followed by Greyish In-Yard circles
+  const sortedPawns = [...playerPawns].sort((a, b) => b.step - a.step);
+
+  return (
+    <div
+      className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-[22px] border-2 transition-all ${
+        isRight ? 'flex-row-reverse text-right' : 'flex-row text-left'
+      } ${
+        isTurn
+          ? 'bg-white border-amber-400 shadow-[0_6px_18px_rgba(245,158,11,0.25)]'
+          : 'bg-white/85 border-white/85 opacity-85 shadow-sm'
+      }`}
+    >
+      <img
+        src={avatar.src}
+        alt={player.name}
+        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow shrink-0"
+      />
+
+      <div className="flex-1 min-w-0">
+        <div
+          className={`flex items-center justify-between gap-1 ${
+            isRight ? 'flex-row-reverse' : 'flex-row'
+          }`}
+        >
+          <span className="text-xs font-extrabold text-slate-900 truncate">
+            {player.name || `Player ${playerIdx + 1}`}
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black tabular-nums shrink-0">
+            {score} pts
+          </span>
+        </div>
+
+        {/* 4 Round Token Circles: Actual Color when Out/Home, Greyish when In Yard */}
+        <div
+          className={`mt-1.5 flex items-center gap-1.5 ${
+            isRight ? 'justify-end' : 'justify-start'
+          }`}
+        >
+          {sortedPawns.map((p) => {
+            const isOut = p.step >= 0;
+            const isHome = p.step === 56;
+            return (
+              <span
+                key={p.id}
+                title={
+                  isHome
+                    ? 'Home!'
+                    : isOut
+                    ? 'Out on Board'
+                    : 'Inside Base'
+                }
+                className={`w-3.5 h-3.5 rounded-full transition-all ${
+                  isHome
+                    ? `${palette.bgClass} ring-2 ring-amber-400 scale-110 shadow-sm`
+                    : isOut
+                    ? `${palette.bgClass} border border-white shadow-sm`
+                    : 'bg-slate-300/90 border border-slate-400/40'
+                }`}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};

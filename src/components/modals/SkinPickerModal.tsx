@@ -1,5 +1,3 @@
-import { RoundedBox } from '@react-three/drei';
-import { Canvas, useFrame } from '@react-three/fiber';
 import { AnimatePresence, motion } from 'framer-motion';
 import gsap from 'gsap';
 import {
@@ -7,12 +5,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Dices,
-  Play,
-  RotateCcw,
   Sparkles,
   X,
 } from 'lucide-react';
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { soundManager } from '../../audio/soundManager';
 import {
@@ -23,15 +19,12 @@ import {
 import { useProfileStore } from '../../store/useProfileStore';
 import { DiceSkinId, PlayerColor, TokenSkinId } from '../../types/game';
 import { haptics } from '../../utils/haptics';
-import {
-  DICE_FACE_PIPS,
-  FACE_EULER_MAP,
-  SHARED_DICE_GEO,
-  SKIN_PBR_MAP,
-  getDiceCubeConfig,
-  getDicePipGeometry,
-} from '../three/Dice3DPod';
-import { Token3DModel } from '../three/Token3DModel';
+import { TOKEN_ICON_MAP } from './skinPicker/constants';
+import { SkinStudioPreview3D } from './skinPicker/preview/SkinStudioPreview3D';
+import { DiceRibbonRow } from './skinPicker/ribbon/DiceRibbonRow';
+import { TokenRibbonRow } from './skinPicker/ribbon/TokenRibbonRow';
+
+export { TOKEN_ICON_MAP };
 
 export interface SkinPickerModalProps {
   isOpen: boolean;
@@ -41,239 +34,6 @@ export interface SkinPickerModalProps {
   initialSkinId?: string;
   initialColor?: PlayerColor;
 }
-
-export const TOKEN_ICON_MAP: Record<string, string> = {
-  classic: '♟️',
-  knight: '🐴',
-  dog: '🐶',
-  cat: '🐱',
-  panda: '🐼',
-  robot: '🤖',
-  astronaut: '🧑‍🚀',
-  unicorn: '🦄',
-  'bamboo-panda': '🎋',
-  'cyber-robot': '🦾',
-  astronomer: '🔭',
-  'star-unicorn': '✨',
-  'fire-dragon': '🐉',
-  'ice-dragon': '❄️',
-  pirate: '🏴‍☠️',
-  magician: '🧙',
-  alien: '👽',
-};
-
-/**
- * Modern Clean Studio Pedestal Platform with Pearlescent Acrylic Podium,
- * Glowing Dynamic LED Accent Ring, and Soft Ground Shadows.
- */
-const ModernStudioPedestal: React.FC<{ glowColor: string }> = ({ glowColor }) => (
-  <group position={[0, -0.48, 0]}>
-    {/* Clean White/Pearlescent Acrylic Podium */}
-    <mesh position={[0, -0.035, 0]}>
-      <cylinderGeometry args={[1.06, 1.15, 0.07, 48]} />
-      <meshStandardMaterial color="#f8fafc" roughness={0.15} metalness={0.08} />
-    </mesh>
-    {/* Glossy Top Surface Plate */}
-    <mesh position={[0, 0.002, 0]}>
-      <cylinderGeometry args={[1.04, 1.06, 0.012, 48]} />
-      <meshStandardMaterial color="#ffffff" roughness={0.06} metalness={0.12} />
-    </mesh>
-    {/* Luminous Neon Ring Inset */}
-    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[0.92, 1.01, 48]} />
-      <meshBasicMaterial color={glowColor} toneMapped={false} />
-    </mesh>
-    {/* Soft Ground Contact Shadow on the Podium */}
-    <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[0.55, 32]} />
-      <meshBasicMaterial color="#0f172a" transparent opacity={0.16} depthWrite={false} />
-    </mesh>
-    {/* Subtle Inner Core Shadow */}
-    <mesh position={[0, 0.013, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[0.32, 32]} />
-      <meshBasicMaterial color="#0f172a" transparent opacity={0.25} depthWrite={false} />
-    </mesh>
-  </group>
-);
-
-/**
- * High-Performance Turntable Controller.
- * Operates purely on refs inside useFrame without triggering React component re-renders!
- * Supports inertia flick physics and gentle idle auto-rotation.
- */
-const TurntableController: React.FC<{
-  rotationTargetRef: React.MutableRefObject<number>;
-  rotationCurrentRef: React.MutableRefObject<number>;
-  isDraggingRef: React.MutableRefObject<boolean>;
-  isAutoRotatingRef: React.MutableRefObject<boolean>;
-  velocityRef: React.MutableRefObject<number>;
-  children: React.ReactNode;
-}> = ({
-  rotationTargetRef,
-  rotationCurrentRef,
-  isDraggingRef,
-  isAutoRotatingRef,
-  velocityRef,
-  children,
-}) => {
-  const groupRef = useRef<THREE.Group>(null);
-
-  useFrame((_, delta) => {
-    if (!groupRef.current) return;
-
-    if (!isDraggingRef.current) {
-      if (Math.abs(velocityRef.current) > 0.0006) {
-        rotationTargetRef.current += velocityRef.current;
-        velocityRef.current *= 0.92; // smooth friction decay
-      } else if (isAutoRotatingRef.current) {
-        rotationTargetRef.current += delta * 0.55; // gentle idle spin
-      }
-    }
-
-    // High refresh rate smooth lerp interpolation
-    rotationCurrentRef.current = THREE.MathUtils.lerp(
-      rotationCurrentRef.current,
-      rotationTargetRef.current,
-      0.22
-    );
-
-    groupRef.current.rotation.y = rotationCurrentRef.current;
-  });
-
-  return <group ref={groupRef}>{children}</group>;
-};
-
-/**
- * 3D Studio Die Mesh rendered inside the Skin Picker Modal.
- * Wrapped in an inner group so GSAP roll jumps and squash-and-stretch operate
- * independently of the outer 360 turntable orbit.
- */
-const StudioDie3DMesh: React.FC<{
-  skinId: DiceSkinId;
-  value: number;
-  isRolling: boolean;
-}> = React.memo(({ skinId, value, isRolling }) => {
-  const dieInnerRef = useRef<THREE.Group>(null);
-  const skin = useMemo(
-    () => DICE_SKINS.find((s) => s.id === skinId) ?? DICE_SKINS[0],
-    [skinId]
-  );
-  const pbr = SKIN_PBR_MAP[skinId] ?? SKIN_PBR_MAP['classic-white'];
-  const cubeConfig = useMemo(() => getDiceCubeConfig(skin.shapeType), [skin.shapeType]);
-
-  useEffect(() => {
-    if (!dieInnerRef.current) return;
-    const grp = dieInnerRef.current;
-    gsap.killTweensOf(grp.position);
-    gsap.killTweensOf(grp.rotation);
-    gsap.killTweensOf(grp.scale);
-
-    const targetEuler = FACE_EULER_MAP[value] ?? FACE_EULER_MAP[1];
-
-    if (isRolling) {
-      soundManager.play('dice_roll');
-      const tl = gsap.timeline();
-      tl.to(
-        grp.rotation,
-        {
-          x: targetEuler[0] + Math.PI * 4,
-          y: targetEuler[1] + Math.PI * 4,
-          z: targetEuler[2] + Math.PI * 2,
-          duration: 0.65,
-          ease: 'power2.out',
-        },
-        0
-      )
-        .to(grp.position, { y: 0.75, duration: 0.22, ease: 'sine.out' }, 0)
-        .to(grp.position, { y: 0.16, duration: 0.25, ease: 'bounce.out' }, 0.22)
-        .to(
-          grp.scale,
-          { x: 1.15, y: 0.85, z: 1.15, duration: 0.08, ease: 'power2.out' },
-          0.44
-        )
-        .to(
-          grp.scale,
-          { x: 1, y: 1, z: 1, duration: 0.15, ease: 'back.out(2)' },
-          0.52
-        );
-    } else {
-      grp.position.set(0, 0.16, 0);
-      grp.rotation.set(targetEuler[0], targetEuler[1], targetEuler[2]);
-      grp.scale.set(1, 1, 1);
-    }
-  }, [isRolling, value]);
-
-  return (
-    <group ref={dieInnerRef} position={[0, 0.16, 0]}>
-      <RoundedBox
-        args={cubeConfig.args}
-        radius={cubeConfig.radius}
-        smoothness={cubeConfig.smoothness}
-      >
-        <meshStandardMaterial
-          color={skin.bodyColor}
-          metalness={skin.metalness}
-          roughness={skin.roughness}
-        />
-      </RoundedBox>
-
-      {DICE_FACE_PIPS.map((face, fIdx) => {
-        const isAce = face.faceValue === 1;
-        const isClassicAce = skinId === 'classic-white' && isAce;
-        const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
-        const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
-        const pipGeo = getDicePipGeometry(face.faceValue, skinId, skin.pipShape);
-
-        return (
-          <group key={fIdx} position={face.normal} rotation={face.rotation}>
-            {face.pips.map(([px, py], pIdx) => (
-              <group key={pIdx} position={[px, py, 0]}>
-                {/* 3D Prominent Visible Pip with Depth */}
-                <mesh
-                  geometry={pipGeo}
-                  position={[0, 0, 0.003]}
-                  rotation={
-                    skin.pipShape === 'digital-square'
-                      ? [0, 0, 0]
-                      : [Math.PI / 2, 0, 0]
-                  }
-                >
-                  <meshStandardMaterial
-                    color={pipColor}
-                    roughness={0.2}
-                    metalness={0.15}
-                    emissive={isClassicAce ? '#7f1d1d' : pbr.pipEmissive}
-                    emissiveIntensity={
-                      isClassicAce ? 0.35 : Math.min(1.0, pbr.pipEmissiveIntensity)
-                    }
-                  />
-                </mesh>
-                {/* Metallic Bevel Rim Around Pip */}
-                <mesh
-                  geometry={
-                    isClassicAce
-                      ? SHARED_DICE_GEO.pipAceRim
-                      : SHARED_DICE_GEO.pipRim
-                  }
-                  position={[0, 0, 0.007]}
-                >
-                  <meshStandardMaterial
-                    color={rimColor}
-                    metalness={0.85}
-                    roughness={0.15}
-                    side={THREE.DoubleSide}
-                  />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-    </group>
-  );
-});
-
-StudioDie3DMesh.displayName = 'StudioDie3DMesh';
 
 /**
  * Universal Modern 3D Studio Picker Modal for Tokens and Dice.
@@ -404,7 +164,6 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
     if (!isDraggingCanvasRef.current) return;
     const delta = e.clientX - lastPointerXRef.current;
-    // Responsive touch multiplier (swift & natural on mobile touch)
     const step = delta * 0.032;
     rotationTargetRef.current += step;
     velocityRef.current = step;
@@ -646,110 +405,26 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
             </div>
 
             {/* Modern Luminous 3D Viewport Stage */}
-            <div
+            <SkinStudioPreview3D
+              currentMode={currentMode}
+              activeSkinId={activeSkinId}
+              activeColor={activeColor}
+              activeGlowColor={activeGlowColor}
+              testDiceValue={testDiceValue}
+              isTestRolling={isTestRolling}
+              isTestHopping={isTestHopping}
+              onTriggerTestHop={handleTriggerTestHop}
+              onTriggerTestRoll={handleTriggerTestRoll}
               onPointerDown={handleCanvasPointerDown}
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={handleCanvasPointerUp}
-              onPointerCancel={handleCanvasPointerUp}
-              className="relative mt-3 w-full h-64 sm:h-72 rounded-3xl overflow-hidden border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.06),inset_0_1px_2px_rgba(255,255,255,0.8)] cursor-grab active:cursor-grabbing select-none"
-              style={{
-                background: 'radial-gradient(circle at 50% 40%, #ffffff 0%, #f1f5f9 65%, #e2e8f0 100%)',
-              }}
-            >
-              {/* Soft Atmospheric Color Bloom behind the figurine */}
-              <div
-                className="absolute inset-0 pointer-events-none opacity-40 transition-colors duration-500"
-                style={{
-                  background: `radial-gradient(circle at 50% 50%, ${activeGlowColor}44 0%, transparent 65%)`,
-                }}
-              />
-
-              {/* 360 Drag Pill Hint */}
-              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-md border border-slate-200/80 text-[10px] font-extrabold text-slate-700 pointer-events-none flex items-center gap-1.5 shadow-sm">
-                <RotateCcw className="w-3.5 h-3.5 text-blue-600 animate-spin" style={{ animationDuration: '6s' }} />
-                <span>Swipe 360° to Orbit</span>
-              </div>
-
-              {/* Action Floating Test Button */}
-              <div className="absolute bottom-3 right-3 z-10">
-                {currentMode === 'token' ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTriggerTestHop();
-                    }}
-                    disabled={isTestHopping}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-black shadow-md shadow-blue-500/25 flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current text-amber-300" />
-                    <span>{isTestHopping ? 'Hopping...' : 'Test Hop'}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTriggerTestRoll();
-                    }}
-                    disabled={isTestRolling}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-md shadow-emerald-500/25 flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                  >
-                    <Dices className="w-3.5 h-3.5 text-amber-300" />
-                    <span>{isTestRolling ? 'Rolling...' : `Roll (${testDiceValue})`}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Single Dedicated High-FPS 3D Studio Canvas */}
-              <Canvas
-                dpr={[1, 1.5]}
-                camera={
-                  currentMode === 'token'
-                    ? { position: [0, 0.9, 2.25], fov: 33 }
-                    : { position: [0, 1.25, 2.2], fov: 34 }
-                }
-                gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
-              >
-                <ambientLight intensity={0.9} />
-                <directionalLight position={[4, 6, 4]} intensity={1.5} />
-                <directionalLight position={[-3, -1, -3]} intensity={0.35} color="#ffffff" />
-                <pointLight position={[-2, 3, 2]} intensity={0.5} color={activeGlowColor} />
-
-                <Suspense fallback={null}>
-                  <TurntableController
-                    rotationTargetRef={rotationTargetRef}
-                    rotationCurrentRef={rotationCurrentRef}
-                    isDraggingRef={isDraggingCanvasRef}
-                    isAutoRotatingRef={isAutoRotatingRef}
-                    velocityRef={velocityRef}
-                  >
-                    {/* Modern Clean Studio Pedestal */}
-                    <ModernStudioPedestal glowColor={activeGlowColor} />
-
-                    {currentMode === 'token' ? (
-                      <group
-                        ref={tokenContainerRef}
-                        position={[0, -0.45, 0]}
-                      >
-                        <Token3DModel
-                          skin={activeSkinId as TokenSkinId}
-                          color={activeColor}
-                          scale={1.4}
-                          autoRotatePreview={false}
-                        />
-                      </group>
-                    ) : (
-                      <StudioDie3DMesh
-                        skinId={activeSkinId as DiceSkinId}
-                        value={testDiceValue}
-                        isRolling={isTestRolling}
-                      />
-                    )}
-                  </TurntableController>
-                </Suspense>
-              </Canvas>
-            </div>
+              rotationTargetRef={rotationTargetRef}
+              rotationCurrentRef={rotationCurrentRef}
+              isDraggingCanvasRef={isDraggingCanvasRef}
+              isAutoRotatingRef={isAutoRotatingRef}
+              velocityRef={velocityRef}
+              tokenContainerRef={tokenContainerRef}
+            />
 
             {/* Model Info Bar & Color Selector */}
             <div className="mt-2.5 px-3.5 py-2.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 shadow-xs flex items-center justify-between">
@@ -828,93 +503,19 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 }`}
                 style={{ scrollBehavior: isDraggingRow ? 'auto' : 'smooth' }}
               >
-                {currentMode === 'token'
-                  ? TOKEN_SKINS.map((skin) => {
-                      const selected = activeSkinId === skin.id;
-                      const icon = TOKEN_ICON_MAP[skin.id] || '♟️';
-                      return (
-                        <button
-                          key={skin.id}
-                          type="button"
-                          data-active={selected ? 'true' : 'false'}
-                          onClick={() => {
-                            if (hasDraggedRowRef.current) return;
-                            soundManager.play('ui_click');
-                            setActiveSkinId(skin.id);
-                          }}
-                          className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                            selected
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500 shadow-md shadow-blue-500/20 scale-102 ring-2 ring-blue-300'
-                              : 'bg-white text-slate-700 border-slate-200/90 hover:border-blue-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="text-xl shrink-0 drop-shadow-xs">{icon}</span>
-                          <div className="text-left">
-                            <span className="block text-xs font-black truncate max-w-[100px] leading-tight">
-                              {skin.name}
-                            </span>
-                            <span
-                              className={`block text-[9px] font-bold ${
-                                selected ? 'text-blue-100' : 'text-slate-400'
-                              }`}
-                            >
-                              {skin.subtitle.split(' ')[0]}
-                            </span>
-                          </div>
-                          {selected && (
-                            <Check className="w-3.5 h-3.5 text-amber-300 stroke-[3] shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })
-                  : DICE_SKINS.map((dice) => {
-                      const selected = activeSkinId === dice.id;
-                      return (
-                        <button
-                          key={dice.id}
-                          type="button"
-                          data-active={selected ? 'true' : 'false'}
-                          onClick={() => {
-                            if (hasDraggedRowRef.current) return;
-                            soundManager.play('ui_click');
-                            setActiveSkinId(dice.id);
-                          }}
-                          className={`shrink-0 flex items-center gap-2.5 px-3 py-1.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                            selected
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500 shadow-md shadow-blue-500/20 scale-102 ring-2 ring-blue-300'
-                              : 'bg-white text-slate-700 border-slate-200/90 hover:border-blue-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div
-                            className="w-6 h-6 rounded-lg shadow-sm border border-black/15 p-1 grid grid-cols-2 gap-0.5 items-center justify-items-center shrink-0"
-                            style={{
-                              backgroundColor: dice.bodyColor,
-                              boxShadow: `0 2px 6px ${dice.edgeGlow}55`,
-                            }}
-                          >
-                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
-                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
-                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
-                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
-                          </div>
-                          <div className="text-left">
-                            <span className="block text-xs font-black truncate max-w-[100px] leading-tight">
-                              {dice.name}
-                            </span>
-                            <span
-                              className={`block text-[9px] font-bold ${
-                                selected ? 'text-blue-100' : 'text-slate-400'
-                              }`}
-                            >
-                              {dice.shapeType}
-                            </span>
-                          </div>
-                          {selected && (
-                            <Check className="w-3.5 h-3.5 text-amber-300 stroke-[3] shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
+                {currentMode === 'token' ? (
+                  <TokenRibbonRow
+                    activeSkinId={activeSkinId}
+                    onSelectSkin={setActiveSkinId}
+                    hasDraggedRowRef={hasDraggedRowRef}
+                  />
+                ) : (
+                  <DiceRibbonRow
+                    activeSkinId={activeSkinId}
+                    onSelectSkin={setActiveSkinId}
+                    hasDraggedRowRef={hasDraggedRowRef}
+                  />
+                )}
               </div>
             </div>
 
