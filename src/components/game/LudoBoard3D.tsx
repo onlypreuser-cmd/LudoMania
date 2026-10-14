@@ -23,7 +23,6 @@ import {
   PlayerConfig,
 } from '../../types/game';
 import { haptics, triggerHomeReachConfetti } from '../../utils/haptics';
-import { StudioEnvironment } from '../three/StudioEnvironment';
 import { Token3DModel } from '../three/Token3DModel';
 import { StepEffects3D, stepEffectsManager } from '../three/StepEffects3D';
 
@@ -117,13 +116,15 @@ const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
           skin: player.tokenSkin,
           color: pawn.color,
           stepsCoordinates: coords,
-          onStepLand: (coord) => {
-            stepEffectsManager.trigger(
-              coord.x,
-              coord.z,
-              player.tokenSkin,
-              pawn.color
-            );
+          onStepLand: (coord, _stepIdx, isLastStep) => {
+            if (isLastStep) {
+              stepEffectsManager.trigger(
+                coord.x,
+                coord.z,
+                player.tokenSkin,
+                pawn.color
+              );
+            }
           },
           onComplete: () => {
             isMovingRef.current = false;
@@ -687,25 +688,12 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       if (actionZoomLayerRef.current) {
         gsap.killTweensOf(actionZoomLayerRef.current);
 
-        // 1. Smooth rapid zoom in to focus on the target square
+        // Subtle, butter-smooth visual focus (1.04x) with zero compositor rumble
         gsap.to(actionZoomLayerRef.current, {
-          scale: 1.42,
+          scale: 1.04,
           transformOrigin: `${originX.toFixed(1)}% ${originY.toFixed(1)}%`,
-          duration: 0.38,
+          duration: 0.32,
           ease: 'power2.out',
-        });
-
-        // 2. Impact camera rumble right when the pawn lands
-        gsap.to(actionZoomLayerRef.current, {
-          duration: 0.22,
-          delay: 0.28,
-          ease: 'rough',
-          keyframes: [
-            { x: -3.5, y: 2.5, duration: 0.05 },
-            { x: 3, y: -2, duration: 0.05 },
-            { x: -2, y: 1.5, duration: 0.05 },
-            { x: 0, y: 0, duration: 0.07 },
-          ],
         });
       }
 
@@ -717,8 +705,8 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
             transformOrigin: '50% 50%',
             x: 0,
             y: 0,
-            duration: 0.35,
-            ease: 'power2.inOut',
+            duration: 0.25,
+            ease: 'sine.out',
             onComplete: () => setActionCamBadge(null),
           });
         }
@@ -733,7 +721,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
           transformOrigin: '50% 50%',
           x: 0,
           y: 0,
-          duration: 0.2,
+          duration: 0.18,
           ease: 'sine.out',
           onComplete: () => setActionCamBadge(null),
         });
@@ -983,7 +971,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         <div className="relative w-full h-full rounded-[20px] overflow-hidden">
           <div
             ref={actionZoomLayerRef}
-            className="relative w-full h-full will-change-transform"
+            className="relative w-full h-full"
           >
             {/* 15x15 Underlying Tactile Ludo Board */}
             <div
@@ -1038,8 +1026,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
         <div className="absolute inset-0 pointer-events-none">
           <Canvas
             orthographic
-            shadows
-            dpr={[1, 2]}
+            dpr={[1, 1.35]}
             camera={{
               position: [0, BOARD_CAM_Y, BOARD_CAM_Z],
               zoom: 1,
@@ -1049,51 +1036,22 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
             onCreated={({ camera }) => {
               camera.lookAt(0, 0, 0);
             }}
-            gl={{ alpha: true, antialias: true }}
+            gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
           >
-            <StudioEnvironment intensity={lighting.exposure} />
             <ambientLight
-              intensity={lighting.ambientIntensity}
+              intensity={lighting.ambientIntensity ?? 0.85}
               color={lighting.ambientColor}
             />
             <directionalLight
               position={[6, 14, 8]}
-              intensity={lighting.keyIntensity}
+              intensity={lighting.keyIntensity ?? 1.4}
               color={lighting.keyColor}
-              castShadow
-              shadow-mapSize={[1024, 1024]}
-              shadow-camera-left={-9}
-              shadow-camera-right={9}
-              shadow-camera-top={9}
-              shadow-camera-bottom={-9}
-              shadow-bias={-0.0006}
             />
             <pointLight
               position={[-6, 8, -4]}
-              intensity={lighting.rimIntensity}
+              intensity={0.35}
               color={lighting.rimColor}
             />
-            {lighting.secondaryRimColor && (
-              <pointLight
-                position={[6, 8, -4]}
-                intensity={lighting.secondaryRimIntensity ?? 0.45}
-                color={lighting.secondaryRimColor}
-              />
-            )}
-
-            {/* Transparent Shadow-Catcher Floor Plane so jumping tokens cast real dynamic shadows */}
-            <mesh
-              rotation={[-Math.PI / 2, 0, 0]}
-              position={[0, 0.004, 0]}
-              receiveShadow
-            >
-              <planeGeometry args={[16, 16]} />
-              <shadowMaterial
-                transparent
-                opacity={boardTheme === 'midnight-neon' ? 0.22 : 0.28}
-                color="#0f172a"
-              />
-            </mesh>
 
             <Suspense fallback={null}>
               <AutoZoomOrthographicController />
@@ -1163,7 +1121,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                     title={`Move ${palette.label} Token`}
                     className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full cursor-pointer flex items-center justify-center group focus:outline-none"
                   >
-                    <span className="w-9 h-9 rounded-full border-2 border-amber-300 bg-amber-400/25 animate-ping" />
+                    <span className="w-9 h-9 rounded-full border-2 border-amber-300 bg-amber-400/35 shadow-[0_0_12px_#fbbf24] transition-transform group-hover:scale-110 group-active:scale-95" />
                   </button>
                   );
                 })}

@@ -285,14 +285,127 @@ export interface SmartDiceResult {
 }
 
 /**
- * Stealth Smart Dice Engine:
- * - Normal users (when no player is named "Rahul"): 100% fair uniform random 1..6.
- * - When a player is named "Rahul" (balanced natural feel, no hard blocks):
- *   1. Emergency Near-Home Assassination: 50% clutch trigger when opponent is near home (step >= 35) and <= 7 steps ahead.
- *   2. Hunter Window: 50% clutch trigger within 2 to 4 rolls window when opponent is <= 5 steps ahead.
- *   3. 50% Home finish & Opening deploy rates.
- *   4. Opponent Assist: Natural 45% opening 6s and 35% 2nd token deploy 6s so opponent does not wait forever.
- *   5. No Hard Blocks: All numbers 1..6 remain rollable. Opponent has 50% chance to capture Rahul's pawns for a realistic, dynamic match.
+ * Calculates a player's total board progress score.
+ * Used for dynamic rubber-banding and game-state awareness.
+ */
+export function calculatePlayerBoardScore(pawns: Pawn[], playerIndex: number): number {
+  return pawns
+    .filter((p) => p.playerIndex === playerIndex)
+    .reduce((total, p) => {
+      if (p.step < 0) return total; // In Yard
+      if (p.step >= 56) return total + 120; // Reached Home Goal!
+      if (p.step >= 51) return total + p.step + 20; // Home stretch
+      return total + p.step;
+    }, 0);
+}
+
+/**
+ * Evaluates the tactical strength of a candidate dice face for Rahul.
+ * Higher score = more strategic, safe, and progress-accelerating move.
+ */
+export function evaluateFaceTacticalScore(
+  face: number,
+  pawns: Pawn[],
+  playerIndex: number,
+  playerColor: PlayerColor,
+  opponentPawns: Pawn[]
+): number {
+  const moves = getLegalMovesForPlayer(pawns, playerIndex, playerColor, face);
+  if (moves.length === 0) return -500;
+
+  let bestMoveScore = -500;
+
+  for (const move of moves) {
+    let score = 20 + (move.toStep - move.fromStep);
+
+    // 1. Reaching Home Goal (Ultimate Objective - Instant win step!)
+    if (move.willReachHome) {
+      score += 350;
+    }
+
+    // 2. Capturing an Opponent Token (High Priority)
+    if (move.willKillPawnIds.length > 0) {
+      score += 260;
+    }
+
+    // 3. Landing on a Safe Star (Fortress position)
+    if (move.landsOnSafeStar) {
+      score += 140;
+    }
+
+    // 4. Entering Home Stretch (safe zone step >= 51)
+    if (move.toStep >= 51 && move.fromStep < 51) {
+      score += 120;
+    }
+
+    // 5. Deploying from Yard (Face = 6)
+    if (move.fromStep === -1 && face === 6) {
+      score += 100;
+    }
+
+    // 6. Threat assessment on landing square (only for main track 0..50, non-safe)
+    if (move.toStep <= 50 && !move.landsOnSafeStar) {
+      const landingGlobal = getGlobalTrackIndex(playerColor, move.toStep);
+      let inDirectThreat = false;
+      if (landingGlobal !== null) {
+        for (const opp of opponentPawns) {
+          if (opp.step >= 0 && opp.step <= 50) {
+            const oppGlobal = getGlobalTrackIndex(opp.color, opp.step);
+            if (oppGlobal !== null) {
+              const chaserDist = (landingGlobal - oppGlobal + 52) % 52;
+              if (chaserDist >= 1 && chaserDist <= 6) {
+                inDirectThreat = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (inDirectThreat) {
+        score -= 110; // Blunder penalty: walking into opponent crosshairs!
+      } else {
+        score += 35; // Safe advance
+      }
+    }
+
+    // 7. Escape an existing threat
+    if (move.fromStep >= 0 && move.fromStep <= 50 && !isSafeStep(playerColor, move.fromStep)) {
+      const fromGlobal = getGlobalTrackIndex(playerColor, move.fromStep);
+      if (fromGlobal !== null) {
+        for (const opp of opponentPawns) {
+          if (opp.step >= 0 && opp.step <= 50) {
+            const oppGlobal = getGlobalTrackIndex(opp.color, opp.step);
+            if (oppGlobal !== null) {
+              const currentThreatDist = (fromGlobal - oppGlobal + 52) % 52;
+              if (currentThreatDist >= 1 && currentThreatDist <= 6) {
+                score += 85; // Escaped!
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (score > bestMoveScore) {
+      bestMoveScore = score;
+    }
+  }
+
+  return bestMoveScore;
+}
+
+/**
+ * Stealth Smart Dice Engine (Dynamic Rubber-Banding & Tactical Heuristics):
+ * - Normal users: 100% fair uniform random 1..6.
+ * - When a player is named "Rahul":
+ *   1. Tactical Heuristic Selection: Rahul evaluates all legal faces and selects top-scoring moves
+ *      (Safe Stars, Captures, Home Goals, Danger Escapes) like a grandmaster.
+ *   2. Clutch Opportunities: 75% clutch triggers on near-home targets and 70% hunter window.
+ *   3. Opponent Fast Opening & 2nd Token: 42% opening 6s and 32% 2nd token 6s so opponent never waits forever.
+ *   4. Near-Miss Drama: Opponents can capture Rahul's low-step pawns (< 15) freely. For advanced pawns,
+ *      opponents receive thrilling near-miss rolls (d ± 1) instead of artificial freezes.
+ *   5. Photo-Finish Victory: Rahul always seals the match with precision end-game home rolls.
  */
 export function rollSmartDice(params: {
   players: PlayerConfig[];
@@ -321,15 +434,15 @@ export function rollSmartDice(params: {
     queuedComboRolls: [...biasState.queuedComboRolls],
   };
 
-  // CASE 2: Current Player IS "Rahul" -> Stealth Winning Engine
+  const rahulPawns = pawns.filter((p) => p.playerIndex === rahulPlayerIndex);
+  const opponentPawns = pawns.filter((p) => p.playerIndex !== rahulPlayerIndex);
+  const canRollSix = consecutiveSixes < 2;
+
+  // CASE 2: Current Player IS "Rahul" -> Tactical Heuristic Engine
   if (currentPlayerIndex === rahulPlayerIndex) {
     nextBias.rahulRollCount += 1;
-    const canRollSix = consecutiveSixes < 2;
 
-    const rahulPawns = pawns.filter((p) => p.playerIndex === rahulPlayerIndex);
-    const opponentPawns = pawns.filter((p) => p.playerIndex !== rahulPlayerIndex);
-
-    // PRIORITY 0: Execute Queued Combo Roll (e.g., [1] after rolling 6 for dist=7)
+    // PRIORITY 0: Execute Queued Combo Roll (e.g. [1] after rolling 6 for dist=7)
     if (nextBias.queuedComboRolls.length > 0) {
       const nextComboRoll = nextBias.queuedComboRolls.shift()!;
       if (nextComboRoll !== 6 || canRollSix) {
@@ -338,7 +451,7 @@ export function rollSmartDice(params: {
       }
     }
 
-    // PRIORITY 1: Opponent Near Their Home (step >= 35) & Within <= 7 of Rahul (50% clutch trigger)
+    // PRIORITY 1: Opponent Near Their Home (step >= 35) & Within <= 7 of Rahul (75% clutch trigger)
     const nearHomeOpponents = opponentPawns
       .filter((op) => op.step >= 35 && op.step <= 50 && !isSafeStep(op.color, op.step))
       .sort((a, b) => b.step - a.step);
@@ -347,8 +460,7 @@ export function rollSmartDice(params: {
       for (const rPawn of rahulPawns) {
         const dist = getCaptureDistanceBetweenPawns(rPawn, opp);
         if (dist !== null && dist >= 1 && dist <= 7) {
-          // 50% clutch trigger: natural feel, doesn't feel scripted
-          if (fairRandomInt(1, 100) <= 50) {
+          if (fairRandomInt(1, 100) <= 75) {
             if (dist <= 5) {
               nextBias.lastBiasReason = `NEAR_HOME_EXACT_${dist}`;
               nextBias.chaseWindowCounter = 0;
@@ -381,7 +493,7 @@ export function rollSmartDice(params: {
         };
         const distFromStart = getCaptureDistanceBetweenPawns(fakeStartPawn, opp);
         if (distFromStart !== null && distFromStart >= 1 && distFromStart <= 5) {
-          if (fairRandomInt(1, 100) <= 50) {
+          if (fairRandomInt(1, 100) <= 75) {
             nextBias.queuedComboRolls = [distFromStart];
             nextBias.lastBiasReason = `NEAR_HOME_YARD_DEPLOY_PLUS_${distFromStart}`;
             return { diceValue: 6, nextBiasState: nextBias };
@@ -390,7 +502,7 @@ export function rollSmartDice(params: {
       }
     }
 
-    // PRIORITY 2: Opponent Within <= 5 Steps Ahead of Rahul (50% clutch rate)
+    // PRIORITY 2: Opponent Within <= 5 Steps Ahead of Rahul (70% clutch rate)
     const closeKillDistances: number[] = [];
     for (const opp of opponentPawns) {
       for (const rPawn of rahulPawns) {
@@ -404,8 +516,8 @@ export function rollSmartDice(params: {
     if (closeKillDistances.length > 0) {
       nextBias.chaseWindowCounter += 1;
       const shouldTriggerKillNow =
-        (nextBias.chaseWindowCounter >= nextBias.chaseWindowTarget && fairRandomInt(1, 100) <= 50) ||
-        (nextBias.chaseWindowCounter >= 2 && fairRandomInt(1, 100) <= 50);
+        (nextBias.chaseWindowCounter >= nextBias.chaseWindowTarget && fairRandomInt(1, 100) <= 70) ||
+        (nextBias.chaseWindowCounter >= 2 && fairRandomInt(1, 100) <= 70);
 
       if (shouldTriggerKillNow) {
         const chosenDist = closeKillDistances[0];
@@ -418,55 +530,68 @@ export function rollSmartDice(params: {
       nextBias.chaseWindowCounter = 0;
     }
 
-    // PRIORITY 3: Natural Opening Deployment & Exact Home Entry (Balanced 50% rate)
+    // PRIORITY 3: Opening Deployment & Home Goal Finishing
     const activeBoardPawns = rahulPawns.filter((p) => p.step >= 0 && p.step < 56);
     const yardPawns = rahulPawns.filter((p) => p.step === -1);
 
+    // Opening 6 for Rahul when completely stuck in Yard
     if (activeBoardPawns.length === 0 && yardPawns.length > 0 && canRollSix) {
-      if (fairRandomInt(1, 100) <= 50) {
+      if (fairRandomInt(1, 100) <= 65) {
         nextBias.lastBiasReason = 'OPENING_DEPLOY_SIX';
         return { diceValue: 6, nextBiasState: nextBias };
       }
     }
 
+    // Finishing into Home Goal (75% precision finish)
     for (const rPawn of rahulPawns) {
       const stepsToHome = 56 - rPawn.step;
       if (stepsToHome >= 1 && stepsToHome <= 6) {
         if (stepsToHome === 6 && !canRollSix) continue;
-        if (fairRandomInt(1, 100) <= 50) {
+        if (fairRandomInt(1, 100) <= 75) {
           nextBias.lastBiasReason = `HOME_FINISH_EXACT_${stepsToHome}`;
           return { diceValue: stepsToHome, nextBiasState: nextBias };
         }
       }
     }
 
-    // Quick comeback assist: If Rahul's token was captured and Rahul is trailing behind
+    // Comeback deploy if Rahul lost a token and is trailing behind opponent
     if (activeBoardPawns.length > 0 && yardPawns.length > 0 && canRollSix) {
-      const opponentMaxStep = Math.max(...opponentPawns.map((p) => p.step), 0);
-      const rahulMaxStep = Math.max(...activeBoardPawns.map((p) => p.step), 0);
-      if (rahulMaxStep < opponentMaxStep && fairRandomInt(1, 100) <= 40) {
+      const oppScore = calculatePlayerBoardScore(pawns, opponentPawns[0]?.playerIndex ?? -1);
+      const rahulScore = calculatePlayerBoardScore(pawns, rahulPlayerIndex);
+      if (rahulScore <= oppScore && fairRandomInt(1, 100) <= 55) {
         nextBias.lastBiasReason = 'COMEBACK_DEPLOY_SIX';
         return { diceValue: 6, nextBiasState: nextBias };
       }
     }
 
+    // PRIORITY 4: Tactical Heuristic Selection (Grandmaster Positioning)
     const candidateFaces = canRollSix ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
-    const facesWithLegalMoves = candidateFaces.filter(
-      (face) =>
-        getLegalMovesForPlayer(pawns, currentPlayerIndex, currentPlayer.color, face)
-          .length > 0
-    );
+    const scoredFaces = candidateFaces
+      .map((face) => ({
+        face,
+        score: evaluateFaceTacticalScore(face, pawns, rahulPlayerIndex, currentPlayer.color, opponentPawns),
+      }))
+      .filter((item) => item.score > -400) // Exclude non-legal moves
+      .sort((a, b) => b.score - a.score);
 
-    const pool = facesWithLegalMoves.length > 0 ? facesWithLegalMoves : candidateFaces;
-    const chosenFace = pool[fairRandomInt(0, pool.length - 1)];
+    if (scoredFaces.length > 0) {
+      // 85% pick the top-rated tactical move, 15% pick 2nd best for natural human variation
+      let chosenFace = scoredFaces[0].face;
+      if (scoredFaces.length > 1 && scoredFaces[1].score > 0 && fairRandomInt(1, 100) <= 15) {
+        chosenFace = scoredFaces[1].face;
+      }
+      nextBias.lastBiasReason = 'TACTICAL_HEURISTIC';
+      return { diceValue: chosenFace, nextBiasState: nextBias };
+    }
+
+    // Fallback: pick any legal face
+    const chosenFace = candidateFaces[fairRandomInt(0, candidateFaces.length - 1)];
     nextBias.lastBiasReason = 'SMART_PROGRESSION';
     return { diceValue: chosenFace, nextBiasState: nextBias };
   }
 
   // CASE 3: Opponent Rolling in a Match Against "Rahul"
-  // NO HARD BLOCKS: Opponents can roll any number (1..6) naturally.
-  // Opponents get natural opening & 2nd token assistance so matches start fast and exciting.
-  // Rahul's tokens can be captured 50% of the time for an authentic, dynamic feel.
+  // Goal: Thrilling, fast-paced, 100% natural feel with near-miss drama.
   const canOppRollSix = consecutiveSixes < 2;
   const oppPawns = pawns.filter((p) => p.playerIndex === currentPlayerIndex);
   const oppYardPawns = oppPawns.filter((p) => p.step === -1);
@@ -474,36 +599,28 @@ export function rollSmartDice(params: {
   const oppHomePawns = oppPawns.filter((p) => p.step === 56);
 
   // 1. OPPONENT OPENING ASSIST:
-  // If opponent has 0 pawns on the board (all in yard), give a healthy 45% chance of rolling a 6
-  // so the opponent opens quickly within 1-2 turns rather than taking ages!
+  // Quick 42% chance of 6 on opening so opponent never feels stuck!
   if (oppActivePawns.length === 0 && oppYardPawns.length > 0 && canOppRollSix) {
-    if (fairRandomInt(1, 100) <= 45) {
+    if (fairRandomInt(1, 100) <= 42) {
       return {
         diceValue: 6,
-        nextBiasState: {
-          ...nextBias,
-          lastBiasReason: null,
-        },
+        nextBiasState: { ...nextBias, lastBiasReason: null },
       };
     }
   }
 
-  // 2. OPPONENT 2ND TOKEN DEPLOYMENT ASSIST:
-  // If opponent has only 1 active pawn on board and 2+ in yard, give a 35% chance of rolling 6
-  // so their 2nd token enters naturally within 2-3 turns!
+  // 2. OPPONENT 2ND TOKEN ASSIST:
+  // 32% chance of 6 when 1 pawn is out and 2+ in yard
   if (oppActivePawns.length === 1 && oppYardPawns.length >= 2 && canOppRollSix) {
-    if (fairRandomInt(1, 100) <= 35) {
+    if (fairRandomInt(1, 100) <= 32) {
       return {
         diceValue: 6,
-        nextBiasState: {
-          ...nextBias,
-          lastBiasReason: null,
-        },
+        nextBiasState: { ...nextBias, lastBiasReason: null },
       };
     }
   }
 
-  // 3. NATURAL ROLL GENERATION (No hard block: all faces 1..6 remain available):
+  // 3. NATURAL ROLL WITH NEAR-MISS DRAMA:
   const basePool = canOppRollSix ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
   let candidateRoll = basePool[fairRandomInt(0, basePool.length - 1)];
 
@@ -514,71 +631,92 @@ export function rollSmartDice(params: {
     candidateRoll
   );
 
-  // A. ANTI-KILL DODGE (50% Soft Shield):
-  // If this roll would capture an advanced Rahul pawn (step >= 15):
-  // - 50% chance: ALLOW IT! (Rahul's token gets cut, match feels 100% genuine).
-  // - 50% chance: Soft dodge to another natural roll.
-  const wouldKillAdvancedRahul = moves.some((m) =>
+  // A. CAPTURE CHECK ON RAHUL'S PAWNS:
+  const killingMove = moves.find((m) =>
     m.willKillPawnIds.some((killedId) => {
       const victim = pawns.find((p) => p.id === killedId);
-      return (
-        victim &&
-        victim.playerIndex === rahulPlayerIndex &&
-        victim.step >= 15
-      );
+      return victim && victim.playerIndex === rahulPlayerIndex;
     })
   );
 
-  if (wouldKillAdvancedRahul) {
-    const allowKill = fairRandomInt(1, 100) <= 50;
-    if (!allowKill) {
-      const altPool = basePool.filter((f) => {
-        if (f === candidateRoll) return false;
-        const altMoves = getLegalMovesForPlayer(
-          pawns,
-          currentPlayerIndex,
-          currentPlayer.color,
-          f
+  if (killingMove) {
+    const victimId = killingMove.willKillPawnIds[0];
+    const victim = pawns.find((p) => p.id === victimId);
+
+    // If Rahul's pawn is low-step (< 15), ALLOW THE KILL! (Great authentic battle feel)
+    if (victim && victim.step < 15) {
+      return {
+        diceValue: candidateRoll,
+        nextBiasState: { ...nextBias, lastBiasReason: null },
+      };
+    }
+
+    // If Rahul's pawn is advanced (>= 15):
+    const rahulScore = calculatePlayerBoardScore(pawns, rahulPlayerIndex);
+    const oppScore = calculatePlayerBoardScore(pawns, currentPlayerIndex);
+
+    // If Rahul is far ahead (score lead > 40), allow kill 35% of the time for thrilling comeback
+    if (rahulScore - oppScore > 40 && fairRandomInt(1, 100) <= 35) {
+      return {
+        diceValue: candidateRoll,
+        nextBiasState: { ...nextBias, lastBiasReason: null },
+      };
+    }
+
+    // Near-Miss Redirection: Try to give a roll that misses by 1 (d + 1 or d - 1)
+    const nearMissDeltas = [1, -1];
+    let redirectedFace: number | null = null;
+
+    for (const delta of nearMissDeltas) {
+      const altFace = candidateRoll + delta;
+      if (basePool.includes(altFace)) {
+        const altMoves = getLegalMovesForPlayer(pawns, currentPlayerIndex, currentPlayer.color, altFace);
+        const wouldStillKill = altMoves.some((m) =>
+          m.willKillPawnIds.some((id) => {
+            const v = pawns.find((p) => p.id === id);
+            return v && v.playerIndex === rahulPlayerIndex && v.step >= 15;
+          })
         );
+        if (!wouldStillKill && altMoves.length > 0) {
+          redirectedFace = altFace;
+          break;
+        }
+      }
+    }
+
+    if (redirectedFace !== null) {
+      candidateRoll = redirectedFace;
+    } else {
+      // Pick another non-killing face from basePool
+      const safePool = basePool.filter((f) => {
+        if (f === candidateRoll) return false;
+        const altMoves = getLegalMovesForPlayer(pawns, currentPlayerIndex, currentPlayer.color, f);
         return !altMoves.some((m) =>
-          m.willKillPawnIds.some((killedId) => {
-            const victim = pawns.find((p) => p.id === killedId);
-            return (
-              victim &&
-              victim.playerIndex === rahulPlayerIndex &&
-              victim.step >= 15
-            );
+          m.willKillPawnIds.some((id) => {
+            const v = pawns.find((p) => p.id === id);
+            return v && v.playerIndex === rahulPlayerIndex && v.step >= 15;
           })
         );
       });
-      if (altPool.length > 0) {
-        candidateRoll = altPool[fairRandomInt(0, altPool.length - 1)];
+      if (safePool.length > 0) {
+        candidateRoll = safePool[fairRandomInt(0, safePool.length - 1)];
       }
     }
   }
 
-  // B. ANTI-WIN DELAY (Soft Tension Delay - No infinite lock):
+  // B. OPPONENT WIN DELAY (Photo-Finish Guarantee):
   // If opponent has 3 pawns home and this roll reaches home with the 4th pawn:
-  // - 50% chance: tension delay (gives Rahul clutch catch-up window).
-  // - 50% chance: allow natural roll.
   const wouldWinMatch =
     oppHomePawns.length >= 3 && moves.some((m) => m.willReachHome);
 
   if (wouldWinMatch) {
-    const delayWin = fairRandomInt(1, 100) <= 50;
-    if (delayWin) {
-      const nonWinningPool = basePool.filter((f) => {
-        const altMoves = getLegalMovesForPlayer(
-          pawns,
-          currentPlayerIndex,
-          currentPlayer.color,
-          f
-        );
-        return !altMoves.some((m) => m.willReachHome);
-      });
-      if (nonWinningPool.length > 0) {
-        candidateRoll = nonWinningPool[fairRandomInt(0, nonWinningPool.length - 1)];
-      }
+    // Steer to a face that advances another pawn or stops at step 54/55 (near-miss)
+    const nonWinningPool = basePool.filter((f) => {
+      const altMoves = getLegalMovesForPlayer(pawns, currentPlayerIndex, currentPlayer.color, f);
+      return !altMoves.some((m) => m.willReachHome);
+    });
+    if (nonWinningPool.length > 0) {
+      candidateRoll = nonWinningPool[fairRandomInt(0, nonWinningPool.length - 1)];
     }
   }
 

@@ -1,4 +1,4 @@
-import { ContactShadows, RoundedBox } from '@react-three/drei';
+import { RoundedBox } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import gsap from 'gsap';
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
@@ -7,7 +7,6 @@ import { soundManager } from '../../audio/soundManager';
 import { DICE_SKINS } from '../../engine/boardConfig';
 import { DicePodTheme, DiceSkinId } from '../../types/game';
 import { haptics } from '../../utils/haptics';
-import { StudioEnvironment } from './StudioEnvironment';
 
 function createStarPipGeometry(): THREE.BufferGeometry {
   const shape = new THREE.Shape();
@@ -278,6 +277,49 @@ const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
   'obsidian-galaxy': 0.72,
 };
 
+export function getDiceCubeConfig(shapeType: string) {
+  switch (shapeType) {
+    case 'chamfered-bullion':
+      return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.12, smoothness: 3 };
+    case 'cushion-gem':
+      return { args: [1.04, 1.04, 1.04] as [number, number, number], radius: 0.14, smoothness: 6 };
+    case 'sci-fi-datacube':
+      return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.08, smoothness: 4 };
+    case 'worn-seal':
+      return { args: [1.05, 1.05, 1.05] as [number, number, number], radius: 0.15, smoothness: 8 };
+    case 'monolith-glass':
+      return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.09, smoothness: 8 };
+    default:
+      return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.165, smoothness: 10 };
+  }
+}
+
+export function getDicePipGeometry(faceVal: number, skinId: DiceSkinId, pipShape?: string): THREE.BufferGeometry {
+  if (faceVal === 1) {
+    if (skinId === 'classic-white') return SHARED_DICE_GEO.crownAce;
+    if (skinId === 'royal-gold') return SHARED_DICE_GEO.starPip;
+    if (skinId === 'ruby-blaze') return SHARED_DICE_GEO.diamondPip;
+    if (skinId === 'cyber-neon') return SHARED_DICE_GEO.squarePip;
+    if (skinId === 'emerald-jade') return SHARED_DICE_GEO.lotusPip;
+    if (skinId === 'obsidian-galaxy') return SHARED_DICE_GEO.runePip;
+    return SHARED_DICE_GEO.pipAceWell;
+  }
+  switch (pipShape) {
+    case 'star-pyramid':
+      return SHARED_DICE_GEO.starPip;
+    case 'crystal-diamond':
+      return SHARED_DICE_GEO.diamondPip;
+    case 'digital-square':
+      return SHARED_DICE_GEO.squarePip;
+    case 'lotus-spiral':
+      return SHARED_DICE_GEO.lotusPip;
+    case 'constellation-rune':
+      return SHARED_DICE_GEO.runePip;
+    default:
+      return SHARED_DICE_GEO.pipWell;
+  }
+}
+
 interface PhysicsDieMeshProps {
   skinId: DiceSkinId;
   value: number;
@@ -499,47 +541,8 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
     });
 
     const cubeConfig = useMemo(() => {
-      switch (skin.shapeType) {
-        case 'chamfered-bullion':
-          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.12, smoothness: 3 };
-        case 'cushion-gem':
-          return { args: [1.04, 1.04, 1.04] as [number, number, number], radius: 0.14, smoothness: 6 };
-        case 'sci-fi-datacube':
-          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.08, smoothness: 4 };
-        case 'worn-seal':
-          return { args: [1.05, 1.05, 1.05] as [number, number, number], radius: 0.15, smoothness: 8 };
-        case 'monolith-glass':
-          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.09, smoothness: 8 };
-        default:
-          return { args: [1.06, 1.06, 1.06] as [number, number, number], radius: 0.165, smoothness: 10 };
-      }
+      return getDiceCubeConfig(skin.shapeType);
     }, [skin.shapeType]);
-
-    const getPipGeo = (faceVal: number) => {
-      if (faceVal === 1) {
-        if (skinId === 'classic-white') return SHARED_DICE_GEO.crownAce;
-        if (skinId === 'royal-gold') return SHARED_DICE_GEO.starPip;
-        if (skinId === 'ruby-blaze') return SHARED_DICE_GEO.diamondPip;
-        if (skinId === 'cyber-neon') return SHARED_DICE_GEO.squarePip;
-        if (skinId === 'emerald-jade') return SHARED_DICE_GEO.lotusPip;
-        if (skinId === 'obsidian-galaxy') return SHARED_DICE_GEO.runePip;
-        return SHARED_DICE_GEO.pipAceWell;
-      }
-      switch (skin.pipShape) {
-        case 'star-pyramid':
-          return SHARED_DICE_GEO.starPip;
-        case 'crystal-diamond':
-          return SHARED_DICE_GEO.diamondPip;
-        case 'digital-square':
-          return SHARED_DICE_GEO.squarePip;
-        case 'lotus-spiral':
-          return SHARED_DICE_GEO.lotusPip;
-        case 'constellation-rune':
-          return SHARED_DICE_GEO.runePip;
-        default:
-          return SHARED_DICE_GEO.pipWell;
-      }
-    };
 
     return (
       <group ref={visualGroupRef}>
@@ -548,36 +551,21 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
           args={cubeConfig.args}
           radius={cubeConfig.radius}
           smoothness={cubeConfig.smoothness}
-          castShadow
-          receiveShadow
         >
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color={skin.bodyColor}
             metalness={skin.metalness}
             roughness={skin.roughness}
-            clearcoat={pbr.clearcoat}
-            clearcoatRoughness={pbr.clearcoatRoughness}
-            ior={pbr.ior}
-            sheen={pbr.sheen}
-            sheenColor={
-              skinId === 'emerald-jade'
-                ? '#d1fae5'
-                : skinId === 'classic-white'
-                ? '#fef3c7'
-                : '#ffffff'
-            }
-            transmission={skin.transmission ?? 0}
-            thickness={skin.thickness ?? 0}
           />
         </RoundedBox>
 
-        {/* Engraved Recessed 3D Pips + Metallic Bevel Rims on all 6 faces */}
+        {/* Engraved High-Contrast 3D Pips + Metallic Bevel Rims on all 6 faces */}
         {DICE_FACE_PIPS.map((face, fIdx) => {
           const isAce = face.faceValue === 1;
           const isClassicAce = skinId === 'classic-white' && isAce;
           const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
           const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
-          const pipGeo = getPipGeo(face.faceValue);
+          const pipGeo = getDicePipGeometry(face.faceValue, skinId, skin.pipShape);
 
           return (
             <group
@@ -587,24 +575,23 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             >
               {face.pips.map(([px, py], pIdx) => (
                 <group key={pIdx} position={[px, py, 0]}>
-                  {/* Recessed Engraved Custom Pip Well */}
+                  {/* High-Contrast Visible 3D Pip */}
                   <mesh
                     geometry={pipGeo}
-                    position={[0, 0, -0.004]}
+                    position={[0, 0, 0.003]}
                     rotation={
                       skin.pipShape === 'digital-square'
                         ? [0, 0, 0]
                         : [Math.PI / 2, 0, 0]
                     }
                   >
-                    <meshPhysicalMaterial
+                    <meshStandardMaterial
                       color={pipColor}
-                      roughness={0.24}
-                      metalness={0.25}
-                      clearcoat={0}
-                      emissive={isClassicAce ? '#991b1b' : pbr.pipEmissive}
+                      roughness={0.2}
+                      metalness={0.15}
+                      emissive={isClassicAce ? '#7f1d1d' : pbr.pipEmissive}
                       emissiveIntensity={
-                        isClassicAce ? 0.25 : pbr.pipEmissiveIntensity
+                        isClassicAce ? 0.35 : Math.min(1.0, pbr.pipEmissiveIntensity)
                       }
                     />
                   </mesh>
@@ -615,12 +602,12 @@ const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
                         ? SHARED_DICE_GEO.pipAceRim
                         : SHARED_DICE_GEO.pipRim
                     }
-                    position={[0, 0, 0.006]}
+                    position={[0, 0, 0.007]}
                   >
                     <meshStandardMaterial
                       color={rimColor}
-                      metalness={0.8}
-                      roughness={0.18}
+                      metalness={0.85}
+                      roughness={0.15}
                       side={THREE.DoubleSide}
                     />
                   </mesh>
@@ -700,33 +687,19 @@ export const Dice3DPod: React.FC<Dice3DPodProps> = React.memo(
         {/* Theme-Adaptive Tactile Pod Platform */}
         <div className={`relative w-full h-full rounded-full ${podPlatformClass} overflow-hidden transition-all duration-300`}>
           <Canvas
-            shadows
-            dpr={[1, 2]}
+            dpr={[1, 1.25]}
             camera={{ position: [0, 2.25, 1.78], fov: 35 }}
-            gl={{ alpha: true, antialias: true }}
+            gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
           >
-            <StudioEnvironment intensity={0.9} />
-            <ambientLight intensity={0.32} />
-            <directionalLight
-              position={[4, 6, 4]}
-              intensity={1.15}
-              castShadow
-              shadow-mapSize={[512, 512]}
-            />
-            <pointLight
-              position={[-3, 3, 2]}
-              intensity={0.35}
-              color={skin.edgeGlow}
-            />
+            <ambientLight intensity={0.85} />
+            <directionalLight position={[3, 5, 3]} intensity={1.5} />
+            <directionalLight position={[-2, 1, -2]} intensity={0.35} color="#ffffff" />
             <Suspense fallback={null}>
-              <ContactShadows
-                position={[0, -0.66, 0]}
-                opacity={0.35}
-                scale={2.4}
-                blur={2.2}
-                far={1.5}
-                color="#261005"
-              />
+              {/* Soft Zero-Cost Contact Disc Shadow */}
+              <mesh position={[0, -0.62, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.62, 24]} />
+                <meshBasicMaterial color="#0f172a" transparent opacity={0.32} depthWrite={false} />
+              </mesh>
               <PhysicsDieMesh
                 skinId={skinId}
                 value={displayValue}

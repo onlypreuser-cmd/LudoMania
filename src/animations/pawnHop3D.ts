@@ -579,98 +579,82 @@ export function reverseTraversePawn3D(params: {
   gsap.killTweensOf(group.rotation);
   gsap.killTweensOf(group.scale);
 
-  // Per-square retreat duration so both short and long retreats feel smooth (~0.65s - 0.95s)
-  const trackStepsCount = Math.max(1, reverseCoordinates.length - 1);
-  const stepDuration = Math.max(
-    0.022,
-    Math.min(0.055, 0.68 / trackStepsCount)
-  );
+  const destCoord =
+    reverseCoordinates.length > 0
+      ? reverseCoordinates[reverseCoordinates.length - 1]
+      : { x: group.position.x, y: 0, z: group.position.z };
 
   const tl = gsap.timeline({
     onComplete: () => {
-      gsap.to(group.position, { y: 0, duration: 0.1, ease: 'sine.out' });
-      gsap.to(group.rotation, { x: 0, y: 0, z: 0, duration: 0.14 });
-      gsap.to(group.scale, {
+      gsap.killTweensOf(group.position);
+      gsap.killTweensOf(group.rotation);
+      gsap.killTweensOf(group.scale);
+      group.position.set(destCoord.x, 0, destCoord.z);
+      group.rotation.set(0, 0, 0);
+      group.scale.set(1, 1, 1);
+      if (onComplete) onComplete();
+    },
+  });
+
+  // 1. Dramatic high knockback pop & spin (0.00s -> 0.20s)
+  tl.to(group.position, {
+    y: 1.5,
+    duration: 0.2,
+    ease: 'power2.out',
+  })
+    .to(
+      group.scale,
+      {
+        x: 0.86,
+        y: 1.22,
+        z: 0.86,
+        duration: 0.18,
+        ease: 'power2.out',
+      },
+      0
+    )
+    .to(
+      group.rotation,
+      {
+        y: `+=${Math.PI * 2.5}`,
+        x: 0.3,
+        duration: 0.58,
+        ease: 'power1.out',
+      },
+      0
+    )
+    // 2. High-speed smooth arc swoop directly across board to Yard pad (0.16s -> 0.58s)
+    .to(
+      group.position,
+      {
+        x: destCoord.x,
+        z: destCoord.z,
+        duration: 0.42,
+        ease: 'sine.inOut',
+      },
+      0.16
+    )
+    // 3. Crisp bounce landing on the base slot
+    .to(
+      group.position,
+      {
+        y: 0,
+        duration: 0.38,
+        ease: 'bounce.out',
+      },
+      0.2
+    )
+    .to(
+      group.scale,
+      {
         x: 1,
         y: 1,
         z: 1,
-        duration: 0.16,
-        ease: 'back.out(1.6)',
-        onComplete: () => {
-          if (onComplete) onComplete();
-        },
-      });
-    },
-  });
-
-  // 1. Initial capture knock-up pop so the clash is visually dramatic
-  tl.to(group.position, {
-    y: 0.72,
-    duration: 0.14,
-    ease: 'power2.out',
-  }).to(
-    group.scale,
-    {
-      x: 0.88,
-      y: 1.18,
-      z: 0.88,
-      duration: 0.14,
-      ease: 'power2.out',
-    },
-    '<'
-  );
-
-  // 2. Smooth track-following retreat + final parabolic hop into Yard pad
-  reverseCoordinates.forEach((coord, idx) => {
-    const isFinalYardHop = idx === reverseCoordinates.length - 1;
-    if (isFinalYardHop) {
-      tl.to(group.position, {
-        x: coord.x,
-        z: coord.z,
-        duration: 0.24,
-        ease: 'sine.inOut',
-      })
-        .to(
-          group.position,
-          {
-            y: 0.65,
-            duration: 0.11,
-            ease: 'sine.out',
-          },
-          '<'
-        )
-        .to(
-          group.position,
-          {
-            y: 0,
-            duration: 0.13,
-            ease: 'bounce.out',
-          },
-          '>'
-        );
-    } else {
-      tl.to(group.position, {
-        x: coord.x,
-        z: coord.z,
-        y: 0.24,
-        duration: stepDuration,
-        ease: 'none',
-        onStart: () => {
-          if (idx % 3 === 0) {
-            soundManager.play('pawn_step', Math.max(0.7, 1.45 - idx * 0.028));
-          }
-        },
-      }).to(
-        group.rotation,
-        {
-          y: `+=${Math.PI * 0.5}`,
-          duration: stepDuration,
-          ease: 'none',
-        },
-        '<'
-      );
-    }
-  });
+        duration: 0.22,
+        ease: 'back.out(2)',
+      },
+      0.4
+    );
 
   return tl;
 }

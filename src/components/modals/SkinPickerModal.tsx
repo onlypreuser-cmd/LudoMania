@@ -28,8 +28,9 @@ import {
   FACE_EULER_MAP,
   SHARED_DICE_GEO,
   SKIN_PBR_MAP,
+  getDiceCubeConfig,
+  getDicePipGeometry,
 } from '../three/Dice3DPod';
-import { StudioEnvironment } from '../three/StudioEnvironment';
 import { Token3DModel } from '../three/Token3DModel';
 
 export interface SkinPickerModalProps {
@@ -158,6 +159,7 @@ const StudioDie3DMesh: React.FC<{
     [skinId]
   );
   const pbr = SKIN_PBR_MAP[skinId] ?? SKIN_PBR_MAP['classic-white'];
+  const cubeConfig = useMemo(() => getDiceCubeConfig(skin.shapeType), [skin.shapeType]);
 
   useEffect(() => {
     if (!dieInnerRef.current) return;
@@ -203,50 +205,62 @@ const StudioDie3DMesh: React.FC<{
 
   return (
     <group ref={dieInnerRef} position={[0, 0.16, 0]}>
-      <RoundedBox args={[1.18, 1.18, 1.18]} radius={0.145} smoothness={8} castShadow receiveShadow>
-        <meshPhysicalMaterial
+      <RoundedBox
+        args={cubeConfig.args}
+        radius={cubeConfig.radius}
+        smoothness={cubeConfig.smoothness}
+      >
+        <meshStandardMaterial
           color={skin.bodyColor}
-          metalness={pbr.metalness}
-          roughness={pbr.roughness}
-          clearcoat={pbr.clearcoat}
-          clearcoatRoughness={pbr.clearcoatRoughness}
-          ior={pbr.ior}
-          sheen={pbr.sheen}
-          sheenColor="#ffffff"
+          metalness={skin.metalness}
+          roughness={skin.roughness}
         />
       </RoundedBox>
 
       {DICE_FACE_PIPS.map((face, fIdx) => {
-        const isClassicAce = skinId === 'classic-white' && face.faceValue === 1;
+        const isAce = face.faceValue === 1;
+        const isClassicAce = skinId === 'classic-white' && isAce;
         const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
         const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
+        const pipGeo = getDicePipGeometry(face.faceValue, skinId, skin.pipShape);
 
         return (
           <group key={fIdx} position={face.normal} rotation={face.rotation}>
             {face.pips.map(([px, py], pIdx) => (
               <group key={pIdx} position={[px, py, 0]}>
+                {/* 3D Prominent Visible Pip with Depth */}
                 <mesh
-                  geometry={isClassicAce ? SHARED_DICE_GEO.pipAceWell : SHARED_DICE_GEO.pipWell}
-                  position={[0, 0, -0.004]}
-                  rotation={[Math.PI / 2, 0, 0]}
+                  geometry={pipGeo}
+                  position={[0, 0, 0.003]}
+                  rotation={
+                    skin.pipShape === 'digital-square'
+                      ? [0, 0, 0]
+                      : [Math.PI / 2, 0, 0]
+                  }
                 >
-                  <meshPhysicalMaterial
+                  <meshStandardMaterial
                     color={pipColor}
-                    roughness={0.14}
-                    metalness={0.35}
-                    clearcoat={1}
-                    emissive={isClassicAce ? '#991b1b' : pbr.pipEmissive}
-                    emissiveIntensity={isClassicAce ? 0.25 : pbr.pipEmissiveIntensity}
+                    roughness={0.2}
+                    metalness={0.15}
+                    emissive={isClassicAce ? '#7f1d1d' : pbr.pipEmissive}
+                    emissiveIntensity={
+                      isClassicAce ? 0.35 : Math.min(1.0, pbr.pipEmissiveIntensity)
+                    }
                   />
                 </mesh>
+                {/* Metallic Bevel Rim Around Pip */}
                 <mesh
-                  geometry={isClassicAce ? SHARED_DICE_GEO.pipAceRim : SHARED_DICE_GEO.pipRim}
-                  position={[0, 0, 0.006]}
+                  geometry={
+                    isClassicAce
+                      ? SHARED_DICE_GEO.pipAceRim
+                      : SHARED_DICE_GEO.pipRim
+                  }
+                  position={[0, 0, 0.007]}
                 >
                   <meshStandardMaterial
                     color={rimColor}
-                    metalness={0.8}
-                    roughness={0.18}
+                    metalness={0.85}
+                    roughness={0.15}
                     side={THREE.DoubleSide}
                   />
                 </mesh>
@@ -697,11 +711,10 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                 }
                 gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
               >
-                <StudioEnvironment intensity={0.95} />
-                <ambientLight intensity={0.7} />
-                <directionalLight position={[4, 6, 4]} intensity={1.6} />
-                <pointLight position={[-3, 3, 2]} intensity={0.7} color={activeGlowColor} />
-                <directionalLight position={[-3, -1, -3]} intensity={0.3} color="#ffffff" />
+                <ambientLight intensity={0.9} />
+                <directionalLight position={[4, 6, 4]} intensity={1.5} />
+                <directionalLight position={[-3, -1, -3]} intensity={0.35} color="#ffffff" />
+                <pointLight position={[-2, 3, 2]} intensity={0.5} color={activeGlowColor} />
 
                 <Suspense fallback={null}>
                   <TurntableController
@@ -873,16 +886,16 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
                           }`}
                         >
                           <div
-                            className="w-6 h-6 rounded-lg shadow-sm border border-black/15 flex items-center justify-center shrink-0"
+                            className="w-6 h-6 rounded-lg shadow-sm border border-black/15 p-1 grid grid-cols-2 gap-0.5 items-center justify-items-center shrink-0"
                             style={{
                               backgroundColor: dice.bodyColor,
                               boxShadow: `0 2px 6px ${dice.edgeGlow}55`,
                             }}
                           >
-                            <div
-                              className="w-2 h-2 rounded-full shadow-inner"
-                              style={{ backgroundColor: dice.pipColor }}
-                            />
+                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
+                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
+                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
+                            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: dice.pipColor }} />
                           </div>
                           <div className="text-left">
                             <span className="block text-xs font-black truncate max-w-[100px] leading-tight">

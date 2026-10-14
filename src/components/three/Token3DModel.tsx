@@ -239,6 +239,54 @@ const CLASSIC_LATHE_GEO = createClassicLatheGeometry();
  * - Uses organic ellipsoidal sculpting + layered eyes with specular catchlights
  * - Tuned PBR materials (`ior`, `sheen`, `clearcoat`, `metalness`) matching the 8 skins
  */
+const SelectableHaloRing: React.FC = React.memo(() => {
+  const ringRef = useRef<THREE.Group>(null);
+  useFrame((state, delta) => {
+    if (ringRef.current) {
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 5.5) * 0.1;
+      ringRef.current.scale.set(pulse, pulse, 1);
+      ringRef.current.rotation.z += delta * 1.0;
+    }
+  });
+
+  return (
+    <group
+      ref={ringRef}
+      position={[0, 0.025, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+    >
+      <mesh geometry={SHARED_GEO.selectRingOuter}>
+        <meshBasicMaterial
+          color="#facc15"
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.92}
+        />
+      </mesh>
+      <mesh geometry={SHARED_GEO.selectRingInner}>
+        <meshBasicMaterial
+          color="#ffffff"
+          side={THREE.DoubleSide}
+          transparent
+          opacity={0.85}
+        />
+      </mesh>
+    </group>
+  );
+});
+SelectableHaloRing.displayName = 'SelectableHaloRing';
+
+const AutoRotateContainer: React.FC<{ children: React.ReactNode }> = React.memo(({ children }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 1.05;
+    }
+  });
+  return <group ref={groupRef}>{children}</group>;
+});
+AutoRotateContainer.displayName = 'AutoRotateContainer';
+
 export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
   ({
     skin,
@@ -248,23 +296,7 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
     scale = 1,
     autoRotatePreview = false,
   }) => {
-    const innerRef = useRef<THREE.Group>(null);
-    const ringRef = useRef<THREE.Group>(null);
     const palette = COLOR_PALETTE[color];
-
-    const isAnimated = autoRotatePreview || isSelectable || isSelected;
-
-    useFrame((state, delta) => {
-      if (!isAnimated) return;
-      if (autoRotatePreview && innerRef.current) {
-        innerRef.current.rotation.y += delta * 1.05;
-      }
-      if (ringRef.current && (isSelectable || isSelected)) {
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 6.5) * 0.12;
-        ringRef.current.scale.set(pulse, pulse, 1);
-        ringRef.current.rotation.z += delta * 1.2;
-      }
-    });
 
     // Shared eye helper with sclera/iris + bright white specular catchlight
     const renderExpressiveEye = useMemo(
@@ -282,13 +314,10 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 geometry={SHARED_GEO.lowSphere}
                 scale={[eyeRadius, eyeRadius * 1.08, eyeRadius * 0.75]}
               >
-                <meshPhysicalMaterial
+                <meshStandardMaterial
                   color={irisColor}
-                  roughness={0.02}
-                  metalness={0.05}
-                  clearcoat={1}
-                  clearcoatRoughness={0.0}
-                  ior={1.45}
+                  roughness={0.15}
+                  metalness={0.1}
                 />
               </mesh>
               {/* Primary Top-Left Specular Catchlight Dot */}
@@ -321,35 +350,12 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
       []
     );
 
-    return (
-      <group ref={innerRef} scale={scale}>
+    const modelContent = (
+      <group scale={scale}>
         {/* ================================================================ */}
-        {/* PULSING TARGET SELECTION HALO ON BOARD FLOOR                     */}
+        {/* PULSING TARGET SELECTION HALO ON BOARD FLOOR (Mounted only when active!) */}
         {/* ================================================================ */}
-        {(isSelectable || isSelected) && (
-          <group
-            ref={ringRef}
-            position={[0, 0.025, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <mesh geometry={SHARED_GEO.selectRingOuter}>
-              <meshBasicMaterial
-                color="#facc15"
-                side={THREE.DoubleSide}
-                transparent
-                opacity={0.92}
-              />
-            </mesh>
-            <mesh geometry={SHARED_GEO.selectRingInner}>
-              <meshBasicMaterial
-                color="#ffffff"
-                side={THREE.DoubleSide}
-                transparent
-                opacity={0.85}
-              />
-            </mesh>
-          </group>
-        )}
+        {(isSelectable || isSelected) && <SelectableHaloRing />}
 
         {/* ================================================================ */}
         {/* UNIVERSAL COLOR-CODED COLLECTOR PEDESTAL BASE                    */}
@@ -4114,6 +4120,12 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
         )}
       </group>
     );
+
+    if (autoRotatePreview) {
+      return <AutoRotateContainer>{modelContent}</AutoRotateContainer>;
+    }
+
+    return modelContent;
   }
 );
 

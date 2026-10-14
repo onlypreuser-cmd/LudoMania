@@ -343,18 +343,39 @@ export const CustomizePage: React.FC = () => {
                   )}
 
                   <div
-                    className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center shadow-inner border border-slate-200 relative overflow-hidden"
-                    style={{ backgroundColor: dice.bodyColor }}
+                    className="w-16 h-16 rounded-2xl p-2 flex flex-col justify-between shadow-md border-2 border-white/60 relative overflow-hidden"
+                    style={{
+                      backgroundColor: dice.bodyColor,
+                      boxShadow: `0 4px 12px ${dice.edgeGlow}40, inset 0 2px 4px rgba(255,255,255,0.6)`,
+                    }}
                   >
-                    <span
-                      className="text-2xl font-black drop-shadow-sm"
-                      style={{ color: dice.pipColor }}
-                    >
-                      {dice.id === 'classic-white' ? '👑' : dice.id === 'royal-gold' ? '★' : dice.id === 'ruby-blaze' ? '◆' : dice.id === 'cyber-neon' ? '■' : dice.id === 'emerald-jade' ? '☯' : '✦'}
-                    </span>
-                    <span className="absolute bottom-1 px-1 py-0.2 rounded-full bg-black/40 text-[8px] font-black text-white flex items-center gap-0.5">
-                      <Eye className="w-2 h-2 text-amber-300" />
-                      <span>3D View</span>
+                    {/* Top Row: 2 Dots */}
+                    <div className="flex justify-between items-center px-0.5">
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: dice.pipColor, boxShadow: `0 0 4px ${dice.edgeGlow}` }} />
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: dice.pipColor, boxShadow: `0 0 4px ${dice.edgeGlow}` }} />
+                    </div>
+                    {/* Center: Center Dot or Ace Symbol */}
+                    <div className="flex justify-center items-center">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner"
+                        style={{
+                          backgroundColor: dice.id === 'classic-white' ? '#dc2626' : dice.pipColor,
+                          color: '#ffffff',
+                          boxShadow: `0 0 6px ${dice.edgeGlow}`,
+                        }}
+                      >
+                        {dice.id === 'classic-white' ? '★' : ''}
+                      </div>
+                    </div>
+                    {/* Bottom Row: 2 Dots */}
+                    <div className="flex justify-between items-center px-0.5">
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: dice.pipColor, boxShadow: `0 0 4px ${dice.edgeGlow}` }} />
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: dice.pipColor, boxShadow: `0 0 4px ${dice.edgeGlow}` }} />
+                    </div>
+                    {/* 3D View pill badge */}
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-slate-900/80 text-[7px] font-black text-amber-300 flex items-center gap-0.5 tracking-tight shadow">
+                      <Eye className="w-2 h-2" />
+                      <span>3D</span>
                     </span>
                   </div>
 
