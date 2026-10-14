@@ -3,8 +3,9 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { PlayerColor } from '../../../../types/game';
-import { ALL_TRACK_TILES, YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
+import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
+import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const MidnightNeonBoard: React.FC = () => {
   const reactorRing1Ref = useRef<THREE.Group>(null);
@@ -120,66 +121,15 @@ export const MidnightNeonBoard: React.FC = () => {
         );
       })}
 
-      {/* 4. Suspended Obsidian Smoked Glass Track Tiles Over Laser Trenches */}
-      {ALL_TRACK_TILES.map((tile) => {
-        const isSafe = tile.type === 'safe';
-        const isStart = tile.type === 'start';
-        const isHomeStretch = tile.type === 'home-stretch';
-        const colorHex = tile.color ? COLOR_PALETTE[tile.color].primary : '#06b6d4';
-
-        return (
-          <group key={tile.key} position={[tile.x, 0, tile.z]}>
-            {/* Suspended Smoked Obsidian Glass Tile */}
-            <mesh geometry={BOARD_GEO.tileChamfer} position={[0, -0.01, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color={isHomeStretch ? colorHex : '#090d16'}
-                roughness={0.12}
-                metalness={0.85}
-                clearcoat={1}
-                clearcoatRoughness={0.04}
-                ior={1.65}
-                emissive={isHomeStretch ? colorHex : '#000000'}
-                emissiveIntensity={isHomeStretch ? 0.35 : 0}
-              />
-            </mesh>
-
-            {/* Glowing Holographic Warp Beacon for Safe Squares */}
-            {isSafe && (
-              <group position={[0, 0.048, 0]}>
-                <mesh geometry={BOARD_GEO.star8Point} rotation={[-Math.PI / 2, 0, 0]}>
-                  <meshStandardMaterial
-                    color="#22d3ee"
-                    emissive="#06b6d4"
-                    emissiveIntensity={3.2}
-                  />
-                </mesh>
-                <mesh
-                  geometry={BOARD_GEO.thinTorus}
-                  position={[0, 0.01, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.48}
-                >
-                  <meshBasicMaterial color="#ec4899" />
-                </mesh>
-              </group>
-            )}
-
-            {isStart && (
-              <mesh
-                geometry={BOARD_GEO.star5Point}
-                position={[0, 0.048, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshStandardMaterial
-                  color={colorHex}
-                  emissive={colorHex}
-                  emissiveIntensity={2.8}
-                />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
+      {/* 4. Suspended Obsidian Smoked Glass Track Tiles Over Laser Trenches (GPU Instanced) */}
+      <InstancedTrackTiles
+        standardColor="#090d16"
+        baseRoughness={0.12}
+        baseClearcoat={1.0}
+        baseMetalness={0.85}
+        safeStarColor="#22d3ee"
+        startEmblemColor="#06b6d4"
+      />
 
       {/* 5. Center 3x3 Home Goal: Levitating 3D Quantum Singularity Reactor Core */}
       <group position={[0, 0, 0]}>

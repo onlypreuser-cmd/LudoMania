@@ -6,7 +6,7 @@ import { SkinComponentProps } from '../types';
 export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
   return (
     <group position={[0, 0.14, 0]}>
-      {/* Glacial-Blue Pedestal Collar + 3D Ice Snowflake Relief */}
+      {/* Glacial-Sapphire Pedestal Collar + 3D Ice Snowflake Relief */}
       <mesh
         geometry={SHARED_GEO.themeCollar}
         position={[0, -0.04, 0]}
@@ -15,10 +15,10 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#0284c7"
-          roughness={0.1}
-          metalness={0.2}
+          roughness={0.08}
+          metalness={0.3}
           clearcoat={1}
-          ior={1.6}
+          ior={1.62}
         />
       </mesh>
       {/* 3D Ice Snowflake Emblem on Pedestal Front */}
@@ -28,18 +28,18 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
             key={sIdx}
             geometry={SHARED_GEO.unitCylinder}
             rotation={[0, 0, ang]}
-            scale={[0.01, 0.088, 0.01]}
+            scale={[0.012, 0.092, 0.012]}
           >
             <meshStandardMaterial
               color="#e0f2fe"
               emissive="#38bdf8"
-              emissiveIntensity={1.6}
+              emissiveIntensity={1.8}
             />
           </mesh>
         ))}
       </group>
 
-      {/* Ultra-Chubby Pear-Shaped Frost Dragon Pot-Belly */}
+      {/* Translucent Glacial Crystal Dragon Body (High Refraction & Frosted Sheen) */}
       <mesh
         geometry={SHARED_GEO.unitSphere}
         position={[0, 0.2, -0.01]}
@@ -48,10 +48,11 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#38bdf8"
-          roughness={0.18}
-          clearcoat={0.92}
+          roughness={0.08}
+          transmission={0.42}
           ior={1.58}
-          sheen={0.65}
+          clearcoat={1.0}
+          sheen={0.8}
           sheenColor="#bae6fd"
         />
       </mesh>
@@ -71,13 +72,15 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
         >
           <meshPhysicalMaterial
             color="#e0f2fe"
-            roughness={0.2}
-            clearcoat={0.8}
+            roughness={0.14}
+            clearcoat={0.9}
+            emissive="#38bdf8"
+            emissiveIntensity={0.25}
           />
         </mesh>
       ))}
 
-      {/* Two Chubby Baby Frost Arms with Paws Resting on Lower Belly */}
+      {/* Two Frost Dragon Arms with Claws Resting on Lower Belly */}
       {[-1, 1].map((sign, armIdx) => (
         <group key={armIdx} position={[sign * 0.14, 0.18, 0.1]}>
           <mesh
@@ -87,9 +90,10 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
             castShadow
           >
             <meshPhysicalMaterial
-              color="#38bdf8"
-              roughness={0.2}
-              clearcoat={0.85}
+              color="#0284c7"
+              roughness={0.12}
+              transmission={0.3}
+              clearcoat={0.9}
             />
           </mesh>
           {/* 3 Translucent Ice Claws */}
@@ -103,7 +107,7 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
               <meshStandardMaterial
                 color="#bae6fd"
                 emissive="#38bdf8"
-                emissiveIntensity={0.6}
+                emissiveIntensity={0.8}
               />
             </mesh>
           ))}
@@ -119,9 +123,9 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
             castShadow
           >
             <meshPhysicalMaterial
-              color="#0284c7"
-              roughness={0.2}
-              clearcoat={0.85}
+              color="#0369a1"
+              roughness={0.15}
+              clearcoat={0.9}
             />
           </mesh>
           <mesh
@@ -129,12 +133,37 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
             position={[0, -0.01, 0.075]}
             scale={[0.038, 0.026, 0.02]}
           >
-            <meshStandardMaterial color="#e0f2fe" roughness={0.3} />
+            <meshStandardMaterial color="#e0f2fe" roughness={0.25} />
           </mesh>
         </group>
       ))}
 
-      {/* Curled Frost Dragon Tail */}
+      {/* 4 Dorsal Glacial Crystal Spikes Along Spine */}
+      {[
+        { y: 0.36, z: -0.15, s: 0.05 },
+        { y: 0.28, z: -0.16, s: 0.045 },
+        { y: 0.20, z: -0.16, s: 0.04 },
+        { y: 0.12, z: -0.14, s: 0.035 },
+      ].map((sp, spIdx) => (
+        <mesh
+          key={spIdx}
+          geometry={SHARED_GEO.earCone}
+          position={[0, sp.y, sp.z]}
+          rotation={[-1.2, 0, 0]}
+          scale={[sp.s * 0.8, sp.s * 1.4, sp.s * 0.4]}
+        >
+          <meshPhysicalMaterial
+            color="#bae6fd"
+            roughness={0.04}
+            transmission={0.5}
+            clearcoat={1}
+            emissive="#38bdf8"
+            emissiveIntensity={0.8}
+          />
+        </mesh>
+      ))}
+
+      {/* Curled Frost Dragon Tail with Crystal Snowflake Finial */}
       <mesh
         geometry={SHARED_GEO.tailTorus}
         position={[-0.14, 0.13, -0.15]}
@@ -143,12 +172,27 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#0284c7"
-          roughness={0.2}
-          clearcoat={0.85}
+          roughness={0.15}
+          clearcoat={0.9}
+        />
+      </mesh>
+      <mesh
+        geometry={SHARED_GEO.earCone}
+        position={[-0.19, 0.22, -0.18]}
+        rotation={[-0.5, 0, -0.8]}
+        scale={[0.07, 0.13, 0.04]}
+      >
+        <meshPhysicalMaterial
+          color="#e0f2fe"
+          roughness={0.04}
+          transmission={0.5}
+          clearcoat={1}
+          emissive="#38bdf8"
+          emissiveIntensity={1.2}
         />
       </mesh>
 
-      {/* Spread Frost Wings */}
+      {/* Spread Crystalline Frost Wings with Refractive Membrane */}
       {[-1, 1].map((side, wIdx) => (
         <group
           key={wIdx}
@@ -163,8 +207,9 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
           >
             <meshPhysicalMaterial
               color="#0284c7"
-              roughness={0.18}
-              clearcoat={0.9}
+              roughness={0.12}
+              clearcoat={0.95}
+              transmission={0.35}
             />
           </mesh>
           <mesh
@@ -174,14 +219,17 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
           >
             <meshPhysicalMaterial
               color="#bae6fd"
-              roughness={0.12}
+              roughness={0.06}
               clearcoat={1}
+              transmission={0.55}
+              emissive="#38bdf8"
+              emissiveIntensity={0.4}
             />
           </mesh>
         </group>
       ))}
 
-      {/* Giant Chubby Frost Head & Jowls */}
+      {/* Giant Chubby Frost Head & Cheeks */}
       <mesh
         geometry={SHARED_GEO.unitSphere}
         position={[0, 0.56, 0.01]}
@@ -190,12 +238,15 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#38bdf8"
-          roughness={0.16}
+          roughness={0.1}
           clearcoat={0.95}
+          transmission={0.38}
           ior={1.6}
-          sheen={0.65}
+          sheen={0.7}
+          sheenColor="#bae6fd"
         />
       </mesh>
+      {/* Plump Lower Side Jowls */}
       {[-0.15, 0.15].map((jx, jIdx) => (
         <mesh
           key={jIdx}
@@ -205,8 +256,9 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
         >
           <meshPhysicalMaterial
             color="#38bdf8"
-            roughness={0.18}
-            clearcoat={0.85}
+            roughness={0.12}
+            clearcoat={0.9}
+            transmission={0.3}
           />
         </mesh>
       ))}
@@ -220,7 +272,7 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#38bdf8"
-          roughness={0.16}
+          roughness={0.12}
           clearcoat={0.9}
         />
       </mesh>
@@ -235,11 +287,11 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
         </mesh>
       ))}
 
-      {/* GIANT Deep Sapphire Kawaii Eyes */}
+      {/* Deep Sapphire Expressive Eyes with Dual Starlight Catchlights */}
       <ExpressiveEye pos={[-0.118, 0.585, 0.198]} irisColor="#0369a1" eyeRadius={0.056} />
       <ExpressiveEye pos={[0.118, 0.585, 0.198]} irisColor="#0369a1" eyeRadius={0.056} />
 
-      {/* Sweeping Organic Curved Crystalline Ice Horns */}
+      {/* Sweeping Organic Curved Crystalline Ice Horns with Internal Radiance */}
       {[-0.135, 0.135].map((hx, hIdx) => {
         const sign = hIdx === 0 ? 1 : -1;
         return (
@@ -253,18 +305,18 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
           >
             <meshPhysicalMaterial
               color="#e0f2fe"
-              roughness={0.04}
+              roughness={0.02}
               clearcoat={1}
-              transmission={0.45}
-              ior={1.34}
+              transmission={0.62}
+              ior={1.42}
               emissive="#38bdf8"
-              emissiveIntensity={0.35}
+              emissiveIntensity={0.5}
             />
           </mesh>
         );
       })}
 
-      {/* Cheek Frost Crystals */}
+      {/* Cheek Faceted Frost Crystals */}
       {[-0.26, 0.26].map((fx, fIdx) => {
         const sign = fIdx === 0 ? 1 : -1;
         return (
@@ -277,8 +329,9 @@ export const IceDragonSkin: React.FC<SkinComponentProps> = React.memo(() => {
           >
             <meshPhysicalMaterial
               color="#bae6fd"
-              roughness={0.08}
+              roughness={0.04}
               clearcoat={1}
+              transmission={0.5}
               ior={1.65}
             />
           </mesh>

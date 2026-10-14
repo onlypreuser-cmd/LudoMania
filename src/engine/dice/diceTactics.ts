@@ -45,7 +45,11 @@ export function evaluateFaceTacticalScore(
   let bestMoveScore = -500;
 
   for (const move of moves) {
-    let score = 20 + (move.toStep - move.fromStep);
+    const stepAdvance =
+      move.fromStep >= 0 && move.toStep < move.fromStep
+        ? move.toStep - move.fromStep + 51
+        : move.toStep - move.fromStep;
+    let score = 20 + stepAdvance;
 
     // 1. Reaching Home Goal (Ultimate Objective - Instant win step!)
     if (move.willReachHome) {

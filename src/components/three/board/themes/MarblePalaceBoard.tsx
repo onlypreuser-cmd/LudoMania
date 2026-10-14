@@ -3,8 +3,9 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { PlayerColor } from '../../../../types/game';
-import { ALL_TRACK_TILES, YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
+import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
+import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const MarblePalaceBoard: React.FC = () => {
   const crystalJewelRef = useRef<THREE.Group>(null);
@@ -138,66 +139,15 @@ export const MarblePalaceBoard: React.FC = () => {
         );
       })}
 
-      {/* 5. Honed Carrara Marble Slabs & Rose-Gold Track Tiles */}
-      {ALL_TRACK_TILES.map((tile) => {
-        const isSafe = tile.type === 'safe';
-        const isStart = tile.type === 'start';
-        const isHomeStretch = tile.type === 'home-stretch';
-        const colorHex = tile.color ? COLOR_PALETTE[tile.color].threeHex : '#f8fafc';
-
-        return (
-          <group key={tile.key} position={[tile.x, 0, tile.z]}>
-            <mesh geometry={BOARD_GEO.tileChamfer} position={[0, -0.01, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color={isHomeStretch || isStart ? colorHex : '#ffffff'}
-                roughness={isHomeStretch || isStart ? 0.22 : 0.35}
-                clearcoat={1}
-                clearcoatRoughness={0.08}
-                metalness={isHomeStretch ? 0.12 : 0.02}
-              />
-            </mesh>
-
-            {/* Inlaid Roman 8-Point Rose-Gold Star with Inset Diamond for Safe Squares */}
-            {isSafe && (
-              <group position={[0, 0.048, 0]}>
-                <mesh geometry={BOARD_GEO.star8Point} rotation={[-Math.PI / 2, 0, 0]}>
-                  <meshPhysicalMaterial
-                    color="#fda4af"
-                    metalness={0.88}
-                    roughness={0.14}
-                    clearcoat={1}
-                  />
-                </mesh>
-                {/* Inset Faceted Diamond Gem Core */}
-                <mesh geometry={BOARD_GEO.lowSphere} scale={[0.075, 0.045, 0.075]}>
-                  <meshPhysicalMaterial
-                    color="#ffffff"
-                    roughness={0.02}
-                    clearcoat={1}
-                    transmission={0.85}
-                    ior={1.8}
-                  />
-                </mesh>
-              </group>
-            )}
-
-            {isStart && (
-              <mesh
-                geometry={BOARD_GEO.star5Point}
-                position={[0, 0.048, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshPhysicalMaterial
-                  color="#fda4af"
-                  metalness={0.85}
-                  roughness={0.15}
-                  clearcoat={1}
-                />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
+      {/* 5. Honed Carrara Marble Slabs & Rose-Gold Track Tiles (GPU Instanced) */}
+      <InstancedTrackTiles
+        standardColor="#ffffff"
+        baseRoughness={0.28}
+        baseClearcoat={1.0}
+        baseMetalness={0.04}
+        safeStarColor="#fda4af"
+        startEmblemColor="#fda4af"
+      />
 
       {/* 6. Center 3x3 Home Goal: Grand Roman Rotunda & Floating Faceted Diamond */}
       <group position={[0, 0, 0]}>

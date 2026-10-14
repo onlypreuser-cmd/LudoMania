@@ -1,3 +1,4 @@
+import { useFrame } from '@react-three/fiber';
 import gsap from 'gsap';
 import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -49,6 +50,7 @@ export const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
     const isMovingRef = useRef(false);
     const hasInitializedPos = useRef(false);
     const executedMoveKeyRef = useRef<string | null>(null);
+    const shadowMeshRef = useRef<THREE.Mesh>(null);
 
     const targetGrid = useMemo(
       () => getPawnGridCoord(pawn.color, pawn.step, pawn.pawnIndex),
@@ -59,6 +61,21 @@ export const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
       () => gridToWorld3D(targetGrid, stackIndex, stackTotal),
       [targetGrid, stackIndex, stackTotal]
     );
+
+    // Frame-rate independent zero-allocation shadow grounding:
+    // Keeps contact shadow pinned to board surface (y = 0.01) while scaling & diffusing with hop height
+    useFrame(() => {
+      if (groupRef.current && shadowMeshRef.current) {
+        const y = groupRef.current.position.y;
+        shadowMeshRef.current.position.y = -y + 0.01;
+        const shadowScale = Math.max(0.38, 1 - y * 0.42);
+        shadowMeshRef.current.scale.set(tokenScale * shadowScale, tokenScale * shadowScale, 1);
+        const mat = shadowMeshRef.current.material as THREE.MeshBasicMaterial;
+        if (mat) {
+          mat.opacity = Math.max(0.06, 0.28 * (1 - y * 0.5));
+        }
+      }
+    });
 
     // Initial mount position anchor
     useEffect(() => {
@@ -214,17 +231,18 @@ export const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
           }
         }}
       >
-        {/* Soft Ambient Occlusion Contact Disc Under Token */}
+        {/* Dynamic Grounded Ambient Occlusion Contact Disc (Diffuses & Pinned to Ground During Hop) */}
         <mesh
+          ref={shadowMeshRef}
           geometry={CONTACT_SHADOW_GEO}
           position={[0, 0.01, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           scale={tokenScale}
         >
           <meshBasicMaterial
-            color="#0f172a"
+            color="#090d16"
             transparent
-            opacity={0.26}
+            opacity={0.28}
             depthWrite={false}
           />
         </mesh>

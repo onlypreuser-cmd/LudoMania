@@ -3,8 +3,9 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { PlayerColor } from '../../../../types/game';
-import { ALL_TRACK_TILES, YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
+import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
+import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const ClassicKingdomBoard: React.FC = () => {
   const crownRef = useRef<THREE.Group>(null);
@@ -166,59 +167,14 @@ export const ClassicKingdomBoard: React.FC = () => {
         })}
       </group>
 
-      {/* 5. 72 Light Oak Parquet Track Tiles */}
-      {ALL_TRACK_TILES.map((tile) => {
-        const isSafe = tile.type === 'safe';
-        const isStart = tile.type === 'start';
-        const isHomeStretch = tile.type === 'home-stretch';
-        const colorHex = tile.color ? COLOR_PALETTE[tile.color].threeHex : '#fffdfa';
-
-        return (
-          <group key={tile.key} position={[tile.x, 0, tile.z]}>
-            {/* Base Parquet Chamfer Tile */}
-            <mesh geometry={BOARD_GEO.tileChamfer} position={[0, -0.01, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color={isHomeStretch || isStart ? colorHex : '#fffdfa'}
-                roughness={isHomeStretch || isStart ? 0.32 : 0.62}
-                clearcoat={isHomeStretch || isStart ? 0.75 : 0.25}
-                metalness={isHomeStretch ? 0.1 : 0.02}
-              />
-            </mesh>
-
-            {/* Recessed Star Medallion for Safe Squares */}
-            {isSafe && (
-              <mesh
-                geometry={BOARD_GEO.star8Point}
-                position={[0, 0.045, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshPhysicalMaterial
-                  color="#fbbf24"
-                  metalness={0.92}
-                  roughness={0.12}
-                  clearcoat={1}
-                />
-              </mesh>
-            )}
-
-            {/* Start Tile Embossed Royal Shield Crest */}
-            {isStart && (
-              <mesh
-                geometry={BOARD_GEO.star5Point}
-                position={[0, 0.045, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshPhysicalMaterial
-                  color="#ffffff"
-                  metalness={0.2}
-                  roughness={0.15}
-                  clearcoat={1}
-                />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
+      {/* 5. 72 Light Oak Parquet Track Tiles (High-Performance GPU Instancing) */}
+      <InstancedTrackTiles
+        standardColor="#fffdfa"
+        baseRoughness={0.58}
+        baseClearcoat={0.35}
+        safeStarColor="#fbbf24"
+        startEmblemColor="#ffffff"
+      />
 
       {/* 6. Center 3x3 Home Goal: 3-Tiered Golden Dais & Rotating Royal Crown */}
       <group position={[0, 0, 0]}>

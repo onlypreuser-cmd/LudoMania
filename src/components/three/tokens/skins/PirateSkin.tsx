@@ -235,6 +235,49 @@ export const PirateSkin: React.FC<SkinComponentProps> = React.memo(() => {
             </mesh>
           ))}
         </group>
+
+        {/* Burgundy Plume Feather Cockade on Hat Side */}
+        <mesh
+          geometry={SHARED_GEO.wingFeather}
+          position={[-0.18, 0.12, 0.05]}
+          rotation={[0.3, 0, -0.75]}
+          scale={[0.7, 0.9, 0.35]}
+        >
+          <meshPhysicalMaterial
+            color="#991b1b"
+            roughness={0.4}
+            sheen={0.8}
+            sheenColor="#fca5a5"
+          />
+        </mesh>
+      </group>
+
+      {/* Curved Cutlass Sword Slung at Hip with Golden Basket Hilt */}
+      <group position={[-0.22, 0.14, 0.08]} rotation={[0.4, 0.3, 0.5]}>
+        {/* Curved Steel Blade */}
+        <mesh
+          geometry={SHARED_GEO.unitCylinder}
+          scale={[0.016, 0.32, 0.008]}
+        >
+          <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.08} />
+        </mesh>
+        {/* Golden Basket Hilt Guard */}
+        <mesh
+          geometry={SHARED_GEO.thinTorus}
+          position={[0, -0.15, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
+          scale={0.06}
+        >
+          <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.12} />
+        </mesh>
+        {/* Leather Grip & Pommel */}
+        <mesh
+          geometry={SHARED_GEO.lowSphere}
+          position={[0, -0.19, 0]}
+          scale={0.018}
+        >
+          <meshStandardMaterial color="#d97706" metalness={0.9} />
+        </mesh>
       </group>
     </group>
   );

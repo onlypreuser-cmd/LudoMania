@@ -120,13 +120,21 @@ export function getLegalMovesForPlayer(
     }
 
     // Tournament Cut-to-Enter Rule (Classic Kingdom):
-    // Must capture at least 1 opponent pawn to enter the Home Stretch (step 51..56)
+    // Must capture at least 1 opponent pawn to enter the Home Stretch (step 51..56).
+    // Option A: If not yet captured, token wraps around the 52-cell track for another
+    // lap to hunt down opponents, avoiding permanent deadlock at step 50!
+    let isCircuitLap = false;
     if (
       boardThemeId === 'classic-kingdom' &&
       !hasCapturedOpponent &&
       toStep >= 51
     ) {
-      continue; // Blocked until player gets at least 1 capture
+      if (pawn.step <= 50) {
+        toStep = toStep - 51; // Wraps 51 -> 0, 52 -> 1, ..., 56 -> 5
+        isCircuitLap = true;
+      } else {
+        continue;
+      }
     }
 
     // Check Phalanx Blockade (Marble Palace):
@@ -153,7 +161,9 @@ export function getLegalMovesForPlayer(
     let willReachHome = toStep === 56;
     let landsOnSafeStar = false;
     let killedPawns: Pawn[] = [];
-    let perkRuleTag: string | undefined = undefined;
+    let perkRuleTag: string | undefined = isCircuitLap
+      ? '🔄 Circuit Lap (Hunting Opponent)'
+      : undefined;
 
     if (toStep <= 50) {
       let targetGlobalIdx = getGlobalTrackIndex(playerColor, toStep);

@@ -53,10 +53,47 @@ export function rollSmartDice(params: {
   const currentPlayer = players[currentPlayerIndex];
   const rahulPlayerIndex = players.findIndex((p) => isRahulName(p.name));
 
-  // CASE 1: No player is named "Rahul" -> 100% Fair Unbiased Random Dice
+  // CASE 1: No player is named "Rahul" -> Fair Random Dice with Opening Deployment Assist
   if (rahulPlayerIndex === -1) {
+    const playerPawns = pawns.filter((p) => p.playerIndex === currentPlayerIndex);
+    const yardPawns = playerPawns.filter((p) => p.step === -1);
+    const activePawns = playerPawns.filter((p) => p.step >= 0 && p.step < 56);
+    const canRollSix = consecutiveSixes < 2;
+
+    // 1. First Token Opening Assist:
+    // Boost chance of rolling 6 to 45% when all pawns are in yard so players don't suffer cold streaks
+    if (activePawns.length === 0 && yardPawns.length > 0 && canRollSix) {
+      if (fairRandomInt(1, 100) <= 45) {
+        return {
+          diceValue: 6,
+          nextBiasState: {
+            ...biasState,
+            lastBiasReason: 'OPENING_ASSIST_SIX',
+          },
+        };
+      }
+    }
+
+    // 2. Second Token Opening Assist:
+    // Boost chance of rolling 6 to 32% when only 1 pawn is active and 2+ in yard for early tactical play
+    if (activePawns.length === 1 && yardPawns.length >= 2 && canRollSix) {
+      if (fairRandomInt(1, 100) <= 32) {
+        return {
+          diceValue: 6,
+          nextBiasState: {
+            ...biasState,
+            lastBiasReason: 'SECOND_TOKEN_ASSIST_SIX',
+          },
+        };
+      }
+    }
+
+    // Standard fair uniform roll (respecting 3-consecutive-sixes limit)
+    const basePool = canRollSix ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
+    const diceValue = basePool[fairRandomInt(0, basePool.length - 1)];
+
     return {
-      diceValue: fairRandomInt(1, 6),
+      diceValue,
       nextBiasState: {
         ...biasState,
         lastBiasReason: null,
@@ -233,12 +270,12 @@ export function rollSmartDice(params: {
   const oppHomePawns = oppPawns.filter((p) => p.step === 56);
 
   // 1. OPPONENT OPENING ASSIST:
-  // Quick 42% chance of 6 on opening so opponent never feels stuck!
+  // Quick 45% chance of 6 on opening so opponent never feels stuck!
   if (oppActivePawns.length === 0 && oppYardPawns.length > 0 && canOppRollSix) {
-    if (fairRandomInt(1, 100) <= 42) {
+    if (fairRandomInt(1, 100) <= 45) {
       return {
         diceValue: 6,
-        nextBiasState: { ...nextBias, lastBiasReason: null },
+        nextBiasState: { ...nextBias, lastBiasReason: 'OPPONENT_OPENING_ASSIST_SIX' },
       };
     }
   }

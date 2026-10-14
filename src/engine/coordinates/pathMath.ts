@@ -70,10 +70,22 @@ export function gridToWorld3D(
 
 /**
  * Builds the array of step indices a pawn traverses when moving from `fromStep` to `toStep`.
+ * Supports both forward motion and perimeter track wrap-around (e.g. from step 48..50 wrapping to 0..5).
  */
 export function buildStepPath(fromStep: number, toStep: number): number[] {
   if (fromStep === -1 && toStep === 0) {
     return [0];
+  }
+  // Wrap-around track path (e.g., from step 48..50 to 0..5 for hunting opponents in Cut-to-Enter)
+  if (fromStep >= 0 && toStep < fromStep) {
+    const steps: number[] = [];
+    for (let s = fromStep + 1; s <= 50; s++) {
+      steps.push(s);
+    }
+    for (let s = 0; s <= toStep; s++) {
+      steps.push(s);
+    }
+    return steps;
   }
   const steps: number[] = [];
   for (let s = fromStep + 1; s <= toStep; s++) {

@@ -3,8 +3,9 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { PlayerColor } from '../../../../types/game';
-import { ALL_TRACK_TILES, YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
+import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
+import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const RoyalTeakwoodBoard: React.FC = () => {
   const astrolabeRing1Ref = useRef<THREE.Group>(null);
@@ -120,73 +121,15 @@ export const RoyalTeakwoodBoard: React.FC = () => {
         );
       })}
 
-      {/* 4. Alternating Blonde Maple & Smoked Walnut Parquet Track Tiles */}
-      {ALL_TRACK_TILES.map((tile) => {
-        const isSafe = tile.type === 'safe';
-        const isStart = tile.type === 'start';
-        const isHomeStretch = tile.type === 'home-stretch';
-        // Alternating parquet checker pattern
-        const isEven = (tile.row + tile.col) % 2 === 0;
-        const woodColor = isEven ? '#fef3c7' : '#92400e';
-        const tileColor = isHomeStretch || isStart
-          ? (tile.color ? COLOR_PALETTE[tile.color].threeHex : woodColor)
-          : woodColor;
-
-        return (
-          <group key={tile.key} position={[tile.x, 0, tile.z]}>
-            <mesh geometry={BOARD_GEO.tileChamfer} position={[0, -0.01, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color={tileColor}
-                roughness={0.45}
-                clearcoat={0.8}
-                clearcoatRoughness={0.1}
-                metalness={isHomeStretch ? 0.08 : 0.02}
-              />
-            </mesh>
-
-            {/* Inlaid Routered Brass Wire Channel Lines */}
-            <mesh
-              geometry={BOARD_GEO.thinTorus}
-              position={[0, 0.042, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={0.44}
-            >
-              <meshStandardMaterial color="#f59e0b" metalness={0.92} roughness={0.15} />
-            </mesh>
-
-            {/* 8-Point Mother-of-Pearl & Brass Nautical Compass Star for Safe Squares */}
-            {isSafe && (
-              <mesh
-                geometry={BOARD_GEO.star8Point}
-                position={[0, 0.048, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshPhysicalMaterial
-                  color="#fef08a"
-                  metalness={0.92}
-                  roughness={0.1}
-                  clearcoat={1}
-                />
-              </mesh>
-            )}
-
-            {isStart && (
-              <mesh
-                geometry={BOARD_GEO.star5Point}
-                position={[0, 0.048, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshPhysicalMaterial
-                  color="#fbbf24"
-                  metalness={0.95}
-                  roughness={0.08}
-                  clearcoat={1}
-                />
-              </mesh>
-            )}
-          </group>
-        );
-      })}
+      {/* 4. Fine Burma Teak Parquet Track Tiles (GPU Instanced) */}
+      <InstancedTrackTiles
+        standardColor="#fef3c7"
+        baseRoughness={0.42}
+        baseClearcoat={0.85}
+        baseMetalness={0.06}
+        safeStarColor="#fef08a"
+        startEmblemColor="#fbbf24"
+      />
 
       {/* 5. Center 3x3 Home Goal: Multi-Ring 3D Antique Brass Nautical Astrolabe */}
       <group position={[0, 0, 0]}>

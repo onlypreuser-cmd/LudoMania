@@ -151,8 +151,9 @@ export const ludoMachine = setup({
 
       let statusMessage = `${currentPlayer.name} rolled ${diceValue}!`;
       if (legalMoves.length === 0) {
-        if (context.boardTheme === 'classic-kingdom' && !playerHasCaptured) {
-          statusMessage = `Rolled ${diceValue} — No moves! (Capture opponent to unlock Home Stretch).`;
+        const playerPawns = context.pawns.filter((p) => p.playerIndex === context.currentPlayerIndex);
+        if (playerPawns.every((p) => p.step === -1)) {
+          statusMessage = `Rolled ${diceValue} — Need a 6 to deploy from Yard.`;
         } else {
           statusMessage = `Rolled ${diceValue} — No legal moves available.`;
         }
