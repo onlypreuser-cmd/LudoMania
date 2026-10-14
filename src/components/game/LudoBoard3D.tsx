@@ -23,6 +23,8 @@ import {
   PlayerConfig,
 } from '../../types/game';
 import { haptics, triggerHomeReachConfetti } from '../../utils/haptics';
+import { StudioEnvironment } from '../three/StudioEnvironment';
+import { ThematicBoard3D } from '../three/ThematicBoard3D';
 import { Token3DModel } from '../three/Token3DModel';
 import { StepEffects3D, stepEffectsManager } from '../three/StepEffects3D';
 
@@ -1022,11 +1024,12 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               {memoizedTrackCells}
             </div>
 
-        {/* 3D Three.js / @react-three/fiber Collectible Token Layer Aligned 1:1 with the 15x15 Grid */}
+        {/* 3D Three.js / @react-three/fiber Collectible Token & Thematic Board Layer */}
         <div className="absolute inset-0 pointer-events-none">
           <Canvas
             orthographic
-            dpr={[1, 1.35]}
+            shadows
+            dpr={[1, 1.5]}
             camera={{
               position: [0, BOARD_CAM_Y, BOARD_CAM_Z],
               zoom: 1,
@@ -1038,23 +1041,34 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
             }}
             gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
           >
+            <StudioEnvironment intensity={1.12} />
             <ambientLight
-              intensity={lighting.ambientIntensity ?? 0.85}
+              intensity={lighting.ambientIntensity ?? 0.65}
               color={lighting.ambientColor}
             />
             <directionalLight
-              position={[6, 14, 8]}
+              position={[5, 14, 6]}
               intensity={lighting.keyIntensity ?? 1.4}
               color={lighting.keyColor}
+              castShadow
+              shadow-mapSize={[1024, 1024]}
+              shadow-camera-left={-8}
+              shadow-camera-right={8}
+              shadow-camera-top={8}
+              shadow-camera-bottom={-8}
+              shadow-camera-near={1}
+              shadow-camera-far={25}
+              shadow-bias={-0.0006}
             />
             <pointLight
               position={[-6, 8, -4]}
-              intensity={0.35}
+              intensity={0.4}
               color={lighting.rimColor}
             />
 
             <Suspense fallback={null}>
               <AutoZoomOrthographicController />
+              <ThematicBoard3D themeId={boardTheme} />
               <StepEffects3D />
               {pawns.map((pawn) => {
                 const player = players[pawn.playerIndex] ?? players[0];

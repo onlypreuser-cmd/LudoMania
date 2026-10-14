@@ -201,6 +201,7 @@ const SHARED_GEO = {
   collarTorus: new THREE.TorusGeometry(0.195, 0.038, 16, 28),
   tailTorus: new THREE.TorusGeometry(0.085, 0.038, 14, 22, Math.PI * 1.35),
   catTailTorus: new THREE.TorusGeometry(0.11, 0.028, 12, 22, Math.PI * 1.2),
+  thinTorus: new THREE.TorusGeometry(1, 0.15, 14, 28),
   capsuleLimb: new THREE.CapsuleGeometry(0.065, 0.11, 12, 16),
   hornCone: new THREE.ConeGeometry(0.058, 0.28, 20),
   earCone: new THREE.ConeGeometry(0.095, 0.2, 18),
@@ -210,6 +211,13 @@ const SHARED_GEO = {
   piratePawnBust: createPiratePawnLatheGeometry(),
   magicianRobe: createMagicianRobeLatheGeometry(),
   floppyHat: createFloppyWizardHatGeometry(),
+  kasaHat: new THREE.ConeGeometry(0.38, 0.16, 28),
+  kasaBrim: new THREE.TorusGeometry(0.38, 0.02, 12, 28),
+  telescopeTube: new THREE.CylinderGeometry(0.045, 0.055, 0.42, 20),
+  armillaryRing: new THREE.TorusGeometry(0.12, 0.014, 12, 24),
+  mechaThruster: new THREE.CylinderGeometry(0.05, 0.07, 0.22, 18),
+  wingFeather: new THREE.ConeGeometry(0.06, 0.32, 16),
+  gemOrb: new THREE.IcosahedronGeometry(0.18, 1),
 };
 
 /**
@@ -400,211 +408,354 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
         </mesh>
 
         {/* ================================================================ */}
-        {/* 1. CLASSIC ROYAL LACQUER PAWN (Turned Lathe Profile)             */}
+        {/* ================================================================ */}
+        {/* 1. CLASSIC: IMPERIAL SOVEREIGN SCEPTRE & CROWN                    */}
         {/* ================================================================ */}
         {skin === 'classic' && (
           <group position={[0, 0.14, 0]}>
-            <mesh geometry={CLASSIC_LATHE_GEO} castShadow receiveShadow>
+            {/* Stepped 8-Facet 24K Gold Plinth */}
+            <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[0.31, 0.36, 0.08, 8]} />
+              <meshPhysicalMaterial
+                color="#fbbf24"
+                metalness={0.92}
+                roughness={0.12}
+                clearcoat={1}
+              />
+            </mesh>
+            {/* Gilded Filigree Ring */}
+            <mesh
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.08, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={1.22}
+            >
+              <meshStandardMaterial color="#f59e0b" metalness={0.94} roughness={0.1} />
+            </mesh>
+
+            {/* Fluted Greco-Roman Sceptre Column in Player Color */}
+            <mesh position={[0, 0.28, 0]} castShadow>
+              <cylinderGeometry args={[0.18, 0.24, 0.36, 16]} />
               <meshPhysicalMaterial
                 color={palette.threeHex}
                 roughness={0.08}
-                metalness={0.12}
+                metalness={0.25}
                 clearcoat={1}
                 clearcoatRoughness={0.04}
                 ior={1.55}
               />
             </mesh>
-            {/* Neck Gold Collar */}
+
+            {/* Upper Imperial Gold Ring & Heraldic Studs */}
             <mesh
               geometry={SHARED_GEO.collarTorus}
-              position={[0, 0.55, 0]}
+              position={[0, 0.46, 0]}
               rotation={[Math.PI / 2, 0, 0]}
-               scale={0.82}
+              scale={0.95}
             >
-              <meshStandardMaterial
-                color="#fde047"
-                metalness={0.85}
-                roughness={0.15}
-              />
+              <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
             </mesh>
-            {/* Crown Sphere */}
+            {[0, 1, 2, 3].map((studIdx) => {
+              const ang = (studIdx * Math.PI) / 2;
+              return (
+                <mesh
+                  key={studIdx}
+                  geometry={SHARED_GEO.lowSphere}
+                  position={[Math.cos(ang) * 0.2, 0.46, Math.sin(ang) * 0.2]}
+                  scale={0.024}
+                >
+                  <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.08} />
+                </mesh>
+              );
+            })}
+
+            {/* Royal Velvet Cushion Dome Under Crown */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.75, 0]}
-              scale={0.235}
+              position={[0, 0.54, 0]}
+              scale={[0.22, 0.12, 0.22]}
               castShadow
             >
               <meshPhysicalMaterial
                 color={palette.threeHex}
-                roughness={0.06}
-                metalness={0.12}
-                clearcoat={1}
-                clearcoatRoughness={0.03}
-                ior={1.6}
+                roughness={0.7}
+                sheen={0.85}
+                sheenColor="#ffffff"
               />
             </mesh>
+
+            {/* Hollow 3D Filigree Royal Coronet (6 Arched Golden Spikes) */}
+            <group position={[0, 0.55, 0]}>
+              <mesh
+                geometry={SHARED_GEO.collarTorus}
+                scale={[1.05, 1.05, 0.8]}
+                rotation={[Math.PI / 2, 0, 0]}
+              >
+                <meshPhysicalMaterial
+                  color="#fbbf24"
+                  metalness={0.95}
+                  roughness={0.08}
+                  clearcoat={1}
+                />
+              </mesh>
+              {[0, 1, 2, 3, 4, 5].map((sIdx) => {
+                const sAngle = (sIdx * Math.PI) / 3;
+                return (
+                  <group
+                    key={sIdx}
+                    position={[Math.cos(sAngle) * 0.21, 0.08, Math.sin(sAngle) * 0.21]}
+                    rotation={[0, -sAngle, 0.12]}
+                  >
+                    <mesh geometry={SHARED_GEO.hornCone} scale={[0.5, 0.6, 0.5]}>
+                      <meshPhysicalMaterial
+                        color="#fde047"
+                        metalness={0.95}
+                        roughness={0.08}
+                        clearcoat={1}
+                      />
+                    </mesh>
+                    {/* Pearl at Spire Tip */}
+                    <mesh geometry={SHARED_GEO.lowSphere} position={[0, 0.09, 0]} scale={0.024}>
+                      <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={1} />
+                    </mesh>
+                  </group>
+                );
+              })}
+            </group>
+
+            {/* Floating Central Faceted Crystal Gem Orb (Refracts Player Color) */}
+            <mesh
+              geometry={SHARED_GEO.gemOrb}
+              position={[0, 0.72, 0]}
+              rotation={[0.3, 0.4, 0.1]}
+              castShadow
+            >
+              <meshPhysicalMaterial
+                color={palette.threeHex}
+                roughness={0.02}
+                clearcoat={1}
+                clearcoatRoughness={0.02}
+                transmission={0.85}
+                ior={1.65}
+                thickness={1.3}
+              />
+            </mesh>
+
+            {/* Royal Imperial Cross Finial at Sceptre Apex */}
+            <group position={[0, 0.87, 0]}>
+              <mesh position={[0, 0.04, 0]} scale={[0.022, 0.08, 0.022]}>
+                <boxGeometry />
+                <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+              </mesh>
+              <mesh position={[0, 0.055, 0]} scale={[0.065, 0.022, 0.022]}>
+                <boxGeometry />
+                <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+              </mesh>
+              <mesh geometry={SHARED_GEO.lowSphere} position={[0, 0.085, 0]} scale={0.018}>
+                <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.08} />
+              </mesh>
+            </group>
           </group>
         )}
 
         {/* ================================================================ */}
-        {/* 2. KNIGHT (SCULPTED GRANDMASTER CHESS STEED - NO BOXES)          */}
+        {/* 2. KNIGHT: CHIVALRIC PALADIN WAR-STEED (STAUNTON ARMOR)          */}
         {/* ================================================================ */}
         {skin === 'knight' && (
           <group position={[0, 0.14, 0]}>
-            {/* Stepped Chess Pedestal Column */}
+            {/* Stepped Tournament Pedestal Base with Player Enamel Ring */}
             <mesh
-              geometry={SHARED_GEO.unitCylinder}
-              position={[0, 0.08, 0]}
-              scale={[0.26, 0.14, 0.26]}
+              geometry={SHARED_GEO.pedestalBase}
+              position={[0, 0.04, 0]}
+              scale={[0.82, 0.8, 0.82]}
               castShadow
+              receiveShadow
             >
               <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                metalness={0.15}
-                clearcoat={1}
-                ior={1.5}
+                color="#1e293b"
+                roughness={0.25}
+                metalness={0.7}
+                clearcoat={0.8}
               />
             </mesh>
-            {/* Sculpted Sweeping Chest & Lower Neck */}
+            <mesh
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.085, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={1.12}
+            >
+              <meshStandardMaterial
+                color={palette.threeHex}
+                metalness={0.4}
+                roughness={0.2}
+              />
+            </mesh>
+
+            {/* Arched Chiseled Paladin Neck with Muscular Contour */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.27, 0.03]}
-              rotation={[-0.22, 0, 0]}
-              scale={[0.22, 0.26, 0.24]}
+              position={[0, 0.28, -0.01]}
+              rotation={[-0.18, 0, 0]}
+              scale={[0.22, 0.28, 0.25]}
               castShadow
             >
               <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                metalness={0.15}
-                clearcoat={1}
-                ior={1.5}
+                color="#334155"
+                roughness={0.28}
+                metalness={0.75}
+                clearcoat={0.9}
               />
             </mesh>
-            {/* Arched Upper Neck */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.48, -0.02]}
-              rotation={[0.28, 0, 0]}
-              scale={[0.185, 0.27, 0.21]}
+              position={[0, 0.48, 0.02]}
+              rotation={[0.22, 0, 0]}
+              scale={[0.19, 0.28, 0.22]}
               castShadow
             >
               <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                metalness={0.15}
-                clearcoat={1}
-                ior={1.5}
+                color="#334155"
+                roughness={0.28}
+                metalness={0.75}
+                clearcoat={0.9}
               />
             </mesh>
-            {/* Sculpted Horse Cranium / Cheek */}
+
+            {/* Chiseled Equine Cranium & Jawline */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.66, 0.03]}
-              scale={[0.175, 0.165, 0.19]}
+              position={[0, 0.65, 0.04]}
+              scale={[0.18, 0.17, 0.19]}
               castShadow
             >
               <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.1}
-                clearcoat={1}
+                color="#475569"
+                roughness={0.25}
+                metalness={0.72}
+                clearcoat={0.85}
               />
             </mesh>
-            {/* Tapered Rounded Muzzle / Snout */}
+
+            {/* Polished Burnished Steel Champron (Forehead Armor Plate) */}
+            <group position={[0, 0.68, 0.16]} rotation={[0.42, 0, 0]}>
+              <mesh scale={[0.14, 0.24, 0.05]} castShadow>
+                <boxGeometry />
+                <meshPhysicalMaterial
+                  color="#e2e8f0"
+                  metalness={0.92}
+                  roughness={0.12}
+                  clearcoat={1}
+                />
+              </mesh>
+              {/* Central Fluted Champron Spike */}
+              <mesh geometry={SHARED_GEO.hornCone} position={[0, 0.06, 0.035]} scale={[0.42, 0.55, 0.42]}>
+                <meshPhysicalMaterial color="#fbbf24" metalness={0.95} roughness={0.08} clearcoat={1} />
+              </mesh>
+              {/* Heraldic Player-Colored Champron Crest */}
+              <mesh geometry={SHARED_GEO.lowSphere} position={[0, -0.06, 0.028]} scale={[0.038, 0.038, 0.015]}>
+                <meshStandardMaterial color={palette.threeHex} metalness={0.6} roughness={0.15} />
+              </mesh>
+            </group>
+
+            {/* Tapered Chiseled Muzzle with Flared Nostrils */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.59, 0.19]}
-              rotation={[0.42, 0, 0]}
-              scale={[0.125, 0.115, 0.18]}
+              position={[0, 0.56, 0.21]}
+              rotation={[0.38, 0, 0]}
+              scale={[0.12, 0.11, 0.17]}
               castShadow
             >
-              <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.1}
-                clearcoat={1}
-              />
+              <meshPhysicalMaterial color="#334155" roughness={0.25} metalness={0.7} />
             </mesh>
-            {/* Sculpted Nostrils */}
+            {[-0.045, 0.045].map((nx, nIdx) => (
+              <mesh
+                key={nIdx}
+                geometry={SHARED_GEO.lowSphere}
+                position={[nx, 0.54, 0.35]}
+                scale={0.02}
+              >
+                <meshStandardMaterial color="#0f172a" roughness={0.4} />
+              </mesh>
+            ))}
+
+            {/* Golden Leather Bridle & Bit Rings */}
             <mesh
-              geometry={SHARED_GEO.lowSphere}
-              position={[-0.048, 0.57, 0.33]}
-              scale={0.022}
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.57, 0.16]}
+              rotation={[0.35, 0, 0]}
+              scale={[0.68, 0.68, 0.45]}
             >
-              <meshStandardMaterial color="#0f172a" roughness={0.3} />
+              <meshStandardMaterial color="#f59e0b" metalness={0.88} roughness={0.15} />
             </mesh>
-            <mesh
-              geometry={SHARED_GEO.lowSphere}
-              position={[0.048, 0.57, 0.33]}
-              scale={0.022}
-            >
-              <meshStandardMaterial color="#0f172a" roughness={0.3} />
-            </mesh>
-            {/* Flowing Scalloped Mane Crest along Back of Neck */}
+            {[-0.125, 0.125].map((bx, bIdx) => (
+              <mesh
+                key={bIdx}
+                geometry={SHARED_GEO.collarTorus}
+                position={[bx, 0.56, 0.22]}
+                rotation={[0, Math.PI / 2, 0]}
+                scale={0.18}
+              >
+                <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.1} />
+              </mesh>
+            ))}
+
+            {/* Flowing Braided Chivalric Plume Mane Along Neck Ridge */}
             {[
-              { y: 0.75, z: -0.06, s: 0.095 },
-              { y: 0.64, z: -0.15, s: 0.105 },
-              { y: 0.51, z: -0.18, s: 0.11 },
-              { y: 0.37, z: -0.16, s: 0.1 },
-              { y: 0.25, z: -0.13, s: 0.085 },
+              { y: 0.77, z: -0.05, s: 0.11 },
+              { y: 0.66, z: -0.14, s: 0.12 },
+              { y: 0.53, z: -0.18, s: 0.125 },
+              { y: 0.39, z: -0.17, s: 0.115 },
+              { y: 0.27, z: -0.14, s: 0.095 },
             ].map((seg, idx) => (
               <mesh
                 key={idx}
                 geometry={SHARED_GEO.lowSphere}
                 position={[0, seg.y, seg.z]}
-                scale={[0.065, seg.s, seg.s * 1.15]}
+                scale={[0.07, seg.s, seg.s * 1.2]}
                 castShadow
               >
                 <meshPhysicalMaterial
                   color={palette.threeHex}
-                  roughness={0.14}
-                  clearcoat={1}
+                  roughness={0.45}
+                  sheen={0.8}
+                  sheenColor="#ffffff"
+                  clearcoat={0.6}
                 />
               </mesh>
             ))}
-            {/* Forelock Tuft Between Ears */}
-            <mesh
-              geometry={SHARED_GEO.lowSphere}
-              position={[0, 0.77, 0.08]}
-              rotation={[0.4, 0, 0]}
-              scale={[0.055, 0.075, 0.095]}
-            >
-              <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                clearcoat={1}
-              />
-            </mesh>
-            {/* Alert Curved Equine Ears */}
-            <mesh
-              geometry={SHARED_GEO.earCone}
-              position={[-0.095, 0.81, -0.02]}
-              rotation={[-0.18, 0, 0.22]}
-              scale={[0.55, 0.75, 0.5]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                clearcoat={1}
-              />
-            </mesh>
-            <mesh
-              geometry={SHARED_GEO.earCone}
-              position={[0.095, 0.81, -0.02]}
-              rotation={[-0.18, 0, -0.22]}
-              scale={[0.55, 0.75, 0.5]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color={palette.threeHex}
-                roughness={0.12}
-                clearcoat={1}
-              />
-            </mesh>
-            {/* Expressive Dark Glossy Eyes with Catchlights */}
-            {renderExpressiveEye([-0.12, 0.67, 0.11], '#0f172a', 0.034)}
-            {renderExpressiveEye([0.12, 0.67, 0.11], '#0f172a', 0.034)}
+
+            {/* Chiseled Armored War-Ears */}
+            {[-0.095, 0.095].map((ex, eIdx) => {
+              const sign = eIdx === 0 ? 1 : -1;
+              return (
+                <group
+                  key={eIdx}
+                  position={[ex, 0.81, -0.01]}
+                  rotation={[-0.15, 0, sign * 0.22]}
+                >
+                  <mesh geometry={SHARED_GEO.earCone} scale={[0.5, 0.72, 0.45]} castShadow>
+                    <meshPhysicalMaterial
+                      color="#e2e8f0"
+                      metalness={0.9}
+                      roughness={0.15}
+                      clearcoat={1}
+                    />
+                  </mesh>
+                  {/* Inner Ear Contrast */}
+                  <mesh
+                    geometry={SHARED_GEO.lowSphere}
+                    position={[0, 0.03, 0.02]}
+                    scale={[0.032, 0.065, 0.012]}
+                  >
+                    <meshStandardMaterial color="#475569" roughness={0.3} />
+                  </mesh>
+                </group>
+              );
+            })}
+
+            {/* 3-Layer Expressive Chivalric Steed Eyes with Dual Catchlights */}
+            {renderExpressiveEye([-0.125, 0.67, 0.11], '#1e1b4b', 0.036)}
+            {renderExpressiveEye([0.125, 0.67, 0.11], '#1e1b4b', 0.036)}
           </group>
         )}
 
@@ -1940,11 +2091,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
         )}
 
         {/* ================================================================ */}
-        {/* 9. BAMBOO PANDA (ULTRA-MOCHI CUTE BABY FIGURINE - REFERENCE #8) */}
+        {/* 9. BAMBOO PANDA: JADE WARRIOR GUARDIAN (KUNG FU MASTER FIGURINE) */}
         {/* ================================================================ */}
         {skin === 'bamboo-panda' && (
           <group position={[0, 0.14, 0]}>
-            {/* Emerald Green Themed Upper Pedestal Collar with Golden Bamboo Ring */}
+            {/* Imperial Jade Green Pedestal Collar with Golden Bamboo Torus */}
             <mesh
               geometry={SHARED_GEO.themeCollar}
               position={[0, -0.04, 0]}
@@ -1952,11 +2103,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               receiveShadow
             >
               <meshPhysicalMaterial
-                color="#16a34a"
-                roughness={0.14}
-                metalness={0.18}
+                color="#047857"
+                roughness={0.12}
+                metalness={0.22}
                 clearcoat={1}
-                ior={1.55}
+                ior={1.62}
               />
             </mesh>
             <mesh
@@ -1966,40 +2117,139 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
             >
               <meshStandardMaterial
                 color="#eab308"
-                metalness={0.88}
-                roughness={0.15}
+                metalness={0.9}
+                roughness={0.14}
               />
             </mesh>
 
-            {/* Plump Chubby Pear-Shaped Panda Torso */}
+            {/* Robust Stout Warrior Torso */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
               position={[0, 0.2, -0.01]}
-              scale={[0.26, 0.225, 0.24]}
+              scale={[0.26, 0.23, 0.24]}
               castShadow
             >
               <meshPhysicalMaterial
                 color="#171717"
                 roughness={0.52}
                 clearcoat={0.18}
-                sheen={0.6}
-              />
-            </mesh>
-            {/* Plump Cream-White Belly Pot */}
-            <mesh
-              geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.185, 0.075]}
-              scale={[0.21, 0.18, 0.19]}
-            >
-              <meshPhysicalMaterial
-                color="#fffdfa"
-                roughness={0.42}
-                clearcoat={0.25}
-                sheen={0.75}
+                sheen={0.5}
               />
             </mesh>
 
-            {/* Forward-Facing Seated Black Hind Feet with Pink/Grey Bean Pads */}
+            {/* Forest-Green Martial Arts Gi / Tunic */}
+            <mesh
+              geometry={SHARED_GEO.unitSphere}
+              position={[0, 0.19, 0.05]}
+              scale={[0.235, 0.2, 0.21]}
+              castShadow
+            >
+              <meshPhysicalMaterial
+                color="#064e3b"
+                roughness={0.42}
+                clearcoat={0.3}
+                sheen={0.65}
+                sheenColor="#34d399"
+              />
+            </mesh>
+
+            {/* Golden Lapel Trim Crossings on Tunic */}
+            <mesh
+              geometry={SHARED_GEO.unitCylinder}
+              position={[-0.05, 0.22, 0.21]}
+              rotation={[0.3, 0.2, -0.6]}
+              scale={[0.016, 0.22, 0.008]}
+            >
+              <meshStandardMaterial color="#facc15" metalness={0.85} roughness={0.2} />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.unitCylinder}
+              position={[0.05, 0.22, 0.21]}
+              rotation={[0.3, -0.2, 0.6]}
+              scale={[0.016, 0.22, 0.008]}
+            >
+              <meshStandardMaterial color="#facc15" metalness={0.85} roughness={0.2} />
+            </mesh>
+
+            {/* Crimson Silk Obi Sash Wrapped Around Waist */}
+            <mesh
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.11, 0.02]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={[1.18, 1.15, 0.9]}
+            >
+              <meshPhysicalMaterial
+                color="#dc2626"
+                roughness={0.45}
+                sheen={0.8}
+                sheenColor="#fca5a5"
+              />
+            </mesh>
+            {/* Dangling Obi Ribbon Ends & Golden Knot Medallion */}
+            <mesh
+              geometry={SHARED_GEO.capsuleLimb}
+              position={[0.06, 0.04, 0.23]}
+              rotation={[0.2, 0, 0.3]}
+              scale={[0.5, 0.65, 0.4]}
+            >
+              <meshPhysicalMaterial color="#dc2626" roughness={0.45} />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.lowSphere}
+              position={[0.03, 0.11, 0.24]}
+              scale={[0.03, 0.03, 0.018]}
+            >
+              <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.12} />
+            </mesh>
+
+            {/* Imperial Jade Prayer Bead Mala (Necklace of 8 Jade Beads) */}
+            {[
+              { x: -0.12, y: 0.37, z: 0.14 },
+              { x: -0.07, y: 0.33, z: 0.2 },
+              { x: 0, y: 0.31, z: 0.22 },
+              { x: 0.07, y: 0.33, z: 0.2 },
+              { x: 0.12, y: 0.37, z: 0.14 },
+              { x: -0.15, y: 0.42, z: 0.05 },
+              { x: 0.15, y: 0.42, z: 0.05 },
+            ].map((bead, bIdx) => (
+              <mesh
+                key={bIdx}
+                geometry={SHARED_GEO.lowSphere}
+                position={[bead.x, bead.y, bead.z]}
+                scale={0.024}
+              >
+                <meshPhysicalMaterial
+                  color="#10b981"
+                  roughness={0.08}
+                  clearcoat={1}
+                  ior={1.65}
+                  emissive="#047857"
+                  emissiveIntensity={0.2}
+                />
+              </mesh>
+            ))}
+            {/* Centered Large Imperial Jade Disc Seal Pendant */}
+            <mesh
+              geometry={SHARED_GEO.lowSphere}
+              position={[0, 0.27, 0.23]}
+              scale={[0.042, 0.042, 0.018]}
+            >
+              <meshPhysicalMaterial
+                color="#059669"
+                roughness={0.06}
+                clearcoat={1}
+                ior={1.68}
+              />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.27, 0.23]}
+              scale={0.24}
+            >
+              <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.15} />
+            </mesh>
+
+            {/* Forward-Facing Seated Black Hind Feet with Paw Pads */}
             {[-0.13, 0.13].map((xFoot, fIdx) => (
               <group key={fIdx} position={[xFoot, 0.07, 0.19]}>
                 <mesh
@@ -2009,7 +2259,6 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshPhysicalMaterial color="#171717" roughness={0.48} />
                 </mesh>
-                {/* Main Sole Pad */}
                 <mesh
                   geometry={SHARED_GEO.lowSphere}
                   position={[0, -0.01, 0.085]}
@@ -2017,91 +2266,93 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshStandardMaterial color="#cbd5e1" roughness={0.5} />
                 </mesh>
-                {/* 3 Baby Toe Beans */}
-                {[-0.03, 0, 0.03].map((tx, tIdx) => (
-                  <mesh
-                    key={tIdx}
-                    geometry={SHARED_GEO.lowSphere}
-                    position={[tx, 0.028 - Math.abs(tx) * 0.2, 0.085]}
-                    scale={0.013}
-                  >
-                    <meshStandardMaterial color="#cbd5e1" roughness={0.5} />
-                  </mesh>
-                ))}
               </group>
             ))}
 
-            {/* Both Chubby Baby Arms Hugging Bamboo Stalk to Chest */}
+            {/* Sturdy Black Warrior Arms Gripping Bamboo Bo Staff */}
             <mesh
               geometry={SHARED_GEO.capsuleLimb}
-              position={[-0.14, 0.22, 0.17]}
-              rotation={[0.4, 0.5, 0.6]}
-              scale={[1.05, 1.0, 1.05]}
+              position={[-0.16, 0.25, 0.16]}
+              rotation={[0.5, 0.4, 0.6]}
+              scale={[1.1, 1.05, 1.1]}
               castShadow
             >
               <meshPhysicalMaterial color="#171717" roughness={0.5} />
             </mesh>
             <mesh
               geometry={SHARED_GEO.capsuleLimb}
-              position={[0.13, 0.22, 0.18]}
-              rotation={[0.4, -0.4, -0.55]}
-              scale={[1.05, 1.0, 1.05]}
+              position={[0.15, 0.25, 0.18]}
+              rotation={[0.3, -0.5, -0.6]}
+              scale={[1.1, 1.05, 1.1]}
               castShadow
             >
               <meshPhysicalMaterial color="#171717" roughness={0.5} />
             </mesh>
 
-            {/* Held Fresh Green Bamboo Twig with Nodes & 3 Spreading Leaves */}
-            <group position={[0.01, 0.24, 0.24]} rotation={[0.08, 0.08, -0.32]}>
+            {/* Authentic Master Bamboo Bo Staff (Diagonal, 3 Nodes, Brass Ferrules & Leaves) */}
+            <group position={[0.02, 0.32, 0.26]} rotation={[0.15, 0.15, -0.55]}>
+              {/* Main Stalk */}
               <mesh
                 geometry={SHARED_GEO.unitCylinder}
-                scale={[0.022, 0.36, 0.022]}
+                scale={[0.022, 0.68, 0.022]}
                 castShadow
               >
                 <meshPhysicalMaterial
                   color="#15803d"
-                  roughness={0.25}
-                  clearcoat={0.7}
+                  roughness={0.22}
+                  clearcoat={0.8}
                 />
               </mesh>
-              {[-0.08, 0.08].map((ny, nIdx) => (
+              {/* Raised Bamboo Segment Rings (Nodes) */}
+              {[-0.2, 0, 0.2].map((ny, nIdx) => (
                 <mesh
                   key={nIdx}
                   geometry={SHARED_GEO.collarTorus}
                   position={[0, ny, 0]}
                   rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.14}
+                  scale={0.145}
                 >
-                  <meshStandardMaterial color="#166534" roughness={0.35} />
+                  <meshStandardMaterial color="#166534" roughness={0.3} />
                 </mesh>
               ))}
-              {/* Lush Spreading Bamboo Leaves */}
+              {/* Polished Brass End Ferrules (Top & Bottom) */}
+              {[-0.34, 0.34].map((capY, cIdx) => (
+                <mesh
+                  key={cIdx}
+                  geometry={SHARED_GEO.unitCylinder}
+                  position={[0, capY, 0]}
+                  scale={[0.025, 0.04, 0.025]}
+                >
+                  <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.12} />
+                </mesh>
+              ))}
+              {/* Sprouting Emerald Leaves */}
               {[
-                { x: 0.05, y: 0.13, rz: -0.7, s: 1.0 },
-                { x: -0.04, y: 0.09, rz: 0.65, s: 0.92 },
-                { x: 0.035, y: 0.19, rz: -0.28, s: 0.95 },
+                { x: 0.05, y: 0.22, rz: -0.6, s: 1.0 },
+                { x: -0.05, y: 0.16, rz: 0.7, s: 0.9 },
+                { x: 0.04, y: 0.28, rz: -0.3, s: 0.85 },
               ].map((lf, lIdx) => (
                 <mesh
                   key={lIdx}
                   geometry={SHARED_GEO.lowSphere}
                   position={[lf.x, lf.y, 0.015]}
-                  rotation={[0.18, 0, lf.rz]}
-                  scale={[0.024 * lf.s, 0.078 * lf.s, 0.01]}
+                  rotation={[0.15, 0, lf.rz]}
+                  scale={[0.022 * lf.s, 0.08 * lf.s, 0.009]}
                 >
                   <meshPhysicalMaterial
                     color={lIdx % 2 === 0 ? '#22c55e' : '#16a34a'}
-                    roughness={0.3}
-                    clearcoat={0.6}
+                    roughness={0.28}
+                    clearcoat={0.7}
                   />
                 </mesh>
               ))}
             </group>
 
-            {/* Giant Chubby Mochi Panda Head (Wider at Lower Cheeks) */}
+            {/* Giant Chubby Panda Head */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.54, 0.01]}
-              scale={[0.32, 0.23, 0.27]}
+              position={[0, 0.53, 0.01]}
+              scale={[0.31, 0.23, 0.26]}
               castShadow
             >
               <meshPhysicalMaterial
@@ -2114,8 +2365,8 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
             </mesh>
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.61, 0.0]}
-              scale={[0.27, 0.23, 0.25]}
+              position={[0, 0.6, 0.0]}
+              scale={[0.26, 0.22, 0.24]}
               castShadow
             >
               <meshPhysicalMaterial
@@ -2125,13 +2376,13 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 sheen={0.8}
               />
             </mesh>
-            {/* Plump Fluffy Mochi Cheeks on Lower Sides */}
-            {[-0.17, 0.17].map((cx, cIdx) => (
+            {/* Fluffy Cheeks */}
+            {[-0.16, 0.16].map((cx, cIdx) => (
               <mesh
                 key={cIdx}
                 geometry={SHARED_GEO.lowSphere}
-                position={[cx, 0.52, 0.12]}
-                scale={[0.13, 0.11, 0.12]}
+                position={[cx, 0.51, 0.12]}
+                scale={[0.12, 0.1, 0.11]}
               >
                 <meshPhysicalMaterial
                   color="#ffffff"
@@ -2141,18 +2392,18 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               </mesh>
             ))}
 
-            {/* Soft Cream Muzzle, Tiny Button Nose & Smile Crease */}
+            {/* Soft Cream Muzzle & Button Nose */}
             <mesh
               geometry={SHARED_GEO.lowSphere}
-              position={[0, 0.51, 0.23]}
+              position={[0, 0.5, 0.22]}
               scale={[0.11, 0.08, 0.085]}
             >
               <meshPhysicalMaterial color="#ffffff" roughness={0.38} />
             </mesh>
             <mesh
               geometry={SHARED_GEO.lowSphere}
-              position={[0, 0.542, 0.298]}
-              scale={[0.044, 0.028, 0.028]}
+              position={[0, 0.535, 0.285]}
+              scale={[0.042, 0.026, 0.026]}
             >
               <meshPhysicalMaterial
                 color="#0f172a"
@@ -2160,26 +2411,26 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 clearcoat={1}
               />
             </mesh>
-            {/* Sweet Rosy Cheeks */}
-            {[-0.165, 0.165].map((bx, bIdx) => (
+            {/* Rosy Warrior Cheeks */}
+            {[-0.16, 0.16].map((bx, bIdx) => (
               <mesh
                 key={bIdx}
                 geometry={SHARED_GEO.lowSphere}
-                position={[bx, 0.515, 0.2]}
-                scale={[0.048, 0.028, 0.025]}
+                position={[bx, 0.505, 0.19]}
+                scale={[0.045, 0.026, 0.022]}
               >
                 <meshStandardMaterial color="#fda4af" roughness={0.55} />
               </mesh>
             ))}
 
-            {/* Iconic 42° Tilted Teardrop Oval Black Eye Patches */}
+            {/* Iconic 42° Tilted Teardrop Black Eye Patches */}
             {[-1, 1].map((sign, pIdx) => (
               <mesh
                 key={pIdx}
                 geometry={SHARED_GEO.lowSphere}
-                position={[sign * 0.115, 0.605, 0.21]}
+                position={[sign * 0.112, 0.595, 0.2]}
                 rotation={[0, sign * 0.22, sign * -0.72]}
-                scale={[0.088, 0.115, 0.048]}
+                scale={[0.085, 0.11, 0.046]}
               >
                 <meshPhysicalMaterial
                   color="#171717"
@@ -2189,17 +2440,17 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               </mesh>
             ))}
 
-            {/* GIANT Liquid Glassy Black Kawaii Eyes with Dual Specular Catchlights */}
-            {renderExpressiveEye([-0.108, 0.605, 0.245], '#111827', 0.052)}
-            {renderExpressiveEye([0.108, 0.605, 0.245], '#111827', 0.052)}
+            {/* Glassy Expressive Eyes with Dual Catchlights */}
+            {renderExpressiveEye([-0.105, 0.595, 0.235], '#064e3b', 0.05)}
+            {renderExpressiveEye([0.105, 0.595, 0.235], '#064e3b', 0.05)}
 
-            {/* Round Plush Velvet Black Ears */}
+            {/* Plush Black Ears Peeking from Below Hat */}
             {[-0.22, 0.22].map((ex, eIdx) => (
               <mesh
                 key={eIdx}
                 geometry={SHARED_GEO.lowSphere}
-                position={[ex, 0.79, -0.01]}
-                scale={[0.11, 0.11, 0.075]}
+                position={[ex, 0.72, 0.02]}
+                scale={[0.1, 0.1, 0.07]}
                 castShadow
               >
                 <meshPhysicalMaterial
@@ -2209,15 +2460,67 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 />
               </mesh>
             ))}
+
+            {/* Conical Woven Bamboo Straw Hat (Kasa) with Brass Crest */}
+            <group position={[0, 0.74, 0.02]} rotation={[-0.08, 0, 0]}>
+              {/* Conical Straw Crown */}
+              <mesh
+                geometry={SHARED_GEO.kasaHat}
+                position={[0, 0.08, 0]}
+                castShadow
+              >
+                <meshPhysicalMaterial
+                  color="#d97706"
+                  roughness={0.65}
+                  clearcoat={0.2}
+                  sheen={0.7}
+                  sheenColor="#fde68a"
+                />
+              </mesh>
+              {/* Outer Woven Brim Ring */}
+              <mesh
+                geometry={SHARED_GEO.kasaBrim}
+                position={[0, 0, 0]}
+                rotation={[Math.PI / 2, 0, 0]}
+                scale={1.02}
+              >
+                <meshStandardMaterial color="#b45309" roughness={0.7} />
+              </mesh>
+              {/* Crimson Chin Cord / Ribbon Trim */}
+              <mesh
+                geometry={SHARED_GEO.collarTorus}
+                position={[0, 0.04, 0]}
+                rotation={[Math.PI / 2, 0, 0]}
+                scale={1.05}
+              >
+                <meshPhysicalMaterial color="#dc2626" roughness={0.5} />
+              </mesh>
+              {/* Polished Brass Apex Finial Spire */}
+              <mesh
+                geometry={SHARED_GEO.unitCylinder}
+                position={[0, 0.17, 0]}
+                scale={[0.024, 0.04, 0.024]}
+              >
+                <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.1} />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.lowSphere}
+                position={[0, 0.2, 0]}
+                scale={0.03}
+              >
+                <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.08} />
+              </mesh>
+            </group>
           </group>
         )}
 
         {/* ================================================================ */}
-        {/* 10. CYBER ROBOT (NEW UNIQUE HDR - WHITE PEARL & DUAL ANTENNAE)   */}
+        {/* ================================================================ */}
+        {/* 10. CYBER-ROBOT: APEX MECHA ANDROID (GUNDAM/MECHA STEALTH CHASSIS)*/}
         {/* ================================================================ */}
         {skin === 'cyber-robot' && (
           <group position={[0, 0.14, 0]}>
-            {/* Brushed Silver Pedestal Collar + 3 Glowing Cyan LED Rim Orbs */}
+            {/* Angular Titanium Pedestal Base + Cyan Circuit Trench */}
             <mesh
               geometry={SHARED_GEO.themeCollar}
               position={[0, -0.04, 0]}
@@ -2225,243 +2528,171 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               receiveShadow
             >
               <meshPhysicalMaterial
-                color="#cbd5e1"
-                metalness={0.85}
-                roughness={0.16}
+                color="#0f172a"
+                metalness={0.92}
+                roughness={0.14}
                 clearcoat={1}
               />
             </mesh>
-            {[-0.55, 0, 0.55].map((ang, lIdx) => (
-              <mesh
-                key={lIdx}
-                geometry={SHARED_GEO.lowSphere}
-                position={[
-                  Math.sin(ang) * 0.33,
-                  -0.04,
-                  Math.cos(ang) * 0.33,
-                ]}
-                scale={[0.032, 0.032, 0.02]}
-              >
-                <meshStandardMaterial
-                  color="#38bdf8"
-                  emissive="#00e5ff"
-                  emissiveIntensity={2.6}
-                />
-              </mesh>
-            ))}
-            {/* Seated White-Pearl Android Torso */}
-            <mesh
-              geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.22, 0]}
-              scale={[0.215, 0.195, 0.19]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color="#f8fafc"
-                metalness={0.18}
-                roughness={0.1}
-                clearcoat={1}
-                ior={1.55}
-              />
-            </mesh>
-            {/* Central Glowing Orange Energy Core + Silver Bezel */}
             <mesh
               geometry={SHARED_GEO.collarTorus}
-              position={[0, 0.22, 0.175]}
-              scale={0.32}
+              position={[0, -0.04, 0]}
+              scale={1.22}
             >
               <meshStandardMaterial
-                color="#94a3b8"
-                metalness={0.85}
-                roughness={0.15}
+                color="#06b6d4"
+                emissive="#06b6d4"
+                emissiveIntensity={2.5}
               />
             </mesh>
-            <mesh
-              geometry={SHARED_GEO.lowSphere}
-              position={[0, 0.22, 0.175]}
-              scale={[0.055, 0.055, 0.028]}
-            >
-              <meshStandardMaterial
-                color="#fb923c"
-                emissive="#f97316"
-                emissiveIntensity={2.2}
-              />
-            </mesh>
-            {/* Seated Android Feet with Dark Navy Soles & Orange Ankle Rings */}
-            {[-0.105, 0.105].map((fx, fIdx) => (
-              <group key={fIdx} position={[fx, 0.07, 0.155]}>
-                <mesh
-                  geometry={SHARED_GEO.lowSphere}
-                  scale={[0.072, 0.068, 0.082]}
-                  castShadow
-                >
+
+            {/* Angular Ceramic Mecha Torso */}
+            <group position={[0, 0.23, 0]}>
+              <RoundedBox args={[0.38, 0.32, 0.28]} radius={0.05} smoothness={4} castShadow>
+                <meshPhysicalMaterial
+                  color="#f8fafc"
+                  roughness={0.14}
+                  metalness={0.35}
+                  clearcoat={1}
+                  ior={1.55}
+                />
+              </RoundedBox>
+              {/* Chest Hexagonal Quantum Plasma Core */}
+              <mesh position={[0, 0.02, 0.145]}>
+                <cylinderGeometry args={[0.075, 0.085, 0.03, 6]} />
+                <meshStandardMaterial
+                  color="#22d3ee"
+                  emissive="#06b6d4"
+                  emissiveIntensity={3.2}
+                />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.thinTorus}
+                position={[0, 0.02, 0.16]}
+                scale={0.085}
+              >
+                <meshStandardMaterial color="#94a3b8" metalness={0.92} roughness={0.1} />
+              </mesh>
+            </group>
+
+            {/* Dual High-Thrust Rear Booster Rockets with Plasma Glow */}
+            {[-0.14, 0.14].map((tx, tIdx) => (
+              <group key={tIdx} position={[tx, 0.26, -0.16]} rotation={[0.15, 0, 0]}>
+                <mesh geometry={SHARED_GEO.mechaThruster} castShadow>
                   <meshPhysicalMaterial
                     color="#1e293b"
-                    metalness={0.65}
-                    roughness={0.2}
+                    metalness={0.88}
+                    roughness={0.18}
                     clearcoat={0.9}
                   />
                 </mesh>
-                <mesh
-                  geometry={SHARED_GEO.collarTorus}
-                  position={[0, 0.01, -0.02]}
-                  rotation={[Math.PI / 3, 0, 0]}
-                  scale={0.34}
-                >
-                  <meshStandardMaterial
-                    color="#f97316"
-                    emissive="#ea580c"
-                    emissiveIntensity={0.8}
-                  />
-                </mesh>
-              </group>
-            ))}
-            {/* Articulated White Arms with Orange Shoulder Rings */}
-            {[-0.225, 0.225].map((ax, aIdx) => (
-              <group key={aIdx} position={[ax, 0.22, 0.04]}>
-                <mesh
-                  geometry={SHARED_GEO.capsuleLimb}
-                  rotation={[0.25, 0, aIdx === 0 ? 0.28 : -0.28]}
-                  scale={[0.88, 0.95, 0.88]}
-                  castShadow
-                >
-                  <meshPhysicalMaterial
-                    color="#f8fafc"
-                    roughness={0.12}
-                    clearcoat={1}
-                  />
-                </mesh>
-                <mesh
-                  geometry={SHARED_GEO.collarTorus}
-                  position={[0, 0.05, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.32}
-                >
-                  <meshStandardMaterial
-                    color="#f97316"
-                    emissive="#ea580c"
-                    emissiveIntensity={0.8}
-                  />
-                </mesh>
-              </group>
-            ))}
-            {/* Pillowed White-Pearl Robot Helmet */}
-            <RoundedBox
-              args={[0.53, 0.4, 0.42]}
-              radius={0.15}
-              smoothness={8}
-              position={[0, 0.58, 0]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color="#ffffff"
-                metalness={0.15}
-                roughness={0.08}
-                clearcoat={1}
-                clearcoatRoughness={0.03}
-                ior={1.55}
-              />
-            </RoundedBox>
-            {/* Recessed Deep-Navy Curved Screen Visor */}
-            <RoundedBox
-              args={[0.41, 0.25, 0.06]}
-              radius={0.08}
-              smoothness={6}
-              position={[0, 0.585, 0.19]}
-            >
-              <meshPhysicalMaterial
-                color="#061229"
-                metalness={0.9}
-                roughness={0.03}
-                clearcoat={1}
-                ior={1.65}
-              />
-            </RoundedBox>
-            {/* 2 Glowing Neon-Cyan Eyes + Cute Curved Smile */}
-            {[-0.095, 0.095].map((ex, eIdx) => (
-              <group key={eIdx} position={[ex, 0.59, 0.222]}>
-                <mesh
-                  geometry={SHARED_GEO.lowSphere}
-                  scale={[0.058, 0.058, 0.02]}
-                >
+                {/* Glowing Plasma Exhaust Nozzle */}
+                <mesh position={[0, -0.12, 0]}>
+                  <cylinderGeometry args={[0.045, 0.035, 0.04, 16]} />
                   <meshStandardMaterial
                     color="#38bdf8"
                     emissive="#00e5ff"
-                    emissiveIntensity={2.8}
+                    emissiveIntensity={4.2}
                   />
-                </mesh>
-                <mesh
-                  geometry={SHARED_GEO.lowSphere}
-                  position={[0, 0, 0.012]}
-                  scale={[0.028, 0.028, 0.01]}
-                >
-                  <meshBasicMaterial color="#ffffff" />
                 </mesh>
               </group>
             ))}
-            {/* Side Silver & Glowing Orange Ear Pods */}
-            {[-0.28, 0.28].map((px, pIdx) => (
-              <mesh
-                key={pIdx}
-                geometry={SHARED_GEO.unitCylinder}
-                position={[px, 0.58, 0]}
-                rotation={[0, 0, Math.PI / 2]}
-                scale={[0.082, 0.045, 0.082]}
-              >
-                <meshPhysicalMaterial
-                  color="#f97316"
-                  emissive="#ea580c"
-                  emissiveIntensity={0.65}
-                  metalness={0.5}
-                  roughness={0.2}
-                  clearcoat={1}
-                />
-              </mesh>
-            ))}
-            {/* Dual V-Shape Top Antennae with Glowing Orange Ball Tips */}
-            {[-0.095, 0.095].map((tx, tIdx) => {
-              const sign = tIdx === 0 ? 1 : -1;
+
+            {/* Angular Stealth Shoulder Pauldrons */}
+            {[-0.26, 0.26].map((sx, sIdx) => {
+              const sign = sIdx === 0 ? 1 : -1;
               return (
-                <group
-                  key={tIdx}
-                  position={[tx, 0.81, 0]}
-                  rotation={[0, 0, sign * 0.28]}
-                >
-                  <mesh
-                    geometry={SHARED_GEO.unitCylinder}
-                    scale={[0.018, 0.11, 0.018]}
-                  >
-                    <meshStandardMaterial
-                      color="#94a3b8"
-                      metalness={0.88}
-                      roughness={0.15}
+                <group key={sIdx} position={[sx, 0.32, 0.02]} rotation={[0, 0, sign * 0.22]}>
+                  <mesh castShadow>
+                    <boxGeometry args={[0.14, 0.16, 0.24]} />
+                    <meshPhysicalMaterial
+                      color="#0284c7"
+                      metalness={0.75}
+                      roughness={0.2}
+                      clearcoat={1}
                     />
                   </mesh>
-                  <mesh
-                    geometry={SHARED_GEO.lowSphere}
-                    position={[0, 0.068, 0]}
-                    scale={0.044}
-                  >
-                    <meshPhysicalMaterial
-                      color="#f97316"
-                      emissive="#ea580c"
-                      emissiveIntensity={1.4}
-                      roughness={0.1}
-                      clearcoat={1}
+                  {/* Cyan Energy Vent Line */}
+                  <mesh position={[sign * 0.072, 0, 0]}>
+                    <boxGeometry args={[0.012, 0.1, 0.18]} />
+                    <meshStandardMaterial
+                      color="#22d3ee"
+                      emissive="#06b6d4"
+                      emissiveIntensity={2.8}
                     />
                   </mesh>
                 </group>
               );
             })}
+
+            {/* Articulated Mecha Limbs */}
+            {[-0.22, 0.22].map((ax, aIdx) => (
+              <mesh
+                key={aIdx}
+                geometry={SHARED_GEO.capsuleLimb}
+                position={[ax, 0.16, 0.04]}
+                rotation={[0.3, 0, aIdx === 0 ? 0.22 : -0.22]}
+                scale={[0.85, 0.9, 0.85]}
+                castShadow
+              >
+                <meshPhysicalMaterial color="#334155" metalness={0.85} roughness={0.18} />
+              </mesh>
+            ))}
+
+            {/* Sharpened Angular Mecha Head & Tactical Hex Visor */}
+            <group position={[0, 0.58, 0]}>
+              <RoundedBox args={[0.42, 0.32, 0.36]} radius={0.06} smoothness={6} castShadow>
+                <meshPhysicalMaterial
+                  color="#f8fafc"
+                  roughness={0.12}
+                  metalness={0.4}
+                  clearcoat={1}
+                />
+              </RoundedBox>
+              {/* Tactical Aerodynamic Brow Crest */}
+              <mesh position={[0, 0.18, 0.06]} rotation={[0.35, 0, 0]}>
+                <boxGeometry args={[0.16, 0.08, 0.22]} />
+                <meshPhysicalMaterial
+                  color="#0284c7"
+                  metalness={0.8}
+                  roughness={0.18}
+                  clearcoat={1}
+                />
+              </mesh>
+              {/* Narrow Glowing Cyan Tactical Hex Visor */}
+              <mesh position={[0, 0.01, 0.185]}>
+                <boxGeometry args={[0.34, 0.11, 0.04]} />
+                <meshStandardMaterial
+                  color="#22d3ee"
+                  emissive="#00e5ff"
+                  emissiveIntensity={3.8}
+                />
+              </mesh>
+              {/* Dual Swept-Back Antenna Vanes */}
+              {[-0.22, 0.22].map((vx, vIdx) => {
+                const vSign = vIdx === 0 ? 1 : -1;
+                return (
+                  <mesh
+                    key={vIdx}
+                    position={[vx, 0.14, -0.06]}
+                    rotation={[-0.35, 0, vSign * 0.42]}
+                    scale={[0.025, 0.22, 0.05]}
+                  >
+                    <boxGeometry />
+                    <meshPhysicalMaterial color="#0284c7" metalness={0.88} roughness={0.15} />
+                  </mesh>
+                );
+              })}
+            </group>
           </group>
         )}
 
         {/* ================================================================ */}
-        {/* 11. ASTRONOMER (NEW UNIQUE HDR - STARLIGHT PEDESTAL & EVA SUIT)  */}
+        {/* 11. ASTRONOMER: CELESTIAL OBSERVATORY SCHOLAR                    */}
         {/* ================================================================ */}
         {skin === 'astronomer' && (
           <group position={[0, 0.14, 0]}>
-            {/* Deep Cosmic-Sapphire Pedestal Collar + 3 Starlight LED Ports */}
+            {/* Antique Gilded Astrolabe Pedestal Base */}
             <mesh
               geometry={SHARED_GEO.themeCollar}
               position={[0, -0.04, 0]}
@@ -2469,187 +2700,183 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               receiveShadow
             >
               <meshPhysicalMaterial
-                color="#1e3a8a"
-                metalness={0.78}
-                roughness={0.14}
+                color="#1e1b4b"
+                metalness={0.85}
+                roughness={0.18}
                 clearcoat={1}
               />
             </mesh>
-            {[-0.55, 0, 0.55].map((ang, lIdx) => (
-              <mesh
-                key={lIdx}
-                geometry={SHARED_GEO.lowSphere}
-                position={[
-                  Math.sin(ang) * 0.33,
-                  -0.04,
-                  Math.cos(ang) * 0.33,
-                ]}
-                scale={[0.032, 0.032, 0.02]}
-              >
-                <meshStandardMaterial
-                  color="#bae6fd"
-                  emissive="#38bdf8"
-                  emissiveIntensity={2.8}
-                />
-              </mesh>
-            ))}
-            {/* Seated White NASA EVA Suit Torso */}
             <mesh
-              geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.22, 0]}
-              scale={[0.225, 0.2, 0.2]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color="#f8fafc"
-                roughness={0.24}
-                clearcoat={0.85}
-                sheen={0.5}
-              />
-            </mesh>
-            {/* Chest Telemetry Unit with Gold/Orange Controls */}
-            <RoundedBox
-              args={[0.17, 0.11, 0.045]}
-              radius={0.02}
-              smoothness={4}
-              position={[0, 0.23, 0.185]}
-            >
-              <meshPhysicalMaterial
-                color="#ffffff"
-                roughness={0.2}
-                clearcoat={0.9}
-              />
-            </RoundedBox>
-            <mesh
-              geometry={SHARED_GEO.lowSphere}
-              position={[0, 0.23, 0.21]}
-              scale={[0.04, 0.03, 0.015]}
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, -0.04, 0]}
+              scale={1.22}
             >
               <meshStandardMaterial
-                color="#f59e0b"
-                emissive="#d97706"
-                emissiveIntensity={0.8}
+                color="#fbbf24"
+                metalness={0.92}
+                roughness={0.12}
               />
             </mesh>
-            {/* Seated Moon Boots & Arms with Orange Mission Stripes */}
-            {[-0.105, 0.105].map((fx, fIdx) => (
-              <mesh
-                key={fIdx}
-                geometry={SHARED_GEO.lowSphere}
-                position={[fx, 0.075, 0.165]}
-                scale={[0.078, 0.068, 0.09]}
-                castShadow
-              >
-                <meshPhysicalMaterial
-                  color="#f1f5f9"
-                  roughness={0.28}
-                  clearcoat={0.7}
+
+            {/* Midnight-Navy Velvet Scholar Mantle Robe */}
+            <mesh
+              geometry={SHARED_GEO.magicianRobe}
+              position={[0, -0.04, 0]}
+              castShadow
+              receiveShadow
+            >
+              <meshPhysicalMaterial
+                color="#0f172a"
+                roughness={0.82}
+                sheen={0.85}
+                sheenColor="#38bdf8"
+              />
+            </mesh>
+
+            {/* Starlight Constellation Waist Sash & Astrolabe Chart Scroll */}
+            <mesh
+              geometry={SHARED_GEO.collarTorus}
+              position={[0, 0.17, 0]}
+              scale={1.05}
+            >
+              <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.12} />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.unitCylinder}
+              position={[0.18, 0.17, 0.16]}
+              rotation={[0.3, 0, 0.6]}
+              scale={[0.035, 0.22, 0.035]}
+            >
+              <meshStandardMaterial color="#fef3c7" roughness={0.65} />
+            </mesh>
+
+            {/* 3D Interlocking Brass Armillary Sphere (Held in Front) */}
+            <group position={[0, 0.24, 0.19]}>
+              {/* Outer Equator Ring */}
+              <mesh geometry={SHARED_GEO.armillaryRing} rotation={[Math.PI / 4, 0, 0]}>
+                <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.12} />
+              </mesh>
+              {/* Inner Meridian Ring */}
+              <mesh geometry={SHARED_GEO.armillaryRing} rotation={[0, Math.PI / 3, 0]} scale={0.78}>
+                <meshStandardMaterial color="#d97706" metalness={0.94} roughness={0.12} />
+              </mesh>
+              {/* Glowing Celestial Starlight Core */}
+              <mesh geometry={SHARED_GEO.lowSphere} scale={0.038}>
+                <meshStandardMaterial
+                  color="#7dd3fc"
+                  emissive="#38bdf8"
+                  emissiveIntensity={3.2}
                 />
               </mesh>
-            ))}
-            {[-0.225, 0.225].map((ax, aIdx) => (
-              <group key={aIdx} position={[ax, 0.22, 0.04]}>
+            </group>
+
+            {/* Compact Brass & Leather Observatory Telescope Slung on Shoulder */}
+            <group position={[-0.21, 0.35, -0.06]} rotation={[0.45, 0.2, 0.32]}>
+              <mesh geometry={SHARED_GEO.telescopeTube} castShadow>
+                <meshPhysicalMaterial
+                  color="#d97706"
+                  metalness={0.92}
+                  roughness={0.16}
+                  clearcoat={1}
+                />
+              </mesh>
+              {/* Leather Grip Wrap */}
+              <mesh position={[0, 0, 0]}>
+                <cylinderGeometry args={[0.052, 0.052, 0.18, 16]} />
+                <meshStandardMaterial color="#78350f" roughness={0.7} />
+              </mesh>
+              {/* Brass Focus Rings */}
+              {[-0.12, 0.12].map((ry, rIdx) => (
                 <mesh
-                  geometry={SHARED_GEO.capsuleLimb}
-                  rotation={[0.25, 0, aIdx === 0 ? 0.28 : -0.28]}
-                  scale={[0.92, 0.98, 0.92]}
-                  castShadow
-                >
-                  <meshPhysicalMaterial
-                    color="#f8fafc"
-                    roughness={0.25}
-                    clearcoat={0.8}
-                  />
-                </mesh>
-                <mesh
-                  geometry={SHARED_GEO.collarTorus}
-                  position={[0, 0.03, 0]}
+                  key={rIdx}
+                  geometry={SHARED_GEO.thinTorus}
+                  position={[0, ry, 0]}
                   rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.34}
+                  scale={0.058}
                 >
-                  <meshStandardMaterial color="#f97316" roughness={0.25} />
+                  <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.08} />
                 </mesh>
-              </group>
-            ))}
-            {/* Rear Life-Support Backpack */}
-            <RoundedBox
-              args={[0.28, 0.26, 0.15]}
-              radius={0.04}
-              smoothness={4}
-              position={[0, 0.25, -0.17]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color="#e2e8f0"
-                roughness={0.25}
-                metalness={0.2}
-                clearcoat={0.7}
-              />
-            </RoundedBox>
-            {/* Oversized White EVA Space Helmet */}
+              ))}
+              {/* Glass Front Objective Lens */}
+              <mesh geometry={SHARED_GEO.lowSphere} position={[0, 0.21, 0]} scale={[0.042, 0.015, 0.042]}>
+                <meshPhysicalMaterial
+                  color="#67e8f9"
+                  transmission={0.88}
+                  ior={1.62}
+                  roughness={0.02}
+                  clearcoat={1}
+                />
+              </mesh>
+            </group>
+
+            {/* Wise Scholar Face with Rosy Cheeks */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.595, 0]}
-              scale={[0.3, 0.28, 0.285]}
+              position={[0, 0.52, 0.02]}
+              scale={[0.23, 0.21, 0.215]}
               castShadow
             >
-              <meshPhysicalMaterial
-                color="#ffffff"
-                roughness={0.08}
-                clearcoat={1}
-                clearcoatRoughness={0.03}
-                ior={1.55}
-              />
+              <meshPhysicalMaterial color="#fed7aa" roughness={0.42} sheen={0.35} />
             </mesh>
-            {/* Deep-Space Midnight Mirror Bubble Visor */}
-            <mesh
-              geometry={SHARED_GEO.unitSphere}
-              position={[0, 0.595, 0.095]}
-              scale={[0.232, 0.205, 0.22]}
-            >
-              <meshPhysicalMaterial
-                color="#051026"
-                metalness={0.95}
-                roughness={0.02}
-                clearcoat={1}
-                clearcoatRoughness={0.0}
-                ior={1.75}
-              />
-            </mesh>
-            {/* Specular Glint Arc on Visor */}
+            {/* Gentle Beard / Mustache */}
             <mesh
               geometry={SHARED_GEO.lowSphere}
-              position={[-0.09, 0.675, 0.28]}
-              rotation={[0, 0, 0.45]}
-              scale={[0.058, 0.026, 0.015]}
+              position={[0, 0.44, 0.17]}
+              scale={[0.11, 0.075, 0.09]}
             >
-              <meshBasicMaterial color="#ffffff" />
+              <meshPhysicalMaterial color="#f8fafc" roughness={0.55} />
             </mesh>
-            {/* Orange Helmet Comms Ear Caps */}
-            {[-0.295, 0.295].map((ex, eIdx) => (
+
+            {/* Midnight Velvet Hooded Cowl Draped Around Face */}
+            <mesh
+              geometry={SHARED_GEO.unitSphere}
+              position={[0, 0.56, -0.02]}
+              scale={[0.29, 0.28, 0.27]}
+              castShadow
+            >
+              <meshPhysicalMaterial
+                color="#0f172a"
+                roughness={0.85}
+                sheen={0.85}
+                sheenColor="#38bdf8"
+              />
+            </mesh>
+
+            {/* Celestial Gilded Monocle Over Right Eye with Glowing Star Reticle */}
+            <group position={[-0.095, 0.54, 0.195]}>
               <mesh
-                key={eIdx}
-                geometry={SHARED_GEO.unitCylinder}
-                position={[ex, 0.59, 0]}
-                rotation={[0, 0, Math.PI / 2]}
-                scale={[0.08, 0.04, 0.08]}
+                geometry={SHARED_GEO.thinTorus}
+                scale={0.052}
+                rotation={[0, 0, 0]}
               >
+                <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+              </mesh>
+              <mesh geometry={SHARED_GEO.lowSphere} scale={[0.045, 0.045, 0.01]}>
                 <meshPhysicalMaterial
-                  color="#f97316"
-                  roughness={0.2}
-                  clearcoat={0.9}
+                  color="#bae6fd"
+                  transmission={0.85}
+                  ior={1.65}
+                  roughness={0.02}
+                  clearcoat={1}
                 />
               </mesh>
-            ))}
+              {/* Glowing Monocle Reticle Pip */}
+              <mesh geometry={SHARED_GEO.lowSphere} position={[0, 0, 0.008]} scale={0.014}>
+                <meshBasicMaterial color="#38bdf8" />
+              </mesh>
+            </group>
+
+            {/* Left Eye: Curious Expressive Scholar Eye with Dual Catchlights */}
+            {renderExpressiveEye([0.095, 0.54, 0.19], '#1e3a8a', 0.04)}
           </group>
         )}
 
         {/* ================================================================ */}
-        {/* 12. STAR UNICORN (DESIGNER PONY FIGURINE - REFERENCE #11)        */}
+        {/* 12. STAR UNICORN: COSMIC STARLIGHT PEGASUS (CRYSTAL MYTHIC FIGURINE) */}
         {/* ================================================================ */}
         {skin === 'star-unicorn' && (
           <group position={[0, 0.14, 0]}>
-            {/* Candy-Pink Pedestal Collar + 3 Raised 3D Golden Stars */}
+            {/* Deep Cosmic Amethyst Pedestal Collar + 4 Raised 3D Golden Stars */}
             <mesh
               geometry={SHARED_GEO.themeCollar}
               position={[0, -0.04, 0]}
@@ -2657,13 +2884,14 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               receiveShadow
             >
               <meshPhysicalMaterial
-                color="#ec4899"
-                roughness={0.14}
-                metalness={0.14}
+                color="#581c87"
+                roughness={0.12}
+                metalness={0.35}
                 clearcoat={1}
+                ior={1.62}
               />
             </mesh>
-            {[-0.6, 0, 0.6].map((ang, sIdx) => (
+            {[-0.9, -0.3, 0.3, 0.9].map((ang, sIdx) => (
               <mesh
                 key={sIdx}
                 geometry={SHARED_GEO.star3D}
@@ -2673,18 +2901,18 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   Math.cos(ang) * 0.33,
                 ]}
                 rotation={[0, ang, 0]}
-                scale={0.82}
+                scale={0.88}
               >
                 <meshPhysicalMaterial
                   color="#fbbf24"
-                  metalness={0.94}
-                  roughness={0.08}
+                  metalness={0.95}
+                  roughness={0.06}
                   clearcoat={1}
                 />
               </mesh>
             ))}
 
-            {/* Seated Porcelain-White Pony Body & Pastel Pink Hooves */}
+            {/* Translucent Opalescent Nebula Crystal Body */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
               position={[0, 0.2, -0.02]}
@@ -2692,13 +2920,17 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               castShadow
             >
               <meshPhysicalMaterial
-                color="#ffffff"
-                roughness={0.24}
-                clearcoat={0.85}
-                sheen={0.8}
-                sheenColor="#fdf4ff"
+                color="#fdf4ff"
+                roughness={0.12}
+                transmission={0.38}
+                ior={1.55}
+                clearcoat={1.0}
+                sheen={0.9}
+                sheenColor="#e879f9"
               />
             </mesh>
+
+            {/* Rose-Gold Gilded Hooves */}
             {[-0.09, 0.09].map((hx, hIdx) => (
               <mesh
                 key={hIdx}
@@ -2708,15 +2940,49 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 castShadow
               >
                 <meshPhysicalMaterial
-                  color="#fbcfe8"
-                  roughness={0.26}
-                  clearcoat={0.8}
+                  color="#f472b6"
+                  metalness={0.75}
+                  roughness={0.18}
+                  clearcoat={0.9}
                 />
               </mesh>
             ))}
 
-            {/* Sculpted Graceful Chibi Pony Head & Snout */}
-            <group rotation={[0, -0.12, 0]}>
+            {/* Graceful Folded Celestial Pegasus Feather Wings on Flanks */}
+            {[-1, 1].map((sign, wIdx) => (
+              <group
+                key={wIdx}
+                position={[sign * 0.19, 0.23, -0.02]}
+                rotation={[0.3, sign * -0.25, sign * 0.35]}
+              >
+                {/* 3 Layered Feathers */}
+                {[
+                  { y: 0.1, rz: 0.2, s: 0.85, col: '#c084fc' },
+                  { y: 0, rz: 0.45, s: 1.0, col: '#e879f9' },
+                  { y: -0.09, rz: 0.7, s: 0.9, col: '#38bdf8' },
+                ].map((f, fIdx) => (
+                  <mesh
+                    key={fIdx}
+                    geometry={SHARED_GEO.wingFeather}
+                    position={[0, f.y, 0]}
+                    rotation={[0, 0, sign * f.rz]}
+                    scale={[0.7 * f.s, 0.9 * f.s, 0.3 * f.s]}
+                    castShadow
+                  >
+                    <meshPhysicalMaterial
+                      color={f.col}
+                      roughness={0.18}
+                      clearcoat={0.95}
+                      sheen={0.8}
+                      sheenColor="#fdf4ff"
+                    />
+                  </mesh>
+                ))}
+              </group>
+            ))}
+
+            {/* Sculpted Graceful Chibi Pony Head */}
+            <group rotation={[0, -0.1, 0]}>
               <mesh
                 geometry={SHARED_GEO.unitSphere}
                 position={[0, 0.56, 0.01]}
@@ -2725,12 +2991,13 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               >
                 <meshPhysicalMaterial
                   color="#ffffff"
-                  roughness={0.24}
-                  clearcoat={0.85}
-                  sheen={0.8}
+                  roughness={0.18}
+                  clearcoat={0.9}
+                  sheen={0.85}
+                  sheenColor="#fdf4ff"
                 />
               </mesh>
-              {/* Sweet Rounded Pony Muzzle & Nostrils */}
+              {/* Sweet Rounded Snout */}
               <mesh
                 geometry={SHARED_GEO.unitSphere}
                 position={[0, 0.505, 0.2]}
@@ -2740,8 +3007,8 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               >
                 <meshPhysicalMaterial
                   color="#ffffff"
-                  roughness={0.25}
-                  clearcoat={0.82}
+                  roughness={0.2}
+                  clearcoat={0.85}
                 />
               </mesh>
               {[-0.045, 0.045].map((nx, nIdx) => (
@@ -2755,11 +3022,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 </mesh>
               ))}
 
-              {/* Enchanting Violet/Amethyst Eyes with Dual Starlight Catchlights */}
-              {renderExpressiveEye([-0.112, 0.585, 0.185], '#581c87', 0.05)}
-              {renderExpressiveEye([0.112, 0.585, 0.185], '#581c87', 0.05)}
+              {/* Enchanting Starlight Violet Eyes with Dual Catchlights */}
+              {renderExpressiveEye([-0.112, 0.585, 0.185], '#6b21a8', 0.052)}
+              {renderExpressiveEye([0.112, 0.585, 0.185], '#6b21a8', 0.052)}
 
-              {/* Pointed Equine Ears with Soft Pink Hollows */}
+              {/* Equine Ears with Soft Rose-Gold Interior */}
               {[-0.145, 0.145].map((ex, eIdx) => {
                 const sign = eIdx === 0 ? 1 : -1;
                 return (
@@ -2773,7 +3040,7 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                       scale={[0.7, 0.88, 0.54]}
                       castShadow
                     >
-                      <meshPhysicalMaterial color="#ffffff" roughness={0.26} />
+                      <meshPhysicalMaterial color="#ffffff" roughness={0.24} clearcoat={0.8} />
                     </mesh>
                     <mesh
                       geometry={SHARED_GEO.earCone}
@@ -2786,32 +3053,47 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 );
               })}
 
-              {/* Twisted Golden Helical Spiral Alicorn Horn */}
+              {/* Forehead 3D Golden Star Tiara Crest */}
+              <mesh
+                geometry={SHARED_GEO.star3D}
+                position={[0, 0.67, 0.21]}
+                rotation={[-0.3, 0, 0]}
+                scale={0.72}
+              >
+                <meshPhysicalMaterial
+                  color="#fbbf24"
+                  metalness={0.96}
+                  roughness={0.06}
+                  clearcoat={1}
+                />
+              </mesh>
+
+              {/* Twisted Golden Helical Spiral Alicorn Horn with Radiance */}
               <mesh
                 geometry={SHARED_GEO.spiralHorn}
-                position={[0, 0.75, 0.08]}
+                position={[0, 0.76, 0.07]}
                 rotation={[0.26, 0, 0]}
-                scale={0.95}
+                scale={1.02}
                 castShadow
               >
                 <meshPhysicalMaterial
                   color="#fbbf24"
                   metalness={0.95}
-                  roughness={0.08}
+                  roughness={0.06}
                   clearcoat={1}
                   emissive="#d97706"
-                  emissiveIntensity={0.25}
+                  emissiveIntensity={0.35}
                 />
               </mesh>
 
-              {/* Whipped-Frosting Cascading Mane Locks in Pastel Pink & Lavender */}
+              {/* Nebula Gradient Cascading Mane (Magenta, Lavender, Cyan) */}
               {[
-                { x: 0.02, y: 0.76, z: 0.09, sx: 0.14, sy: 0.1, sz: 0.13, col: '#f472b6' },
-                { x: 0.08, y: 0.71, z: -0.12, sx: 0.125, sy: 0.135, sz: 0.125, col: '#ec4899' },
-                { x: 0.13, y: 0.57, z: -0.16, sx: 0.12, sy: 0.145, sz: 0.125, col: '#c084fc' },
-                { x: 0.14, y: 0.42, z: -0.15, sx: 0.115, sy: 0.135, sz: 0.115, col: '#f472b6' },
-                { x: 0.12, y: 0.28, z: -0.15, sx: 0.11, sy: 0.115, sz: 0.11, col: '#db2777' },
-                { x: 0.02, y: 0.18, z: -0.23, sx: 0.115, sy: 0.125, sz: 0.125, col: '#c084fc' },
+                { x: 0.02, y: 0.77, z: 0.08, sx: 0.14, sy: 0.1, sz: 0.13, col: '#f472b6' },
+                { x: 0.08, y: 0.71, z: -0.12, sx: 0.13, sy: 0.14, sz: 0.13, col: '#c084fc' },
+                { x: 0.13, y: 0.57, z: -0.16, sx: 0.125, sy: 0.15, sz: 0.13, col: '#38bdf8' },
+                { x: 0.14, y: 0.42, z: -0.15, sx: 0.12, sy: 0.14, sz: 0.12, col: '#c084fc' },
+                { x: 0.12, y: 0.28, z: -0.15, sx: 0.115, sy: 0.12, sz: 0.115, col: '#f472b6' },
+                { x: 0.02, y: 0.18, z: -0.23, sx: 0.12, sy: 0.13, sz: 0.13, col: '#38bdf8' },
               ].map((m, idx) => (
                 <mesh
                   key={idx}
@@ -2822,10 +3104,10 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshPhysicalMaterial
                     color={m.col}
-                    roughness={0.32}
-                    clearcoat={0.6}
-                    sheen={0.85}
-                    sheenColor="#fbcfe8"
+                    roughness={0.24}
+                    clearcoat={0.8}
+                    sheen={0.9}
+                    sheenColor="#fdf4ff"
                   />
                 </mesh>
               ))}
@@ -2834,11 +3116,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
         )}
 
         {/* ================================================================ */}
-        {/* 13. FIRE DRAGON (CHUBBY BABY DRAKE FIGURINE - REFERENCE #1)     */}
+        {/* 13. FIRE DRAGON: VOLCANIC MAGMA DRAKE (LEGENDARY BEAST FIGURINE) */}
         {/* ================================================================ */}
         {skin === 'fire-dragon' && (
           <group position={[0, 0.14, 0]}>
-            {/* Crimson Pedestal Collar + 3D Flame Relief Emblem */}
+            {/* Volcanic Crimson-and-Charcoal Pedestal Collar with Golden Flame Emblem */}
             <mesh
               geometry={SHARED_GEO.themeCollar}
               position={[0, -0.04, 0]}
@@ -2846,13 +3128,14 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               receiveShadow
             >
               <meshPhysicalMaterial
-                color="#dc2626"
-                roughness={0.14}
-                metalness={0.16}
+                color="#7f1d1d"
+                roughness={0.16}
+                metalness={0.3}
                 clearcoat={1}
+                ior={1.62}
               />
             </mesh>
-            {/* 3D Sculpted Flame Emblem on Pedestal Front */}
+            {/* 3D Sculpted Molten Flame Emblem on Pedestal Front */}
             <group position={[0, -0.04, 0.33]}>
               <mesh
                 geometry={SHARED_GEO.earCone}
@@ -2862,7 +3145,7 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 <meshStandardMaterial
                   color="#f97316"
                   emissive="#ea580c"
-                  emissiveIntensity={1.4}
+                  emissiveIntensity={1.8}
                 />
               </mesh>
               <mesh
@@ -2873,12 +3156,12 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 <meshStandardMaterial
                   color="#fde047"
                   emissive="#facc15"
-                  emissiveIntensity={1.6}
+                  emissiveIntensity={2.2}
                 />
               </mesh>
             </group>
 
-            {/* Ultra-Chubby Pear-Shaped Baby Dragon Pot-Belly */}
+            {/* Volcanic Crimson Scaled Dragon Torso */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
               position={[0, 0.2, -0.01]}
@@ -2886,15 +3169,15 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               castShadow
             >
               <meshPhysicalMaterial
-                color="#ef4444"
-                roughness={0.28}
-                clearcoat={0.8}
-                sheen={0.65}
+                color="#b91c1c"
+                roughness={0.22}
+                clearcoat={0.9}
+                sheen={0.75}
                 sheenColor="#fca5a5"
               />
             </mesh>
 
-            {/* 4 Sculpted Horizontal Segmented Golden Belly Rib Plates */}
+            {/* 4 Segmented Molten Magma Belly Plates with Fiery Emissive Seams */}
             {[
               { y: 0.11, sx: 0.165, sz: 0.145 },
               { y: 0.16, sx: 0.155, sz: 0.14 },
@@ -2908,15 +3191,16 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 scale={[plate.sx, 0.038, plate.sz]}
               >
                 <meshPhysicalMaterial
-                  color="#fef08a"
-                  roughness={0.28}
-                  clearcoat={0.6}
-                  sheen={0.4}
+                  color="#f97316"
+                  roughness={0.18}
+                  clearcoat={0.8}
+                  emissive="#ea580c"
+                  emissiveIntensity={1.4 + pIdx * 0.2}
                 />
               </mesh>
             ))}
 
-            {/* Two Chubby Baby Dragon Arms with Paws Resting on Lower Belly */}
+            {/* Two Dragon Arms with Paws Resting on Lower Belly */}
             {[-1, 1].map((sign, armIdx) => (
               <group key={armIdx} position={[sign * 0.14, 0.18, 0.1]}>
                 <mesh
@@ -2926,12 +3210,12 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   castShadow
                 >
                   <meshPhysicalMaterial
-                    color="#ef4444"
-                    roughness={0.3}
-                    clearcoat={0.6}
+                    color="#b91c1c"
+                    roughness={0.24}
+                    clearcoat={0.8}
                   />
                 </mesh>
-                {/* 3 Tiny Golden Claws on Each Baby Paw */}
+                {/* 3 Golden Claws on Each Paw */}
                 {[-0.02, 0, 0.02].map((cx, cIdx) => (
                   <mesh
                     key={cIdx}
@@ -2941,15 +3225,15 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   >
                     <meshStandardMaterial
                       color="#fbbf24"
-                      metalness={0.85}
-                      roughness={0.15}
+                      metalness={0.92}
+                      roughness={0.1}
                     />
                   </mesh>
                 ))}
               </group>
             ))}
 
-            {/* Seated Hind Thighs & Rounded Foot Pads on Pedestal */}
+            {/* Seated Hind Thighs on Pedestal */}
             {[-0.135, 0.135].map((px, pIdx) => (
               <group key={pIdx} position={[px, 0.07, 0.16]}>
                 <mesh
@@ -2958,23 +3242,44 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   castShadow
                 >
                   <meshPhysicalMaterial
-                    color="#dc2626"
-                    roughness={0.32}
-                    clearcoat={0.6}
+                    color="#991b1b"
+                    roughness={0.28}
+                    clearcoat={0.7}
                   />
                 </mesh>
-                {/* Sole Pad */}
                 <mesh
                   geometry={SHARED_GEO.lowSphere}
                   position={[0, -0.01, 0.075]}
                   scale={[0.038, 0.026, 0.02]}
                 >
-                  <meshStandardMaterial color="#fef08a" roughness={0.4} />
+                  <meshStandardMaterial color="#fef08a" roughness={0.35} />
                 </mesh>
               </group>
             ))}
 
-            {/* Curled Dragon Tail with Spade Flame Tip */}
+            {/* 4 Dorsal Spines Along Upper Spine */}
+            {[
+              { y: 0.36, z: -0.15, s: 0.05 },
+              { y: 0.28, z: -0.16, s: 0.045 },
+              { y: 0.20, z: -0.16, s: 0.04 },
+              { y: 0.12, z: -0.14, s: 0.035 },
+            ].map((sp, spIdx) => (
+              <mesh
+                key={spIdx}
+                geometry={SHARED_GEO.earCone}
+                position={[0, sp.y, sp.z]}
+                rotation={[-1.2, 0, 0]}
+                scale={[sp.s * 0.8, sp.s * 1.4, sp.s * 0.4]}
+              >
+                <meshStandardMaterial
+                  color="#f97316"
+                  emissive="#ea580c"
+                  emissiveIntensity={1.5}
+                />
+              </mesh>
+            ))}
+
+            {/* Curled Dragon Tail with Molten Spade Tip */}
             <mesh
               geometry={SHARED_GEO.tailTorus}
               position={[-0.14, 0.13, -0.15]}
@@ -2982,25 +3287,25 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               castShadow
             >
               <meshPhysicalMaterial
-                color="#dc2626"
-                roughness={0.3}
-                clearcoat={0.6}
+                color="#991b1b"
+                roughness={0.25}
+                clearcoat={0.8}
               />
             </mesh>
             <mesh
               geometry={SHARED_GEO.earCone}
               position={[-0.19, 0.22, -0.18]}
               rotation={[-0.5, 0, -0.8]}
-              scale={[0.07, 0.12, 0.04]}
+              scale={[0.07, 0.13, 0.04]}
             >
               <meshStandardMaterial
                 color="#f59e0b"
-                emissive="#d97706"
-                emissiveIntensity={0.8}
+                emissive="#ea580c"
+                emissiveIntensity={1.6}
               />
             </mesh>
 
-            {/* Cute Miniature Scalloped Bat Wings on Back */}
+            {/* Scalloped Bat Wings with Sharp Claws & Fiery Membrane */}
             {[-1, 1].map((side, wIdx) => (
               <group
                 key={wIdx}
@@ -3014,12 +3319,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   castShadow
                 >
                   <meshPhysicalMaterial
-                    color="#b91c1c"
-                    roughness={0.32}
-                    clearcoat={0.5}
+                    color="#7f1d1d"
+                    roughness={0.28}
+                    clearcoat={0.7}
                   />
                 </mesh>
-                {/* Gold Wing-Tip Thumb Claw */}
                 <mesh
                   geometry={SHARED_GEO.lowSphere}
                   position={[side * 0.06, 0.1, 0]}
@@ -3027,8 +3331,8 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshStandardMaterial
                     color="#fbbf24"
-                    metalness={0.9}
-                    roughness={0.12}
+                    metalness={0.92}
+                    roughness={0.1}
                   />
                 </mesh>
                 <mesh
@@ -3036,12 +3340,17 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                   position={[side * 0.065, -0.02, 0.015]}
                   scale={[0.088, 0.07, 0.02]}
                 >
-                  <meshPhysicalMaterial color="#f87171" roughness={0.4} />
+                  <meshPhysicalMaterial
+                    color="#f87171"
+                    roughness={0.3}
+                    emissive="#ea580c"
+                    emissiveIntensity={0.6}
+                  />
                 </mesh>
               </group>
             ))}
 
-            {/* Giant Chubby Baby Dragon Head & Cheeks */}
+            {/* Giant Chubby Dragon Head & Cheeks */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
               position={[0, 0.56, 0.01]}
@@ -3049,10 +3358,11 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               castShadow
             >
               <meshPhysicalMaterial
-                color="#ef4444"
-                roughness={0.26}
-                clearcoat={0.82}
-                sheen={0.65}
+                color="#b91c1c"
+                roughness={0.22}
+                clearcoat={0.9}
+                sheen={0.75}
+                sheenColor="#fca5a5"
               />
             </mesh>
             {/* Plump Lower Side Jowls */}
@@ -3064,14 +3374,14 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 scale={[0.115, 0.095, 0.11]}
               >
                 <meshPhysicalMaterial
-                  color="#ef4444"
-                  roughness={0.28}
-                  clearcoat={0.7}
+                  color="#b91c1c"
+                  roughness={0.24}
+                  clearcoat={0.8}
                 />
               </mesh>
             ))}
 
-            {/* Stubby Baby Muzzle, Nostrils & Sweet Smile Crease */}
+            {/* Stubby Dragon Muzzle & Nostrils */}
             <mesh
               geometry={SHARED_GEO.unitSphere}
               position={[0, 0.505, 0.2]}
@@ -3079,9 +3389,9 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               castShadow
             >
               <meshPhysicalMaterial
-                color="#ef4444"
-                roughness={0.26}
-                clearcoat={0.8}
+                color="#b91c1c"
+                roughness={0.22}
+                clearcoat={0.85}
               />
             </mesh>
             {[-0.045, 0.045].map((nx, nIdx) => (
@@ -3095,16 +3405,16 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
               </mesh>
             ))}
 
-            {/* GIANT Liquid Ruby-Black Kawaii Eyes with Dual Starlight Highlights */}
+            {/* Fiery Ruby Expressive Eyes with Dual Starlight Catchlights */}
             {renderExpressiveEye([-0.118, 0.585, 0.198], '#450a0a', 0.056)}
             {renderExpressiveEye([0.118, 0.585, 0.198], '#450a0a', 0.056)}
 
-            {/* Sweeping Organic Curved Golden Horns */}
+            {/* Sweeping Organic Curved Golden Dragon Horns with Magma Glow */}
             {[-0.135, 0.135].map((hx, hIdx) => {
               const sign = hIdx === 0 ? 1 : -1;
               return (
                 <mesh
-                  key={hIdx}
+                  key={hx}
                   geometry={SHARED_GEO.curvedHorn}
                   position={[hx, 0.72, 0.02]}
                   rotation={[-0.18, sign * 0.15, sign * 0.32]}
@@ -3113,15 +3423,17 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshPhysicalMaterial
                     color="#f59e0b"
-                    metalness={0.88}
-                    roughness={0.12}
+                    metalness={0.9}
+                    roughness={0.1}
                     clearcoat={1}
+                    emissive="#d97706"
+                    emissiveIntensity={0.4}
                   />
                 </mesh>
               );
             })}
 
-            {/* Cheek Golden Baby Spikes */}
+            {/* Cheek Golden Spikes */}
             {[-0.26, 0.26].map((fx, fIdx) => {
               const sign = fIdx === 0 ? 1 : -1;
               return (
@@ -3134,8 +3446,8 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
                 >
                   <meshPhysicalMaterial
                     color="#fbbf24"
-                    metalness={0.85}
-                    roughness={0.15}
+                    metalness={0.88}
+                    roughness={0.12}
                     clearcoat={1}
                   />
                 </mesh>
