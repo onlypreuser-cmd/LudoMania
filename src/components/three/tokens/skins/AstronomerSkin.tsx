@@ -111,13 +111,12 @@ export const AstronomerSkin: React.FC<SkinComponentProps> = React.memo(() => {
             <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.08} />
           </mesh>
         ))}
-        {/* Glass Front Objective Lens */}
+        {/* Solid Polished Optical Sapphire Objective Lens */}
         <mesh geometry={SHARED_GEO.lowSphere} position={[0, 0.21, 0]} scale={[0.042, 0.015, 0.042]}>
           <meshPhysicalMaterial
-            color="#67e8f9"
-            transmission={0.88}
-            ior={1.62}
-            roughness={0.02}
+            color="#38bdf8"
+            roughness={0.08}
+            metalness={0.2}
             clearcoat={1}
           />
         </mesh>
@@ -167,10 +166,9 @@ export const AstronomerSkin: React.FC<SkinComponentProps> = React.memo(() => {
         </mesh>
         <mesh geometry={SHARED_GEO.lowSphere} scale={[0.045, 0.045, 0.01]}>
           <meshPhysicalMaterial
-            color="#bae6fd"
-            transmission={0.85}
-            ior={1.65}
-            roughness={0.02}
+            color="#38bdf8"
+            roughness={0.08}
+            metalness={0.2}
             clearcoat={1}
           />
         </mesh>

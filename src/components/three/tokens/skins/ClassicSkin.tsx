@@ -8,13 +8,13 @@ export const ClassicSkin: React.FC<SkinComponentProps> = React.memo(({ color }) 
 
   return (
     <group position={[0, 0.14, 0]}>
-      {/* Stepped 8-Facet 24K Gold Plinth */}
+      {/* Stepped 8-Facet Plinth in Vibrant Player Color */}
       <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.31, 0.36, 0.08, 8]} />
         <meshPhysicalMaterial
-          color="#fbbf24"
-          metalness={0.92}
-          roughness={0.12}
+          color={palette.threeHex}
+          metalness={0.2}
+          roughness={0.18}
           clearcoat={1}
         />
       </mesh>
@@ -25,7 +25,7 @@ export const ClassicSkin: React.FC<SkinComponentProps> = React.memo(({ color }) 
         rotation={[Math.PI / 2, 0, 0]}
         scale={1.22}
       >
-        <meshStandardMaterial color="#f59e0b" metalness={0.94} roughness={0.1} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
       </mesh>
 
       {/* Fluted Greco-Roman Sceptre Column in Player Color */}
@@ -33,7 +33,7 @@ export const ClassicSkin: React.FC<SkinComponentProps> = React.memo(({ color }) 
         <cylinderGeometry args={[0.18, 0.24, 0.36, 16]} />
         <meshPhysicalMaterial
           color={palette.threeHex}
-          roughness={0.08}
+          roughness={0.12}
           metalness={0.25}
           clearcoat={1}
           clearcoatRoughness={0.04}
@@ -118,7 +118,7 @@ export const ClassicSkin: React.FC<SkinComponentProps> = React.memo(({ color }) 
         })}
       </group>
 
-      {/* Floating Central Faceted Crystal Gem Orb (Refracts Player Color) */}
+      {/* Solid Faceted Royal Gem Orb in Vibrant Player Color (100% Opaque, ZERO Glass!) */}
       <mesh
         geometry={SHARED_GEO.gemOrb}
         position={[0, 0.72, 0]}
@@ -127,12 +127,11 @@ export const ClassicSkin: React.FC<SkinComponentProps> = React.memo(({ color }) 
       >
         <meshPhysicalMaterial
           color={palette.threeHex}
-          roughness={0.02}
+          roughness={0.05}
+          metalness={0.15}
           clearcoat={1}
           clearcoatRoughness={0.02}
-          transmission={0.85}
           ior={1.65}
-          thickness={1.3}
         />
       </mesh>
 

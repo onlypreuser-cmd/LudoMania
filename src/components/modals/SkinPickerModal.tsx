@@ -80,12 +80,15 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
     return isPlayerContext ? targetPlayer?.color || 'blue' : 'blue';
   });
 
-  // Zero-rerender high-FPS 360 orbit rotation refs
+  // Zero-rerender high-FPS 360 orbit rotation refs (Yaw & Pitch)
   const rotationTargetRef = useRef(0);
   const rotationCurrentRef = useRef(0);
+  const pitchTargetRef = useRef(0);
+  const pitchCurrentRef = useRef(0);
   const isDraggingCanvasRef = useRef(false);
   const isAutoRotatingRef = useRef(true);
   const lastPointerXRef = useRef(0);
+  const lastPointerYRef = useRef(0);
   const velocityRef = useRef(0);
   const autoRotateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -126,6 +129,8 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
       }
       rotationTargetRef.current = 0;
       rotationCurrentRef.current = 0;
+      pitchTargetRef.current = 0;
+      pitchCurrentRef.current = 0;
       velocityRef.current = 0;
       isAutoRotatingRef.current = true;
       setIsTestRolling(false);
@@ -157,17 +162,30 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
     isDraggingCanvasRef.current = true;
     isAutoRotatingRef.current = false;
     lastPointerXRef.current = e.clientX;
+    lastPointerYRef.current = e.clientY;
     velocityRef.current = 0;
     if (autoRotateTimerRef.current) clearTimeout(autoRotateTimerRef.current);
   };
 
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
     if (!isDraggingCanvasRef.current) return;
-    const delta = e.clientX - lastPointerXRef.current;
-    const step = delta * 0.032;
-    rotationTargetRef.current += step;
-    velocityRef.current = step;
+    const deltaX = e.clientX - lastPointerXRef.current;
+    const deltaY = e.clientY - lastPointerYRef.current;
+
+    // Horizontal 360 spin
+    const stepX = deltaX * 0.030;
+    rotationTargetRef.current += stepX;
+    velocityRef.current = stepX;
+
+    // Vertical pitch tilt clamped so user can inspect top/bottom without flipping
+    const stepY = deltaY * 0.016;
+    pitchTargetRef.current = Math.max(
+      -0.35,
+      Math.min(0.45, pitchTargetRef.current + stepY)
+    );
+
     lastPointerXRef.current = e.clientX;
+    lastPointerYRef.current = e.clientY;
   };
 
   const handleCanvasPointerUp = (e: React.PointerEvent) => {
@@ -321,14 +339,14 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xl select-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 select-none"
         >
           <motion.div
             initial={{ scale: 0.94, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.94, y: 16, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-            className="relative w-full max-w-[480px] max-h-[96vh] rounded-[32px] bg-white/95 backdrop-blur-2xl p-4 sm:p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18),0_4px_16px_rgba(15,23,42,0.06)] border border-white/80 flex flex-col justify-between overflow-y-auto"
+            className="relative w-full max-w-[480px] max-h-[96vh] rounded-[32px] bg-white p-4 sm:p-5 shadow-[0_24px_60px_rgba(15,23,42,0.35),0_4px_16px_rgba(15,23,42,0.1)] border border-slate-200/80 flex flex-col justify-between overflow-y-auto"
           >
             {/* Header & Mode Switcher */}
             <div className="flex items-center justify-between gap-2">
@@ -420,6 +438,8 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
               onPointerUp={handleCanvasPointerUp}
               rotationTargetRef={rotationTargetRef}
               rotationCurrentRef={rotationCurrentRef}
+              pitchTargetRef={pitchTargetRef}
+              pitchCurrentRef={pitchCurrentRef}
               isDraggingCanvasRef={isDraggingCanvasRef}
               isAutoRotatingRef={isAutoRotatingRef}
               velocityRef={velocityRef}

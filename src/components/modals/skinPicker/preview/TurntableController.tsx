@@ -3,13 +3,18 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 
 /**
- * High-Performance Turntable Controller.
+ * High-Performance 2-Axis Turntable & Orbit Controller.
  * Operates purely on refs inside useFrame without triggering React component re-renders!
- * Supports inertia flick physics and gentle idle auto-rotation.
+ * Supports:
+ * - 360° Infinite Horizontal Spin (Yaw) with inertia flick physics & gentle idle spin.
+ * - Vertical Tilt (Pitch, Up/Down) clamped so the user can inspect the top of horns,
+ *   wings, face, and pedestal base without flipping upside down.
  */
 export const TurntableController: React.FC<{
   rotationTargetRef: React.MutableRefObject<number>;
   rotationCurrentRef: React.MutableRefObject<number>;
+  pitchTargetRef?: React.MutableRefObject<number>;
+  pitchCurrentRef?: React.MutableRefObject<number>;
   isDraggingRef: React.MutableRefObject<boolean>;
   isAutoRotatingRef: React.MutableRefObject<boolean>;
   velocityRef: React.MutableRefObject<number>;
@@ -17,6 +22,8 @@ export const TurntableController: React.FC<{
 }> = ({
   rotationTargetRef,
   rotationCurrentRef,
+  pitchTargetRef,
+  pitchCurrentRef,
   isDraggingRef,
   isAutoRotatingRef,
   velocityRef,
@@ -27,6 +34,7 @@ export const TurntableController: React.FC<{
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
+    // 1. Horizontal Momentum / Idle Spin
     if (!isDraggingRef.current) {
       if (Math.abs(velocityRef.current) > 0.0006) {
         rotationTargetRef.current += velocityRef.current;
@@ -36,14 +44,27 @@ export const TurntableController: React.FC<{
       }
     }
 
-    // High refresh rate smooth lerp interpolation
+    // 2. High refresh rate smooth lerp interpolation for Yaw (Left/Right)
     rotationCurrentRef.current = THREE.MathUtils.lerp(
       rotationCurrentRef.current,
       rotationTargetRef.current,
       0.22
     );
-
     groupRef.current.rotation.y = rotationCurrentRef.current;
+
+    // 3. Vertical Pitch (Up/Down Orbit)
+    if (pitchTargetRef && pitchCurrentRef) {
+      if (!isDraggingRef.current && isAutoRotatingRef.current) {
+        // Slowly ease pitch back to neutral resting angle during idle
+        pitchTargetRef.current = THREE.MathUtils.lerp(pitchTargetRef.current, 0, 0.04);
+      }
+      pitchCurrentRef.current = THREE.MathUtils.lerp(
+        pitchCurrentRef.current,
+        pitchTargetRef.current,
+        0.22
+      );
+      groupRef.current.rotation.x = pitchCurrentRef.current;
+    }
   });
 
   return <group ref={groupRef}>{children}</group>;

@@ -23,6 +23,8 @@ interface SkinStudioPreview3DProps {
   onPointerUp: (e: React.PointerEvent) => void;
   rotationTargetRef: React.MutableRefObject<number>;
   rotationCurrentRef: React.MutableRefObject<number>;
+  pitchTargetRef?: React.MutableRefObject<number>;
+  pitchCurrentRef?: React.MutableRefObject<number>;
   isDraggingCanvasRef: React.MutableRefObject<boolean>;
   isAutoRotatingRef: React.MutableRefObject<boolean>;
   velocityRef: React.MutableRefObject<number>;
@@ -44,6 +46,8 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
   onPointerUp,
   rotationTargetRef,
   rotationCurrentRef,
+  pitchTargetRef,
+  pitchCurrentRef,
   isDraggingCanvasRef,
   isAutoRotatingRef,
   velocityRef,
@@ -69,9 +73,9 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
       />
 
       {/* 360 Drag Pill Hint */}
-      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-md border border-slate-200/80 text-[10px] font-extrabold text-slate-700 pointer-events-none flex items-center gap-1.5 shadow-sm">
+      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/85 border border-slate-200/80 text-[10px] font-extrabold text-slate-700 pointer-events-none flex items-center gap-1.5 shadow-sm">
         <RotateCcw className="w-3.5 h-3.5 text-blue-600 animate-spin" style={{ animationDuration: '6s' }} />
-        <span>Swipe 360° to Orbit</span>
+        <span>Drag to Orbit 360° & Tilt</span>
       </div>
 
       {/* Action Floating Test Button */}
@@ -106,12 +110,13 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
       </div>
 
       {/* Single Dedicated High-FPS 3D Studio Canvas */}
+      {/* Calibrated Camera Distance & Framing: Zero Head Clipping (+25% Headroom) */}
       <Canvas
         dpr={[1, 1.5]}
         camera={
           currentMode === 'token'
-            ? { position: [0, 0.9, 2.25], fov: 33 }
-            : { position: [0, 1.25, 2.2], fov: 34 }
+            ? { position: [0, 0.42, 3.8], fov: 36 }
+            : { position: [0, 0.95, 2.6], fov: 34 }
         }
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
       >
@@ -124,6 +129,8 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
           <TurntableController
             rotationTargetRef={rotationTargetRef}
             rotationCurrentRef={rotationCurrentRef}
+            pitchTargetRef={pitchTargetRef}
+            pitchCurrentRef={pitchCurrentRef}
             isDraggingRef={isDraggingCanvasRef}
             isAutoRotatingRef={isAutoRotatingRef}
             velocityRef={velocityRef}
@@ -134,12 +141,12 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
             {currentMode === 'token' ? (
               <group
                 ref={tokenContainerRef as React.RefObject<THREE.Group>}
-                position={[0, -0.45, 0]}
+                position={[0, -0.40, 0]}
               >
                 <Token3DModel
                   skin={activeSkinId as TokenSkinId}
                   color={activeColor}
-                  scale={1.4}
+                  scale={1.22}
                   autoRotatePreview={false}
                 />
               </group>

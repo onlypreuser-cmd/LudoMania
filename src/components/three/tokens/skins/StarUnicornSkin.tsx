@@ -42,7 +42,7 @@ export const StarUnicornSkin: React.FC<SkinComponentProps> = React.memo(() => {
         </mesh>
       ))}
 
-      {/* Translucent Opalescent Nebula Crystal Body */}
+      {/* Solid Pearlescent Celestial Nebula Body (ZERO Glass / Transmission!) */}
       <mesh
         geometry={SHARED_GEO.unitSphere}
         position={[0, 0.2, -0.02]}
@@ -51,11 +51,10 @@ export const StarUnicornSkin: React.FC<SkinComponentProps> = React.memo(() => {
       >
         <meshPhysicalMaterial
           color="#fdf4ff"
-          roughness={0.12}
-          transmission={0.38}
-          ior={1.55}
-          clearcoat={1.0}
-          sheen={0.9}
+          roughness={0.24}
+          metalness={0.08}
+          clearcoat={0.9}
+          sheen={0.8}
           sheenColor="#e879f9"
         />
       </mesh>
