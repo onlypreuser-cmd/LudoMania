@@ -3,9 +3,8 @@ import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { PlayerColor } from '../../../../types/game';
-import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
+import { YARD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
-import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const ClassicKingdomBoard: React.FC = () => {
   const crownRef = useRef<THREE.Group>(null);
@@ -24,15 +23,11 @@ export const ClassicKingdomBoard: React.FC = () => {
   });
 
   return (
-    <group position={[0, -0.05, 0]}>
-      {/* 1. Heavy English Oak Sub-Chassis Foundation */}
-      <mesh geometry={BOARD_GEO.subChassisBox} position={[0, -0.12, 0]} receiveShadow>
-        <meshPhysicalMaterial
-          color="#381c0d"
-          roughness={0.65}
-          metalness={0.06}
-          clearcoat={0.3}
-        />
+    <group position={[0, 0, 0]}>
+      {/* 1. Transparent Shadow Receiver Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} receiveShadow>
+        <planeGeometry args={[15.2, 15.2]} />
+        <shadowMaterial opacity={0.24} />
       </mesh>
 
       {/* 2. Heavy Oak Frame Perimeter Rails */}
@@ -76,60 +71,7 @@ export const ClassicKingdomBoard: React.FC = () => {
         </group>
       ))}
 
-      {/* 4. 4 Sunken Stone Castle Yards with Crenelations & Banners */}
-      {(['blue', 'red', 'yellow', 'green'] as PlayerColor[]).map((col) => {
-        const yardPos = YARD_OFFSETS[col];
-        const pal = COLOR_PALETTE[col];
-        return (
-          <group key={col} position={[yardPos.x, 0, yardPos.z]}>
-            {/* Sunken Stone Basin Floor */}
-            <mesh geometry={BOARD_GEO.yardBasinBox} position={[0, -0.07, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color="#f8fafc"
-                roughness={0.75}
-                metalness={0.04}
-              />
-            </mesh>
-            {/* Stone Wall Trim Around Yard */}
-            <mesh
-              geometry={BOARD_GEO.unitTorus}
-              position={[0, 0.02, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[2.75, 2.75, 0.8]}
-            >
-              <meshPhysicalMaterial color="#cbd5e1" roughness={0.7} />
-            </mesh>
-            {/* 4 Player Token Resting Pads */}
-            {YARD_PAD_OFFSETS.map(([px, pz], pIdx) => (
-              <group key={pIdx} position={[px, -0.01, pz]}>
-                <mesh geometry={BOARD_GEO.yardPadCylinder}>
-                  <meshPhysicalMaterial
-                    color={pal.threeHex}
-                    roughness={0.25}
-                    clearcoat={0.8}
-                    ior={1.5}
-                  />
-                </mesh>
-                {/* Gold Inlay Ring on Pad Rim */}
-                <mesh
-                  geometry={BOARD_GEO.thinTorus}
-                  position={[0, 0.035, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.72}
-                >
-                  <meshStandardMaterial
-                    color="#fde047"
-                    metalness={0.88}
-                    roughness={0.15}
-                  />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-
-      {/* Waving Heraldic Silk Pennants on 4 Yards */}
+      {/* 4. Waving Heraldic Silk Pennants on 4 Yard Outer Corners */}
       <group ref={bannerGroupRef}>
         {(['blue', 'red', 'yellow', 'green'] as PlayerColor[]).map((col) => {
           const yardPos = YARD_OFFSETS[col];
@@ -167,37 +109,9 @@ export const ClassicKingdomBoard: React.FC = () => {
         })}
       </group>
 
-      {/* 5. 72 Light Oak Parquet Track Tiles (High-Performance GPU Instancing) */}
-      <InstancedTrackTiles
-        standardColor="#fffdfa"
-        baseRoughness={0.58}
-        baseClearcoat={0.35}
-        safeStarColor="#fbbf24"
-        startEmblemColor="#ffffff"
-      />
-
-      {/* 6. Center 3x3 Home Goal: 3-Tiered Golden Dais & Rotating Royal Crown */}
+      {/* 5. Center 3x3 Home Goal: Grand 3D Royal Tournament Crown (Rotating Monument Hovering Above Home Triangles) */}
       <group position={[0, 0, 0]}>
-        {/* Tier 1 Dais Podium */}
-        <mesh geometry={BOARD_GEO.daisTier1} position={[0, 0.03, 0]} receiveShadow>
-          <meshPhysicalMaterial color="#eab308" metalness={0.88} roughness={0.2} clearcoat={1} />
-        </mesh>
-        {/* Tier 2 Dais Podium */}
-        <mesh geometry={BOARD_GEO.daisTier2} position={[0, 0.12, 0]} receiveShadow>
-          <meshPhysicalMaterial color="#d97706" metalness={0.92} roughness={0.15} clearcoat={1} />
-        </mesh>
-        {/* Tier 3 Dais Podium (Red Velvet Inlay Top) */}
-        <mesh geometry={BOARD_GEO.daisTier3} position={[0, 0.21, 0]}>
-          <meshPhysicalMaterial
-            color="#881337"
-            roughness={0.8}
-            sheen={0.85}
-            sheenColor="#fda4af"
-          />
-        </mesh>
-
-        {/* Grand 3D Royal Tournament Crown (Rotating Monument) */}
-        <group ref={crownRef} position={[0, 0.35, 0]}>
+        <group ref={crownRef} position={[0, 0.45, 0]}>
           {/* Gold Coronet Base Ring */}
           <mesh
             geometry={BOARD_GEO.unitTorus}

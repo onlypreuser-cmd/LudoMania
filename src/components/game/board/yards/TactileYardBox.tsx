@@ -1,4 +1,5 @@
 import React from 'react';
+import { COLOR_PALETTE } from '../../../../engine/boardConfig';
 import { BoardThemeId, PlayerColor } from '../../../../types/game';
 
 export const YARD_PAD_POSITIONS: [number, number][] = [
@@ -26,6 +27,8 @@ export const TactileYardBox: React.FC<TactileYardBoxProps> = React.memo(
     boardTheme,
     yardBorderClass,
   }) => {
+    const pal = COLOR_PALETTE[color];
+
     // Theme-specific Yard Inner Basin styling:
     let yardInnerStyle: React.CSSProperties = {};
     const yardInnerClass = `absolute inset-[10%] rounded-2xl shadow-[inset_0_4px_10px_rgba(0,0,0,0.3)] transition-all`;
@@ -34,34 +37,34 @@ export const TactileYardBox: React.FC<TactileYardBoxProps> = React.memo(
 
     if (boardTheme === 'royal-wood') {
       yardInnerStyle = {
-        background: 'radial-gradient(circle at 50% 50%, #78350f 0%, #451a03 70%, #291002 100%)',
+        background: 'radial-gradient(circle at 50% 50%, #5c2406 0%, #3a1402 70%, #200a01 100%)',
         border: '2px solid #b45309',
       };
       tokenPadStyle = {
-        background: 'radial-gradient(circle at 35% 35%, #fef08a 0%, #d97706 70%, #78350f 100%)',
+        background: `radial-gradient(circle at 35% 35%, #fffbeb 0%, ${pal.primary}60 70%, #78350f 100%)`,
         boxShadow: '0 3px 6px rgba(0,0,0,0.6), inset 0 2px 3px rgba(255,255,255,0.4)',
-        borderColor: '#b45309',
+        borderColor: pal.primary,
       };
     } else if (boardTheme === 'marble-palace') {
       yardInnerStyle = {
-        background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 65%, #cbd5e1 100%)',
-        border: '2px solid #fda4af',
+        background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f8fafc 65%, #e2e8f0 100%)',
+        border: '2px solid #cbd5e1',
       };
       tokenPadStyle = {
-        background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #ffe4e6 70%, #fda4af 100%)',
-        boxShadow: '0 3px 6px rgba(159,18,57,0.25), inset 0 2px 4px rgba(255,255,255,0.9)',
-        borderColor: '#f43f5e',
+        background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${pal.light} 65%, ${pal.primary}25 100%)`,
+        boxShadow: `0 3px 6px rgba(0,0,0,0.18), inset 0 2px 4px rgba(255,255,255,0.9)`,
+        borderColor: pal.primary,
       };
     } else if (boardTheme === 'midnight-neon') {
       yardInnerStyle = {
         background: 'radial-gradient(circle at 50% 50%, #0b0f19 0%, #030712 85%, #000000 100%)',
-        border: '2px solid #06b6d4',
-        boxShadow: 'inset 0 0 15px rgba(6,182,212,0.35)',
+        border: `2px solid ${pal.primary}88`,
+        boxShadow: `inset 0 0 15px ${pal.primary}33`,
       };
       tokenPadStyle = {
-        background: 'radial-gradient(circle at 50% 50%, #06b6d433 0%, #090d16 70%, #030712 100%)',
-        boxShadow: '0 0 10px rgba(6,182,212,0.6), inset 0 0 6px #22d3ee',
-        borderColor: '#22d3ee',
+        background: `radial-gradient(circle at 50% 50%, ${pal.primary}33 0%, #090d16 70%, #030712 100%)`,
+        boxShadow: `0 0 10px ${pal.primary}66, inset 0 0 6px ${pal.primary}`,
+        borderColor: pal.primary,
       };
     } else {
       // Classic Kingdom
@@ -70,9 +73,9 @@ export const TactileYardBox: React.FC<TactileYardBoxProps> = React.memo(
         border: '2px solid #eab308',
       };
       tokenPadStyle = {
-        background: 'radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 70%, #b45309 100%)',
+        background: `radial-gradient(circle at 35% 35%, #ffffff 0%, ${pal.light} 65%, ${pal.primary}30 100%)`,
         boxShadow: '0 3px 6px rgba(180,83,9,0.35), inset 0 2px 3px rgba(255,255,255,0.7)',
-        borderColor: '#b45309',
+        borderColor: pal.primary,
       };
     }
 

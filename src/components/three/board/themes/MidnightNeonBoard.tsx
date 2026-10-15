@@ -1,11 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useRef } from 'react';
 import * as THREE from 'three';
-import { COLOR_PALETTE } from '../../../../engine/boardConfig';
-import { PlayerColor } from '../../../../types/game';
-import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
-import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const MidnightNeonBoard: React.FC = () => {
   const reactorRing1Ref = useRef<THREE.Group>(null);
@@ -26,15 +22,11 @@ export const MidnightNeonBoard: React.FC = () => {
   });
 
   return (
-    <group position={[0, -0.05, 0]}>
-      {/* 1. Aerospace Carbon-Fiber Sub-Chassis Foundation */}
-      <mesh geometry={BOARD_GEO.subChassisBox} position={[0, -0.12, 0]} receiveShadow>
-        <meshPhysicalMaterial
-          color="#030712"
-          roughness={0.35}
-          metalness={0.7}
-          clearcoat={0.6}
-        />
+    <group position={[0, 0, 0]}>
+      {/* 1. Transparent Shadow Receiver Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} receiveShadow>
+        <planeGeometry args={[15.2, 15.2]} />
+        <shadowMaterial opacity={0.3} />
       </mesh>
 
       {/* 2. Carbon-Fiber Rails with Illuminated Coolant Conduits */}
@@ -65,95 +57,10 @@ export const MidnightNeonBoard: React.FC = () => {
         <meshBasicMaterial color="#ec4899" />
       </mesh>
 
-      {/* 3. 4 Sub-Level Quantum Magnetic Containment Yards */}
-      {(['blue', 'red', 'yellow', 'green'] as PlayerColor[]).map((col) => {
-        const yardPos = YARD_OFFSETS[col];
-        const pal = COLOR_PALETTE[col];
-        return (
-          <group key={col} position={[yardPos.x, 0, yardPos.z]}>
-            {/* Sunken Magnetic Bay Floor */}
-            <mesh geometry={BOARD_GEO.yardBasinBox} position={[0, -0.08, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color="#030712"
-                roughness={0.32}
-                metalness={0.85}
-              />
-            </mesh>
-            {/* Glowing Hexagonal Forcefield Ring */}
-            <mesh
-              geometry={BOARD_GEO.unitTorus}
-              position={[0, 0.02, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[2.7, 2.7, 0.6]}
-            >
-              <meshStandardMaterial
-                color="#06b6d4"
-                emissive="#06b6d4"
-                emissiveIntensity={1.8}
-              />
-            </mesh>
-            {/* 4 Glowing Hexagonal Induction Pads */}
-            {YARD_PAD_OFFSETS.map(([px, pz], pIdx) => (
-              <group key={pIdx} position={[px, -0.01, pz]}>
-                <mesh geometry={BOARD_GEO.yardPadCylinder}>
-                  <meshPhysicalMaterial
-                    color="#090d16"
-                    metalness={0.85}
-                    roughness={0.2}
-                    clearcoat={1}
-                  />
-                </mesh>
-                <mesh
-                  geometry={BOARD_GEO.thinTorus}
-                  position={[0, 0.035, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.72}
-                >
-                  <meshStandardMaterial
-                    color={pal.primary}
-                    emissive={pal.primary}
-                    emissiveIntensity={2.5}
-                  />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-
-      {/* 4. Suspended Obsidian Smoked Glass Track Tiles Over Laser Trenches (GPU Instanced) */}
-      <InstancedTrackTiles
-        standardColor="#090d16"
-        baseRoughness={0.12}
-        baseClearcoat={1.0}
-        baseMetalness={0.85}
-        safeStarColor="#22d3ee"
-        startEmblemColor="#06b6d4"
-      />
-
-      {/* 5. Center 3x3 Home Goal: Levitating 3D Quantum Singularity Reactor Core */}
+      {/* 3. Center 3x3 Home Goal: Levitating 3D Quantum Singularity Reactor Core (Hovering Above Home Triangles) */}
       <group position={[0, 0, 0]}>
-        {/* Sub-Level Magnetic Reactor Basin */}
-        <mesh
-          geometry={BOARD_GEO.unitCylinder}
-          position={[0, 0.02, 0]}
-          scale={[1.45, 0.08, 1.45]}
-          receiveShadow
-        >
-          <meshPhysicalMaterial color="#030712" metalness={0.9} roughness={0.18} />
-        </mesh>
-        {/* Outer Cyan Forcefield Containment Ring */}
-        <mesh
-          geometry={BOARD_GEO.unitTorus}
-          position={[0, 0.08, 0]}
-          rotation={[Math.PI / 2, 0, 0]}
-          scale={[1.38, 1.38, 0.6]}
-        >
-          <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={2.2} />
-        </mesh>
-
-        {/* Dual Counter-Rotating Gyroscopic Magnetic Rings */}
-        <group ref={reactorRing1Ref} position={[0, 0.28, 0]}>
+        {/* Dual Counter-Rotating Gyroscopic Magnetic Rings hovering above Home Goal */}
+        <group ref={reactorRing1Ref} position={[0, 0.45, 0]}>
           <mesh
             geometry={BOARD_GEO.unitTorus}
             scale={[0.78, 0.78, 0.6]}
@@ -167,7 +74,7 @@ export const MidnightNeonBoard: React.FC = () => {
             />
           </mesh>
         </group>
-        <group ref={reactorRing2Ref} position={[0, 0.28, 0]}>
+        <group ref={reactorRing2Ref} position={[0, 0.45, 0]}>
           <mesh
             geometry={BOARD_GEO.unitTorus}
             scale={[0.55, 0.55, 0.5]}
@@ -183,7 +90,7 @@ export const MidnightNeonBoard: React.FC = () => {
         </group>
 
         {/* Levitating Pulsating Plasma Singularity Core */}
-        <mesh ref={plasmaCoreRef} geometry={BOARD_GEO.unitSphere} position={[0, 0.28, 0]}>
+        <mesh ref={plasmaCoreRef} geometry={BOARD_GEO.unitSphere} position={[0, 0.45, 0]}>
           <meshStandardMaterial
             color="#22d3ee"
             emissive="#22d3ee"

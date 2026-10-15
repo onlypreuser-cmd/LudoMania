@@ -52,15 +52,6 @@ function createStudioRigScene(): THREE.Scene {
   floorBounce.rotation.x = -Math.PI / 2;
   scene.add(floorBounce);
 
-  // 5. Overhead Soft Zenith Disk
-  const topDisk = new THREE.Mesh(
-    new THREE.CircleGeometry(4.0, 32),
-    new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide })
-  );
-  topDisk.position.set(0, 13, 0);
-  topDisk.rotation.x = Math.PI / 2;
-  scene.add(topDisk);
-
   return scene;
 }
 

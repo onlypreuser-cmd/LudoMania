@@ -1,34 +1,24 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useRef } from 'react';
 import * as THREE from 'three';
-import { COLOR_PALETTE } from '../../../../engine/boardConfig';
-import { PlayerColor } from '../../../../types/game';
-import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
-import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const MarblePalaceBoard: React.FC = () => {
   const crystalJewelRef = useRef<THREE.Group>(null);
-  const waterPlaneRef = useRef<THREE.Mesh>(null);
 
   useFrame((state, delta) => {
     if (crystalJewelRef.current) {
       crystalJewelRef.current.rotation.y += delta * 0.55;
-      crystalJewelRef.current.position.y = 0.38 + Math.sin(state.clock.getElapsedTime() * 2) * 0.04;
+      crystalJewelRef.current.position.y = 0.45 + Math.sin(state.clock.getElapsedTime() * 2) * 0.05;
     }
   });
 
   return (
-    <group position={[0, -0.05, 0]}>
-      {/* 1. Solid Italian Carrara White Marble Sub-Chassis */}
-      <mesh geometry={BOARD_GEO.subChassisBox} position={[0, -0.12, 0]} receiveShadow>
-        <meshPhysicalMaterial
-          color="#f8fafc"
-          roughness={0.28}
-          metalness={0.04}
-          clearcoat={0.95}
-          ior={1.54}
-        />
+    <group position={[0, 0, 0]}>
+      {/* 1. Transparent Shadow Floor: Catches token & column shadows with 0% milky/white washout */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} receiveShadow>
+        <planeGeometry args={[15.2, 15.2]} />
+        <shadowMaterial opacity={0.24} />
       </mesh>
 
       {/* 2. Honed Marble Perimeter Rails with Rose-Gold Inlay Trim */}
@@ -67,128 +57,18 @@ export const MarblePalaceBoard: React.FC = () => {
         </group>
       ))}
 
-      {/* 4. 4 Sunken Roman Bath Pools (Impluvium) with Translucent Water */}
-      {(['blue', 'red', 'yellow', 'green'] as PlayerColor[]).map((col) => {
-        const yardPos = YARD_OFFSETS[col];
-        return (
-          <group key={col} position={[yardPos.x, 0, yardPos.z]}>
-            {/* Sunken Lapis Lazuli Basin Floor */}
-            <mesh geometry={BOARD_GEO.yardBasinBox} position={[0, -0.08, 0]} receiveShadow>
-              <meshPhysicalMaterial
-                color="#0284c7"
-                roughness={0.22}
-                clearcoat={1}
-              />
-            </mesh>
-            {/* Translucent Reflective Turquoise Water Surface */}
-            <mesh
-              ref={waterPlaneRef}
-              geometry={BOARD_GEO.waterPlane}
-              position={[0, -0.015, 0]}
-              rotation={[-Math.PI / 2, 0, 0]}
-            >
-              <meshPhysicalMaterial
-                color="#38bdf8"
-                transmission={0.82}
-                ior={1.333}
-                roughness={0.06}
-                clearcoat={1}
-                transparent
-                opacity={0.88}
-              />
-            </mesh>
-            {/* Rose-Gold Pool Coping Trim */}
-            <mesh
-              geometry={BOARD_GEO.unitTorus}
-              position={[0, 0.02, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[2.7, 2.7, 0.7]}
-            >
-              <meshPhysicalMaterial
-                color="#fda4af"
-                metalness={0.85}
-                roughness={0.15}
-                clearcoat={1}
-              />
-            </mesh>
-            {/* 4 Raised Stepped Marble Token Pedestals Emerging from Pool */}
-            {YARD_PAD_OFFSETS.map(([px, pz], pIdx) => (
-              <group key={pIdx} position={[px, 0.01, pz]}>
-                <mesh geometry={BOARD_GEO.yardPadCylinder}>
-                  <meshPhysicalMaterial
-                    color="#ffffff"
-                    roughness={0.15}
-                    clearcoat={1}
-                  />
-                </mesh>
-                <mesh
-                  geometry={BOARD_GEO.thinTorus}
-                  position={[0, 0.035, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.72}
-                >
-                  <meshStandardMaterial
-                    color="#f43f5e"
-                    metalness={0.88}
-                    roughness={0.14}
-                  />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-
-      {/* 5. Honed Carrara Marble Slabs & Rose-Gold Track Tiles (GPU Instanced) */}
-      <InstancedTrackTiles
-        standardColor="#ffffff"
-        baseRoughness={0.28}
-        baseClearcoat={1.0}
-        baseMetalness={0.04}
-        safeStarColor="#fda4af"
-        startEmblemColor="#fda4af"
-      />
-
-      {/* 6. Center 3x3 Home Goal: Grand Roman Rotunda & Floating Faceted Diamond */}
+      {/* 4. Center 3x3 Home Goal: Floating Faceted Diamond Monument with Rose-Gold Ring */}
       <group position={[0, 0, 0]}>
-        {/* Tier 1 Rotunda Step */}
-        <mesh
-          geometry={BOARD_GEO.unitCylinder}
-          position={[0, 0.03, 0]}
-          scale={[1.45, 0.1, 1.45]}
-          receiveShadow
-        >
-          <meshPhysicalMaterial color="#ffffff" roughness={0.2} clearcoat={1} />
-        </mesh>
-        {/* Tier 2 Rotunda Step with Rose-Gold Filigree */}
-        <mesh
-          geometry={BOARD_GEO.unitCylinder}
-          position={[0, 0.12, 0]}
-          scale={[1.15, 0.1, 1.15]}
-          receiveShadow
-        >
-          <meshPhysicalMaterial color="#fda4af" metalness={0.85} roughness={0.16} clearcoat={1} />
-        </mesh>
-        {/* Tier 3 Basin with Mirror Pool */}
-        <mesh
-          geometry={BOARD_GEO.unitCylinder}
-          position={[0, 0.2, 0]}
-          scale={[0.82, 0.08, 0.82]}
-        >
-          <meshPhysicalMaterial color="#ffffff" roughness={0.15} clearcoat={1} />
-        </mesh>
-
-        {/* Floating, Slowly Spinning Crystal Diamond Monument */}
-        <group ref={crystalJewelRef} position={[0, 0.38, 0]}>
+        {/* Floating, Slowly Spinning Crystal Diamond hovering gracefully above Home Goal triangles */}
+        <group ref={crystalJewelRef} position={[0, 0.45, 0]}>
           {/* Top Diamond Cone */}
           <mesh geometry={BOARD_GEO.unitCone} position={[0, 0.12, 0]} scale={[0.34, 0.24, 0.34]}>
             <meshPhysicalMaterial
               color="#ffffff"
               roughness={0.02}
               clearcoat={1}
-              transmission={0.88}
               ior={2.4}
-              thickness={1.5}
+              metalness={0.08}
             />
           </mesh>
           {/* Inverted Bottom Diamond Cone */}
@@ -202,9 +82,8 @@ export const MarblePalaceBoard: React.FC = () => {
               color="#ffffff"
               roughness={0.02}
               clearcoat={1}
-              transmission={0.88}
               ior={2.4}
-              thickness={1.5}
+              metalness={0.08}
             />
           </mesh>
           {/* Rose-Gold Girdle Ring Around Diamond */}

@@ -242,17 +242,21 @@ export const AnimatedPawn3DNode: React.FC<AnimatedPawn3DNodeProps> = React.memo(
           <meshBasicMaterial
             color="#090d16"
             transparent
-            opacity={0.28}
+            opacity={0.32}
             depthWrite={false}
           />
         </mesh>
 
-        <Token3DModel
-          skin={player.tokenSkin}
-          color={pawn.color}
-          isSelectable={isSelectable}
-          scale={tokenScale}
-        />
+        {/* 2.5D Oblique Figurine Pitch Tilt: Tilts the 3D figurine ~26° forward towards the camera */}
+        {/* Eliminates the flat "bottle cap" top-down look, presenting the figurine's sculpted face, horns, wings & plinth proudly */}
+        <group position={[0, 0.04, 0.06]} rotation={[-0.45, 0, 0]}>
+          <Token3DModel
+            skin={player.tokenSkin}
+            color={pawn.color}
+            isSelectable={isSelectable}
+            scale={tokenScale * 1.18}
+          />
+        </group>
       </group>
     );
   },

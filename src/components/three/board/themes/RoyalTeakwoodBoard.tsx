@@ -1,11 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import React, { useRef } from 'react';
 import * as THREE from 'three';
-import { COLOR_PALETTE } from '../../../../engine/boardConfig';
-import { PlayerColor } from '../../../../types/game';
-import { YARD_OFFSETS, YARD_PAD_OFFSETS } from '../data/trackTilesBuilder';
 import { BOARD_GEO } from '../geometries/boardGeometries';
-import { InstancedTrackTiles } from '../common/InstancedTrackTiles';
 
 export const RoyalTeakwoodBoard: React.FC = () => {
   const astrolabeRing1Ref = useRef<THREE.Group>(null);
@@ -25,16 +21,11 @@ export const RoyalTeakwoodBoard: React.FC = () => {
   });
 
   return (
-    <group position={[0, -0.05, 0]}>
-      {/* 1. Heavy Burma Teak Solid Sub-Chassis with French Polish Finish */}
-      <mesh geometry={BOARD_GEO.subChassisBox} position={[0, -0.12, 0]} receiveShadow>
-        <meshPhysicalMaterial
-          color="#451a03"
-          roughness={0.42}
-          metalness={0.05}
-          clearcoat={0.85}
-          clearcoatRoughness={0.12}
-        />
+    <group position={[0, 0, 0]}>
+      {/* 1. Transparent Shadow Receiver Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} receiveShadow>
+        <planeGeometry args={[15.2, 15.2]} />
+        <shadowMaterial opacity={0.24} />
       </mesh>
 
       {/* 2. Beveled Bullnose Carved Teak Rails */}
@@ -51,109 +42,10 @@ export const RoyalTeakwoodBoard: React.FC = () => {
         <meshPhysicalMaterial color="#78350f" roughness={0.38} clearcoat={0.9} />
       </mesh>
 
-      {/* 3. 4 Sunken Circular Turned Teakwood Bowls Lined with Velvet */}
-      {(['blue', 'red', 'yellow', 'green'] as PlayerColor[]).map((col) => {
-        const yardPos = YARD_OFFSETS[col];
-        return (
-          <group key={col} position={[yardPos.x, 0, yardPos.z]}>
-            {/* Sunken Circular Timber Basin */}
-            <mesh
-              geometry={BOARD_GEO.unitCylinder}
-              position={[0, -0.06, 0]}
-              scale={[2.7, 0.16, 2.7]}
-              receiveShadow
-            >
-              <meshPhysicalMaterial
-                color="#451a03"
-                roughness={0.45}
-                clearcoat={0.8}
-              />
-            </mesh>
-            {/* Crimson Baize Velvet Inner Floor */}
-            <mesh
-              geometry={BOARD_GEO.unitCylinder}
-              position={[0, -0.05, 0]}
-              scale={[2.45, 0.04, 2.45]}
-            >
-              <meshPhysicalMaterial
-                color="#7f1d1d"
-                roughness={0.85}
-                sheen={0.8}
-                sheenColor="#fca5a5"
-              />
-            </mesh>
-            {/* Polished Routered Brass Ring Framing Yard */}
-            <mesh
-              geometry={BOARD_GEO.unitTorus}
-              position={[0, 0.02, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[2.55, 2.55, 0.8]}
-            >
-              <meshPhysicalMaterial
-                color="#d97706"
-                metalness={0.92}
-                roughness={0.14}
-                clearcoat={1}
-              />
-            </mesh>
-            {/* 4 Inlaid Turned Brass Token Pads with Upholstery Studs */}
-            {YARD_PAD_OFFSETS.map(([px, pz], pIdx) => (
-              <group key={pIdx} position={[px, -0.01, pz]}>
-                <mesh geometry={BOARD_GEO.yardPadCylinder}>
-                  <meshPhysicalMaterial
-                    color="#b45309"
-                    metalness={0.88}
-                    roughness={0.18}
-                    clearcoat={1}
-                  />
-                </mesh>
-                <mesh
-                  geometry={BOARD_GEO.thinTorus}
-                  position={[0, 0.032, 0]}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={0.68}
-                >
-                  <meshStandardMaterial color="#fef08a" metalness={0.95} roughness={0.1} />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-
-      {/* 4. Fine Burma Teak Parquet Track Tiles (GPU Instanced) */}
-      <InstancedTrackTiles
-        standardColor="#fef3c7"
-        baseRoughness={0.42}
-        baseClearcoat={0.85}
-        baseMetalness={0.06}
-        safeStarColor="#fef08a"
-        startEmblemColor="#fbbf24"
-      />
-
-      {/* 5. Center 3x3 Home Goal: Multi-Ring 3D Antique Brass Nautical Astrolabe */}
+      {/* 3. Center 3x3 Home Goal: Multi-Ring 3D Antique Brass Nautical Astrolabe (Hovering Above Home Triangles) */}
       <group position={[0, 0, 0]}>
-        {/* Sunken Exotic Wood Marquetry Compass Base */}
-        <mesh
-          geometry={BOARD_GEO.unitCylinder}
-          position={[0, 0.02, 0]}
-          scale={[1.45, 0.08, 1.45]}
-          receiveShadow
-        >
-          <meshPhysicalMaterial color="#291002" roughness={0.4} clearcoat={0.9} />
-        </mesh>
-        {/* Outer Stamped Brass Azimuth Rim */}
-        <mesh
-          geometry={BOARD_GEO.unitTorus}
-          position={[0, 0.065, 0]}
-          rotation={[Math.PI / 2, 0, 0]}
-          scale={[1.38, 1.38, 0.7]}
-        >
-          <meshPhysicalMaterial color="#d97706" metalness={0.94} roughness={0.12} clearcoat={1} />
-        </mesh>
-
-        {/* 3 Concentric Rotating Brass Astrolabe Rings */}
-        <group ref={astrolabeRing1Ref} position={[0, 0.22, 0]}>
+        {/* 3 Concentric Rotating Brass Astrolabe Rings hovering above Home Goal */}
+        <group ref={astrolabeRing1Ref} position={[0, 0.45, 0]}>
           <mesh
             geometry={BOARD_GEO.unitTorus}
             scale={[0.85, 0.85, 0.6]}
@@ -167,7 +59,7 @@ export const RoyalTeakwoodBoard: React.FC = () => {
             />
           </mesh>
         </group>
-        <group ref={astrolabeRing2Ref} position={[0, 0.22, 0]}>
+        <group ref={astrolabeRing2Ref} position={[0, 0.45, 0]}>
           <mesh
             geometry={BOARD_GEO.unitTorus}
             scale={[0.62, 0.62, 0.5]}
@@ -181,7 +73,7 @@ export const RoyalTeakwoodBoard: React.FC = () => {
             />
           </mesh>
         </group>
-        <group ref={astrolabeRing3Ref} position={[0, 0.22, 0]}>
+        <group ref={astrolabeRing3Ref} position={[0, 0.45, 0]}>
           <mesh
             geometry={BOARD_GEO.unitTorus}
             scale={[0.42, 0.42, 0.4]}
@@ -196,14 +88,14 @@ export const RoyalTeakwoodBoard: React.FC = () => {
           </mesh>
         </group>
 
-        {/* Central Faceted Amber Glass Finial Sphere */}
-        <mesh geometry={BOARD_GEO.unitSphere} position={[0, 0.22, 0]} scale={0.17}>
+        {/* Central Faceted Amber Sphere */}
+        <mesh geometry={BOARD_GEO.unitSphere} position={[0, 0.45, 0]} scale={0.17}>
           <meshPhysicalMaterial
             color="#d97706"
             roughness={0.02}
             clearcoat={1}
             ior={1.65}
-            transmission={0.45}
+            metalness={0.15}
           />
         </mesh>
       </group>
