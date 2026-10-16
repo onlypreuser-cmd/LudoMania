@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber';
-import gsap from 'gsap';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useMemo } from 'react';
+import * as THREE from 'three';
 import { soundManager } from '../../audio/soundManager';
 import {
   BOARD_THEMES,
@@ -46,7 +46,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     legalMoves,
     activeMove,
     boardTheme,
-    actionCameraEnabled = true,
+    actionCameraEnabled: _actionCameraEnabled,
     onSelectPawn,
     onMoveAnimationComplete,
   }) => {
@@ -55,111 +55,6 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
       [boardTheme]
     );
     const { styleTokens, lighting } = themeMeta;
-
-    const actionZoomLayerRef = useRef<HTMLDivElement>(null);
-    const [actionCamBadge, setActionCamBadge] = useState<{
-      type: 'cut' | 'home';
-      text: string;
-      subtitle: string;
-    } | null>(null);
-
-    // Dynamic Action Camera Zoom: ONLY triggers when a pawn cuts an opponent or reaches home!
-    useEffect(() => {
-      if (!actionCameraEnabled || !activeMove) {
-        if (actionZoomLayerRef.current) {
-          gsap.killTweensOf(actionZoomLayerRef.current);
-          gsap.to(actionZoomLayerRef.current, {
-            scale: 1,
-            transformOrigin: '50% 50%',
-            x: 0,
-            y: 0,
-            duration: 0.35,
-            ease: 'power2.inOut',
-            onComplete: () => setActionCamBadge(null),
-          });
-        }
-        return;
-      }
-
-      const isCut = activeMove.willKillPawnIds.length > 0;
-      const isHome = activeMove.willReachHome;
-
-      if (!isCut && !isHome) {
-        return;
-      }
-
-      // Calculate focal target coordinates
-      const movingPawn = pawns.find((p) => p.id === activeMove.pawnId);
-      const targetGrid = isHome
-        ? { row: 7, col: 7 }
-        : movingPawn
-        ? getPawnGridCoord(
-            movingPawn.color,
-            activeMove.toStep,
-            movingPawn.pawnIndex
-          )
-        : { row: 7, col: 7 };
-
-      const originX = ((targetGrid.col + 0.5) / 15) * 100;
-      const originY = ((targetGrid.row + 0.5) / 15) * 100;
-
-      // Set Action Cam Banner
-      if (isCut) {
-        setActionCamBadge({
-          type: 'cut',
-          text: 'ACTION CAM • TOKEN CAPTURE!',
-          subtitle: 'Opponent Cut! Bonus Turn Earned',
-        });
-      } else {
-        setActionCamBadge({
-          type: 'home',
-          text: 'ACTION CAM • REACHED HOME!',
-          subtitle: 'Kingdom Triumph! Bonus Turn Earned',
-        });
-      }
-
-      if (actionZoomLayerRef.current) {
-        gsap.killTweensOf(actionZoomLayerRef.current);
-
-        // Subtle, butter-smooth visual focus (1.04x) with zero compositor rumble
-        gsap.to(actionZoomLayerRef.current, {
-          scale: 1.04,
-          transformOrigin: `${originX.toFixed(1)}% ${originY.toFixed(1)}%`,
-          duration: 0.32,
-          ease: 'power2.out',
-        });
-      }
-
-      return () => {
-        if (actionZoomLayerRef.current) {
-          gsap.killTweensOf(actionZoomLayerRef.current);
-          gsap.to(actionZoomLayerRef.current, {
-            scale: 1,
-            transformOrigin: '50% 50%',
-            x: 0,
-            y: 0,
-            duration: 0.25,
-            ease: 'sine.out',
-            onComplete: () => setActionCamBadge(null),
-          });
-        }
-      };
-    }, [activeMove, actionCameraEnabled, pawns]);
-
-    const handleDismissActionZoom = () => {
-      if (actionZoomLayerRef.current) {
-        gsap.killTweensOf(actionZoomLayerRef.current);
-        gsap.to(actionZoomLayerRef.current, {
-          scale: 1,
-          transformOrigin: '50% 50%',
-          x: 0,
-          y: 0,
-          duration: 0.18,
-          ease: 'sine.out',
-          onComplete: () => setActionCamBadge(null),
-        });
-      }
-    };
 
     const legalPawnIds = useMemo(
       () => new Set(legalMoves.map((m) => m.pawnId)),
@@ -287,141 +182,140 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     return (
       <div className="relative w-full max-w-[430px] mx-auto flex flex-col items-center select-none">
         <div
-          onClick={actionCamBadge ? handleDismissActionZoom : undefined}
           className={`relative w-full aspect-square rounded-[28px] p-2 sm:p-2.5 ${styleTokens.outerContainerBg} border-4 ${styleTokens.outerBorderClass} transition-colors duration-300`}
         >
           {/* Thematic Hardware Corner Brackets (Burma Brass / Roman Plinths / Cyber LEDs) */}
           <ThematicCornerDecorations themeId={boardTheme} />
 
-          {/* Dynamic Action Camera Floating Badge */}
-          {actionCamBadge && (
+          {/* Rock-Solid Board Frame - Perfectly Stable & Centered */}
+          <div className="relative w-full h-full rounded-[20px] overflow-hidden">
+            {/* 15x15 Underlying Tactile Ludo Board */}
             <div
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.4)] border border-white/70 flex items-center gap-2 pointer-events-none animate-bounce backdrop-blur-md"
+              className={`relative w-full h-full grid grid-cols-15 grid-rows-15 border-2 ${styleTokens.trackBorderClass} ${styleTokens.trackBg} transition-colors duration-300`}
               style={{
-                background:
-                  actionCamBadge.type === 'cut'
-                    ? 'linear-gradient(135deg, rgba(225, 29, 72, 0.95), rgba(185, 28, 28, 0.95))'
-                    : 'linear-gradient(135deg, rgba(234, 179, 8, 0.95), rgba(217, 119, 6, 0.95))',
+                gridTemplateColumns: 'repeat(15, minmax(0, 1fr))',
+                gridTemplateRows: 'repeat(15, minmax(0, 1fr))',
               }}
             >
-              <span className="text-sm">
-                {actionCamBadge.type === 'cut' ? '⚡' : '👑'}
-              </span>
-              <div className="flex flex-col text-left leading-tight">
-                <span className="text-[10px] font-black tracking-wider uppercase text-white drop-shadow">
-                  {actionCamBadge.text}
-                </span>
-                <span className="text-[9px] font-bold text-white/85">
-                  {actionCamBadge.subtitle}
-                </span>
-              </div>
-            </div>
-          )}
+              {/* Top-Left BLUE Yard (rows 1..6, cols 1..6) */}
+              <TactileYardBox
+                color="blue"
+                gridAreaClass="col-start-1 col-end-7 row-start-1 row-end-7 rounded-tl-[18px]"
+                gradientClass="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
+                isActive={activeColors.has('blue')}
+                boardTheme={boardTheme}
+                yardBorderClass={styleTokens.yardBorderClass}
+              />
 
-          {/* Overflow boundary wrapper so zoom stays cleanly inside rounded board frame */}
-          <div className="relative w-full h-full rounded-[20px] overflow-hidden">
-            <div
-              ref={actionZoomLayerRef}
-              className="relative w-full h-full"
-            >
-              {/* 15x15 Underlying Tactile Ludo Board */}
-              <div
-                className={`relative w-full h-full grid grid-cols-15 grid-rows-15 border-2 ${styleTokens.trackBorderClass} ${styleTokens.trackBg} transition-colors duration-300`}
-                style={{
-                  gridTemplateColumns: 'repeat(15, minmax(0, 1fr))',
-                  gridTemplateRows: 'repeat(15, minmax(0, 1fr))',
+              {/* Top-Right RED Yard (rows 1..6, cols 10..15) */}
+              <TactileYardBox
+                color="red"
+                gridAreaClass="col-start-10 col-end-16 row-start-1 row-end-7 rounded-tr-[18px]"
+                gradientClass="bg-gradient-to-br from-rose-400 via-rose-500 to-red-600"
+                isActive={activeColors.has('red')}
+                boardTheme={boardTheme}
+                yardBorderClass={styleTokens.yardBorderClass}
+              />
+
+              {/* Bottom-Left YELLOW Yard (rows 10..15, cols 1..6) */}
+              <TactileYardBox
+                color="yellow"
+                gridAreaClass="col-start-1 col-end-7 row-start-10 row-end-16 rounded-bl-[18px]"
+                gradientClass="bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500"
+                isActive={activeColors.has('yellow')}
+                boardTheme={boardTheme}
+                yardBorderClass={styleTokens.yardBorderClass}
+              />
+
+              {/* Bottom-Right GREEN Yard (rows 10..15, cols 10..15) */}
+              <TactileYardBox
+                color="green"
+                gridAreaClass="col-start-10 col-end-16 row-start-10 row-end-16 rounded-br-[18px]"
+                gradientClass="bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600"
+                isActive={activeColors.has('green')}
+                boardTheme={boardTheme}
+                yardBorderClass={styleTokens.yardBorderClass}
+              />
+
+              {/* Center 3x3 Home Goal Triangles (rows 7..9, cols 7..9) */}
+              <div className={`col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border ${styleTokens.trackBorderClass} shadow-inner`}>
+                <ThematicCenterGoal themeId={boardTheme} dividerColor={styleTokens.homeDividerColor} />
+              </div>
+
+              {/* All 52 Track Cells + 20 Home Stretch Cells */}
+              {memoizedTrackCells}
+            </div>
+
+            {/* 3D Three.js / @react-three/fiber Collectible Token & Thematic Board Layer */}
+            <div className="absolute inset-0 pointer-events-none">
+              <Canvas
+                orthographic
+                shadows
+                dpr={[1, 1.5]}
+                camera={{
+                  position: [0, BOARD_CAM_Y, BOARD_CAM_Z],
+                  zoom: 1,
+                  near: 0.1,
+                  far: 100,
+                }}
+                onCreated={({ camera, gl }) => {
+                  camera.lookAt(0, 0, 0);
+                  gl.toneMapping = THREE.ACESFilmicToneMapping;
+                  gl.toneMappingExposure = lighting.exposure ?? 1.1;
+                }}
+                gl={{
+                  alpha: true,
+                  antialias: true,
+                  powerPreference: 'high-performance',
+                  stencil: false,
+                  depth: true,
                 }}
               >
-                {/* Top-Left BLUE Yard (rows 1..6, cols 1..6) */}
-                <TactileYardBox
-                  color="blue"
-                  gridAreaClass="col-start-1 col-end-7 row-start-1 row-end-7 rounded-tl-[18px]"
-                  gradientClass="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
-                  isActive={activeColors.has('blue')}
-                  boardTheme={boardTheme}
-                  yardBorderClass={styleTokens.yardBorderClass}
+                <StudioEnvironment intensity={1.15} exposure={lighting.exposure ?? 1.1} />
+
+                {/* High-Radiance Ambient Fill */}
+                <ambientLight
+                  intensity={lighting.ambientIntensity ?? 0.8}
+                  color={lighting.ambientColor}
                 />
 
-                {/* Top-Right RED Yard (rows 1..6, cols 10..15) */}
-                <TactileYardBox
-                  color="red"
-                  gridAreaClass="col-start-10 col-end-16 row-start-1 row-end-7 rounded-tr-[18px]"
-                  gradientClass="bg-gradient-to-br from-rose-400 via-rose-500 to-red-600"
-                  isActive={activeColors.has('red')}
-                  boardTheme={boardTheme}
-                  yardBorderClass={styleTokens.yardBorderClass}
+                {/* Primary Sun / Key Light with Soft Shadows */}
+                <directionalLight
+                  position={[5, 14, 6]}
+                  intensity={lighting.keyIntensity ?? 1.5}
+                  color={lighting.keyColor}
+                  castShadow
+                  shadow-mapSize={[1024, 1024]}
+                  shadow-camera-left={-8}
+                  shadow-camera-right={8}
+                  shadow-camera-top={8}
+                  shadow-camera-bottom={-8}
+                  shadow-camera-near={1}
+                  shadow-camera-far={25}
+                  shadow-bias={-0.0006}
                 />
 
-                {/* Bottom-Left YELLOW Yard (rows 10..15, cols 1..6) */}
-                <TactileYardBox
-                  color="yellow"
-                  gridAreaClass="col-start-1 col-end-7 row-start-10 row-end-16 rounded-bl-[18px]"
-                  gradientClass="bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500"
-                  isActive={activeColors.has('yellow')}
-                  boardTheme={boardTheme}
-                  yardBorderClass={styleTokens.yardBorderClass}
+                {/* Dedicated Front-Facing Fill Directional Light directly illuminating figurine faces, horns, visors, and chest cores */}
+                <directionalLight
+                  position={[0, 8, 12]}
+                  intensity={0.82}
+                  color="#fffcf5"
                 />
 
-                {/* Bottom-Right GREEN Yard (rows 10..15, cols 10..15) */}
-                <TactileYardBox
-                  color="green"
-                  gridAreaClass="col-start-10 col-end-16 row-start-10 row-end-16 rounded-br-[18px]"
-                  gradientClass="bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600"
-                  isActive={activeColors.has('green')}
-                  boardTheme={boardTheme}
-                  yardBorderClass={styleTokens.yardBorderClass}
+                {/* Low-Angle Rim / Accent Light matching the theme or active color */}
+                <pointLight
+                  position={[-6, 8, -4]}
+                  intensity={lighting.rimIntensity ?? 0.5}
+                  color={lighting.rimColor}
                 />
 
-                {/* Center 3x3 Home Goal Triangles (rows 7..9, cols 7..9) */}
-                <div className={`col-start-7 col-end-10 row-start-7 row-end-10 relative overflow-hidden border ${styleTokens.trackBorderClass} shadow-inner`}>
-                  <ThematicCenterGoal themeId={boardTheme} dividerColor={styleTokens.homeDividerColor} />
-                </div>
-
-                {/* All 52 Track Cells + 20 Home Stretch Cells */}
-                {memoizedTrackCells}
-              </div>
-
-              {/* 3D Three.js / @react-three/fiber Collectible Token & Thematic Board Layer */}
-              <div className="absolute inset-0 pointer-events-none">
-                <Canvas
-                  orthographic
-                  shadows
-                  dpr={[1, 1.5]}
-                  camera={{
-                    position: [0, BOARD_CAM_Y, BOARD_CAM_Z],
-                    zoom: 1,
-                    near: 0.1,
-                    far: 100,
-                  }}
-                  onCreated={({ camera }) => {
-                    camera.lookAt(0, 0, 0);
-                  }}
-                  gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
-                >
-                  <StudioEnvironment intensity={1.12} />
-                  <ambientLight
-                    intensity={lighting.ambientIntensity ?? 0.65}
-                    color={lighting.ambientColor}
-                  />
-                  <directionalLight
-                    position={[5, 14, 6]}
-                    intensity={lighting.keyIntensity ?? 1.4}
-                    color={lighting.keyColor}
-                    castShadow
-                    shadow-mapSize={[1024, 1024]}
-                    shadow-camera-left={-8}
-                    shadow-camera-right={8}
-                    shadow-camera-top={8}
-                    shadow-camera-bottom={-8}
-                    shadow-camera-near={1}
-                    shadow-camera-far={25}
-                    shadow-bias={-0.0006}
-                  />
+                {lighting.secondaryRimColor && (
                   <pointLight
-                    position={[-6, 8, -4]}
-                    intensity={0.4}
-                    color={lighting.rimColor}
+                    position={[6, 7, -3]}
+                    intensity={lighting.secondaryRimIntensity ?? 0.45}
+                    color={lighting.secondaryRimColor}
                   />
+                )}
 
                   <Suspense fallback={null}>
                     <AutoZoomOrthographicController />
@@ -496,7 +390,6 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                     })}
                 </div>
               )}
-            </div>
           </div>
         </div>
 

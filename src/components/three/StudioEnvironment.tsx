@@ -61,14 +61,14 @@ function createStudioRigScene(): THREE.Scene {
  * Gives `meshPhysicalMaterial` (clearcoat, metalness, sheen, ior, transmission)
  * commercial-grade specular reflections and crisp rim highlights with 0 external CDN fetch.
  */
-export const StudioEnvironment: React.FC<{ intensity?: number }> = React.memo(
-  ({ intensity = 1.15 }) => {
+export const StudioEnvironment: React.FC<{ intensity?: number; exposure?: number }> = React.memo(
+  ({ intensity = 1.15, exposure }) => {
     const { gl, scene } = useThree();
 
     useEffect(() => {
-      // Use cinematic AgX tone mapping (with ACESFilmic fallback)
-      gl.toneMapping = (THREE as unknown as { AgXToneMapping?: THREE.ToneMapping }).AgXToneMapping ?? THREE.ACESFilmicToneMapping;
-      gl.toneMappingExposure = 1.08;
+      // Use cinematic ACESFilmic tone mapping for vibrant, rich PBR pop matching SkinStudioPreview3D
+      gl.toneMapping = THREE.ACESFilmicToneMapping;
+      gl.toneMappingExposure = exposure ?? 1.12;
 
       let envTexture = envMapCache.get(gl);
       if (!envTexture) {
@@ -98,7 +98,7 @@ export const StudioEnvironment: React.FC<{ intensity?: number }> = React.memo(
         (scene as THREE.Scene & { environmentIntensity: number }).environmentIntensity =
           intensity;
       }
-    }, [gl, scene, intensity]);
+    }, [gl, scene, intensity, exposure]);
 
     return null;
   }

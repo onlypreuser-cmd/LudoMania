@@ -68,6 +68,12 @@ interface ProfileState {
   soundEnabled: boolean;
   actionCameraEnabled: boolean;
 
+  coins: number;
+  playerLevel: number;
+  playerXp: number;
+  playerXpToNextLevel: number;
+  winStreak: number;
+
   unlockedTokenSkins: TokenSkinId[];
   unlockedDiceSkins: DiceSkinId[];
   unlockedBoardThemes: BoardThemeId[];
@@ -77,6 +83,8 @@ interface ProfileState {
   savedGameSession: SavedGameSession | null;
   _hasHydrated: boolean;
 
+  addCoins: (amount: number) => void;
+  addXp: (amount: number) => void;
   completeInitialSetup: (payload: {
     name: string;
     avatar: AvatarId;
@@ -133,6 +141,12 @@ export const useProfileStore = create<ProfileState>()(
       soundEnabled: true,
       actionCameraEnabled: true,
 
+      coins: 2450,
+      playerLevel: 5,
+      playerXp: 420,
+      playerXpToNextLevel: 600,
+      winStreak: 3,
+
       unlockedTokenSkins: ALL_TOKEN_SKINS,
       unlockedDiceSkins: ALL_DICE_SKINS,
       unlockedBoardThemes: ALL_BOARD_THEMES,
@@ -141,6 +155,32 @@ export const useProfileStore = create<ProfileState>()(
       matchHistory: [],
       savedGameSession: null,
       _hasHydrated: false,
+
+      addCoins: (amount) => {
+        set((state) => ({
+          coins: Math.max(0, state.coins + amount),
+        }));
+      },
+
+      addXp: (amount) => {
+        set((state) => {
+          let nextXp = state.playerXp + amount;
+          let nextLevel = state.playerLevel;
+          let nextXpNeeded = state.playerXpToNextLevel;
+
+          while (nextXp >= nextXpNeeded) {
+            nextXp -= nextXpNeeded;
+            nextLevel += 1;
+            nextXpNeeded = Math.round(nextXpNeeded * 1.35);
+          }
+
+          return {
+            playerLevel: nextLevel,
+            playerXp: nextXp,
+            playerXpToNextLevel: nextXpNeeded,
+          };
+        });
+      },
 
       completeInitialSetup: ({ name, avatar, diceSkin, tokenSkin, color }) => {
         const trimmed = name.trim();
@@ -253,6 +293,12 @@ export const useProfileStore = create<ProfileState>()(
         return {
           ...currentState,
           ...persisted,
+          coins: typeof persisted.coins === 'number' ? persisted.coins : 2450,
+          playerLevel: typeof persisted.playerLevel === 'number' ? persisted.playerLevel : 5,
+          playerXp: typeof persisted.playerXp === 'number' ? persisted.playerXp : 420,
+          playerXpToNextLevel:
+            typeof persisted.playerXpToNextLevel === 'number' ? persisted.playerXpToNextLevel : 600,
+          winStreak: typeof persisted.winStreak === 'number' ? persisted.winStreak : 3,
           unlockedTokenSkins: ALL_TOKEN_SKINS,
           unlockedDiceSkins: ALL_DICE_SKINS,
           unlockedBoardThemes: ALL_BOARD_THEMES,

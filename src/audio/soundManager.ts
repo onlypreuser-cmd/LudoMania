@@ -3,6 +3,7 @@ import { Howl } from 'howler';
 export type SoundSpriteKey =
   | 'dice_roll'
   | 'pawn_step'
+  | 'token_hop'
   | 'pawn_kill'
   | 'safe_star'
   | 'home_reach'
@@ -204,6 +205,7 @@ class SoundSpriteManager {
         sprite: {
           dice_roll: [0, 680],
           pawn_step: [720, 140],
+          token_hop: [720, 140],
           pawn_kill: [900, 520],
           safe_star: [1450, 450],
           home_reach: [1920, 600],
