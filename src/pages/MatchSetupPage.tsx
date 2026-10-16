@@ -57,6 +57,7 @@ const TOKEN_ICON_MAP: Record<string, string> = {
   unicorn: '🦄',
   'bamboo-panda': '🎋',
   'cyber-robot': '🦾',
+  ninja: '🥷',
   astronomer: '🔭',
   'star-unicorn': '✨',
   'fire-dragon': '🐉',

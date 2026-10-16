@@ -26,6 +26,7 @@ const TOKEN_ICON_MAP: Record<string, string> = {
   unicorn: '🦄',
   'bamboo-panda': '🎋',
   'cyber-robot': '🦾',
+  ninja: '🥷',
   astronomer: '🔭',
   'star-unicorn': '✨',
   'fire-dragon': '🐉',
@@ -62,13 +63,13 @@ export const CustomizePage: React.FC = () => {
   const visibleTokens = React.useMemo(() => {
     const newHdrPart1 = [
       'bamboo-panda',
-      'cyber-robot',
-      'astronomer',
-      'star-unicorn',
+      'robot',
+      'astronaut',
+      'unicorn',
       'fire-dragon',
       'ice-dragon',
     ];
-    const newHdrPart2 = ['pirate', 'magician', 'alien'];
+    const newHdrPart2 = ['pirate', 'ninja', 'magician', 'alien'];
     if (tokenSeries === 'hdr-1') {
       return TOKEN_SKINS.filter((s) => newHdrPart1.includes(s.id));
     }

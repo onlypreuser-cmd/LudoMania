@@ -189,6 +189,130 @@ export function createClassicLatheGeometry(): THREE.LatheGeometry {
   return new THREE.LatheGeometry(points, 32);
 }
 
+export function createCurvedKatanaBladeGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(0.016, 0.22, 0.046, 0.44);
+  shape.lineTo(0.04, 0.46);
+  shape.quadraticCurveTo(0.004, 0.22, -0.012, 0.0);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.008,
+    bevelEnabled: true,
+    bevelThickness: 0.002,
+    bevelSize: 0.002,
+    bevelSegments: 2,
+  });
+}
+
+export function createCurvedCutlassBladeGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(0.02, 0.16, 0.068, 0.35);
+  shape.lineTo(0.042, 0.38);
+  shape.quadraticCurveTo(-0.012, 0.18, -0.02, 0.0);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.01,
+    bevelEnabled: true,
+    bevelThickness: 0.003,
+    bevelSize: 0.003,
+    bevelSegments: 2,
+  });
+}
+
+export function createBicorneHatGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.36, 0.02);
+  shape.bezierCurveTo(-0.2, 0.14, -0.08, 0.05, 0, 0.04);
+  shape.bezierCurveTo(0.08, 0.05, 0.2, 0.14, 0.36, 0.02);
+  shape.bezierCurveTo(0.24, -0.11, 0.1, -0.15, 0, -0.15);
+  shape.bezierCurveTo(-0.1, -0.15, -0.24, -0.11, -0.36, 0.02);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.24,
+    bevelEnabled: true,
+    bevelThickness: 0.035,
+    bevelSize: 0.028,
+    bevelSegments: 4,
+  });
+}
+
+export function createFlowingRibbonGeometry(length = 0.38, width = 0.045): THREE.BufferGeometry {
+  const geom = new THREE.BufferGeometry();
+  const segments = 24;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const x = t * length;
+    const y = Math.sin(t * Math.PI * 2.2) * 0.045 - t * 0.05;
+    const z = Math.cos(t * Math.PI * 1.8) * 0.038;
+    const halfW = (width * (1 - t * 0.35)) / 2;
+
+    vertices.push(x, y + halfW, z);
+    vertices.push(x, y - halfW, z);
+  }
+
+  for (let i = 0; i < segments; i++) {
+    const a = i * 2;
+    const b = i * 2 + 1;
+    const c = (i + 1) * 2;
+    const d = (i + 1) * 2 + 1;
+    indices.push(a, c, b);
+    indices.push(b, c, d);
+    indices.push(a, b, c);
+    indices.push(b, d, c);
+  }
+
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geom.setIndex(indices);
+  geom.computeVertexNormals();
+  return geom;
+}
+
+export function createBambooLeafGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(0.028, 0.09, 0.005, 0.24);
+  shape.quadraticCurveTo(-0.028, 0.09, 0, 0);
+  shape.closePath();
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.004,
+    bevelEnabled: true,
+    bevelThickness: 0.001,
+    bevelSize: 0.001,
+    bevelSegments: 1,
+  });
+}
+
+export function createArchedConduitGeometry(): THREE.BufferGeometry {
+  const curve = new THREE.CubicBezierCurve3(
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0.16, 0.03),
+    new THREE.Vector3(0, 0.22, 0.15),
+    new THREE.Vector3(0, 0.19, 0.24)
+  );
+  return new THREE.TubeGeometry(curve, 18, 0.018, 12, false);
+}
+
+export function createSpikyHairTuftGeometry(): THREE.BufferGeometry {
+  const geom = new THREE.ConeGeometry(0.075, 0.3, 8);
+  const pos = geom.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const factor = (y + 0.15) / 0.3;
+    pos.setZ(i, pos.getZ(i) - Math.pow(factor, 2) * 0.1);
+  }
+  geom.computeVertexNormals();
+  return geom;
+}
+
+export function createCobblestonePlateGeometry(): THREE.CylinderGeometry {
+  return new THREE.CylinderGeometry(0.33, 0.35, 0.05, 32);
+}
+
 export const CLASSIC_LATHE_GEO = createClassicLatheGeometry();
 
 export const SHARED_GEO = {
@@ -222,4 +346,13 @@ export const SHARED_GEO = {
   mechaThruster: new THREE.CylinderGeometry(0.05, 0.07, 0.22, 18),
   wingFeather: new THREE.ConeGeometry(0.06, 0.32, 16),
   gemOrb: new THREE.IcosahedronGeometry(0.18, 1),
+  // Newly crafted specialized geometries:
+  katanaBlade: createCurvedKatanaBladeGeometry(),
+  cutlassBlade: createCurvedCutlassBladeGeometry(),
+  bicorneHat: createBicorneHatGeometry(),
+  flowingRibbon: createFlowingRibbonGeometry(),
+  bambooLeaf: createBambooLeafGeometry(),
+  archedConduit: createArchedConduitGeometry(),
+  spikyHairTuft: createSpikyHairTuftGeometry(),
+  cobblestonePlate: createCobblestonePlateGeometry(),
 };

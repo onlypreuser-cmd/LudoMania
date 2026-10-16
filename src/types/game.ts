@@ -11,6 +11,7 @@ export type TokenSkinId =
   | 'unicorn'
   | 'bamboo-panda'
   | 'cyber-robot'
+  | 'ninja'
   | 'astronomer'
   | 'star-unicorn'
   | 'fire-dragon'

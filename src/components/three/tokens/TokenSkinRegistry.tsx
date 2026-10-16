@@ -12,6 +12,7 @@ import { FireDragonSkin } from './skins/FireDragonSkin';
 import { IceDragonSkin } from './skins/IceDragonSkin';
 import { KnightSkin } from './skins/KnightSkin';
 import { MagicianSkin } from './skins/MagicianSkin';
+import { NinjaSkin } from './skins/NinjaSkin';
 import { PandaSkin } from './skins/PandaSkin';
 import { PirateSkin } from './skins/PirateSkin';
 import { RobotSkin } from './skins/RobotSkin';
@@ -24,12 +25,13 @@ export const TOKEN_SKIN_COMPONENTS: Record<TokenSkinId, React.FC<SkinComponentPr
   knight: KnightSkin,
   dog: DogSkin,
   cat: CatSkin,
-  panda: PandaSkin,
+  panda: BambooPandaSkin, // Route legacy panda to rebuilt Bamboo Panda
   robot: RobotSkin,
   astronaut: AstronautSkin,
   unicorn: UnicornSkin,
   'bamboo-panda': BambooPandaSkin,
-  'cyber-robot': CyberRobotSkin,
+  'cyber-robot': RobotSkin, // Route legacy cyber-robot to rebuilt OG Squaries Robot
+  ninja: NinjaSkin,
   astronomer: AstronomerSkin,
   'star-unicorn': StarUnicornSkin,
   'fire-dragon': FireDragonSkin,

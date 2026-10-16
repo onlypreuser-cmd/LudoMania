@@ -104,6 +104,10 @@ export function hopPawn3D(params: {
         baseStepDur = 0.3;
         jumpApex = 0.64;
         break;
+      case 'ninja':
+        baseStepDur = 0.25;
+        jumpApex = 0.72;
+        break;
       case 'cyber-robot':
         baseStepDur = 0.25;
         jumpApex = 0.56;
@@ -510,6 +514,25 @@ export function hopPawn3D(params: {
           group.rotation,
           { y: 0, x: 0, z: 0, duration: half, ease: 'sine.inOut' },
           t0 + half
+        );
+        break;
+      }
+
+      case 'ninja': {
+        tl.to(
+          group.rotation,
+          {
+            x: 0.28,
+            y: Math.PI * 2 * wagDir,
+            z: 0.12 * wagDir,
+            duration: dur,
+            ease: 'power2.inOut',
+          },
+          t0
+        ).to(
+          group.rotation,
+          { x: 0, z: 0, y: 0, duration: half * 0.5, ease: 'back.out(2)' },
+          t0 + dur
         );
         break;
       }

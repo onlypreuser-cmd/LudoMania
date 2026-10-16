@@ -26,6 +26,7 @@ const SKIN_GLYPH_MAP: Record<TokenSkinId, GlyphType> = {
   unicorn: 'star',
   'bamboo-panda': 'paw',
   'cyber-robot': 'cyber',
+  ninja: 'star',
   astronomer: 'cosmic',
   'star-unicorn': 'star',
   'fire-dragon': 'flame',
