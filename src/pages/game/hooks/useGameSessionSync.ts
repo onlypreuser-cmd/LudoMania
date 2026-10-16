@@ -1,6 +1,7 @@
 import { useMachine } from '@xstate/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { soundManager } from '../../../audio/soundManager';
+import { evaluateBestAiMove } from '../../../engine/ai/aiDecisionEngine';
 import { ludoMachine } from '../../../machines/ludoMachine';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { triggerMatchWinConfetti } from '../../../utils/haptics';
@@ -18,6 +19,7 @@ export function useGameSessionSync() {
     clearSavedGameSession,
     recordMatchResult,
     _hasHydrated,
+    pawnCount,
   } = useProfileStore();
 
   const [state, send] = useMachine(ludoMachine, {
@@ -25,10 +27,11 @@ export function useGameSessionSync() {
       players,
       boardTheme: selectedBoardTheme,
       savedSession: savedGameSession,
+      pawnCount,
     },
   });
 
-  const [setupTargetIdx, setSetupTargetIdx] = useState<0 | 1 | null>(null);
+  const [setupTargetIdx, setSetupTargetIdx] = useState<number | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const hasRestoredSessionRef = useRef(Boolean(savedGameSession));
@@ -42,10 +45,12 @@ export function useGameSessionSync() {
     // Gate on store hydration to prevent premature setup modal flash
     if (!_hasHydrated) return;
 
-    if (!players[0]?.name.trim()) {
-      setSetupTargetIdx(0);
-    } else if (!players[1]?.name.trim()) {
-      setSetupTargetIdx(1);
+    const missingHumanIdx = players.findIndex(
+      (p) => !p.isAi && !p.name?.trim()
+    );
+
+    if (missingHumanIdx !== -1) {
+      setSetupTargetIdx(missingHumanIdx);
     } else {
       setSetupTargetIdx(null);
       if (!hasRestoredSessionRef.current && !gameStartedRef.current) {
@@ -53,12 +58,13 @@ export function useGameSessionSync() {
           type: 'CONFIGURE_PLAYERS',
           players,
           boardTheme: selectedBoardTheme,
+          pawnCount,
         });
       } else if (hasRestoredSessionRef.current) {
         hasRestoredSessionRef.current = false;
       }
     }
-  }, [_hasHydrated, players, selectedBoardTheme, send]);
+  }, [_hasHydrated, players, selectedBoardTheme, pawnCount, send]);
 
   const hasRecordedWinRef = useRef(false);
 
@@ -264,17 +270,65 @@ export function useGameSessionSync() {
     return () => clearInterval(intervalId);
   }, [isGameOver, boardPowers.stasis.length, send]);
 
+  const isAiTurn = Boolean(players[currentPlayerIndex]?.isAi);
+
+  // Autonomous AI Turn Controller: 100% self-driven with strategic heuristic evaluation
+  useEffect(() => {
+    if (isGameOver) return;
+    const currentPlayer = players[currentPlayerIndex];
+    if (!currentPlayer?.isAi) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    // Phase 1: Natural delay before rolling dice
+    if (isIdle) {
+      timer = setTimeout(() => {
+        send({ type: 'ROLL_DICE' });
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+
+    // Phase 2: Natural deliberation before moving chosen pawn
+    if (isSelectingPawn) {
+      if (legalMoves.length === 0) return;
+
+      const chosenMove = evaluateBestAiMove(
+        legalMoves,
+        pawns,
+        currentPlayerIndex,
+        currentPlayer.color,
+        currentPlayer.aiDifficulty ?? 'hard'
+      );
+
+      timer = setTimeout(() => {
+        send({ type: 'SELECT_PAWN', pawnId: chosenMove.pawnId });
+      }, 550);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isGameOver,
+    isIdle,
+    isSelectingPawn,
+    currentPlayerIndex,
+    players,
+    legalMoves,
+    pawns,
+    send,
+  ]);
+
   const handleRestartMatch = useCallback(() => {
     soundManager.play('ui_click');
     clearSavedGameSession();
-    send({ type: 'RESET_MATCH' });
+    send({ type: 'RESET_MATCH', pawnCount });
     setIsSettingsOpen(false);
-  }, [clearSavedGameSession, send]);
+  }, [clearSavedGameSession, pawnCount, send]);
 
   const handleTriggerRoll = useCallback(() => {
     if (!isIdle) return;
+    const currentPlayer = players[currentPlayerIndex];
+    if (currentPlayer?.isAi) return; // Prevent human click interference on AI turn!
     send({ type: 'ROLL_DICE' });
-  }, [isIdle, send]);
+  }, [isIdle, players, currentPlayerIndex, send]);
 
   const handleRollSettled = useCallback(() => {
     send({ type: 'DICE_SETTLED' });
@@ -282,9 +336,11 @@ export function useGameSessionSync() {
 
   const handleSelectPawn = useCallback(
     (pawnId: string) => {
+      const currentPlayer = players[currentPlayerIndex];
+      if (currentPlayer?.isAi) return; // Prevent human click interference on AI turn!
       send({ type: 'SELECT_PAWN', pawnId });
     },
-    [send]
+    [players, currentPlayerIndex, send]
   );
 
   const handleMoveAnimationComplete = useCallback(() => {
@@ -356,6 +412,7 @@ export function useGameSessionSync() {
     isSelectingPawn,
     isMoving,
     isGameOver,
+    isAiTurn,
     pawns,
     currentPlayerIndex,
     diceValue,

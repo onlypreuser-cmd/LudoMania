@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import { LudoBoard3D } from '../components/game/LudoBoard3D';
+import { TacticalPowerBanner } from './game/components/TacticalPowerBanner';
 import { PlayerSetupModal } from '../components/modals/PlayerSetupModal';
 import { BOARD_THEMES } from '../engine/boardConfig';
 import { CornerDiceDock } from './game/components/CornerDiceDock';
 import { GameHeaderHUD } from './game/components/GameHeaderHUD';
 import { GameOverOverlay } from './game/components/GameOverOverlay';
-import { TacticalPowerBanner } from './game/components/TacticalPowerBanner';
 import { TopScoreCard } from './game/components/TopScoreCard';
 import { useGameSessionSync } from './game/hooks/useGameSessionSync';
 
@@ -24,6 +24,7 @@ export const GamePage: React.FC = () => {
     isIdle,
     isRolling,
     isSelectingPawn,
+    isAiTurn,
     isGameOver,
     pawns,
     currentPlayerIndex,
@@ -93,11 +94,14 @@ export const GamePage: React.FC = () => {
   const boardThemeMeta =
     BOARD_THEMES.find((b) => b.id === selectedBoardTheme) ?? BOARD_THEMES[0];
 
-  /**
-   * Determine which player sits on the TOP half of the board (`blue` = Top-Left, `red` = Top-Right)
-   * and which player sits on the BOTTOM half of the board (`yellow` = Bottom-Left, `green` = Bottom-Right)
-   * so each player's Dice Pod is ALWAYS on the exact same side & corner as their tokens!
-   */
+  const isFourPlayer = players.length === 4;
+
+  const bluePlayerIdx = players.findIndex((p) => p.color === 'blue');
+  const redPlayerIdx = players.findIndex((p) => p.color === 'red');
+  const greenPlayerIdx = players.findIndex((p) => p.color === 'green');
+  const yellowPlayerIdx = players.findIndex((p) => p.color === 'yellow');
+
+  // In 2-player mode, top is Blue or Red, bottom is Yellow or Green
   const isTopColor = (c: string) => c === 'blue' || c === 'red';
   const topPlayerIndex = isTopColor(players[0]?.color) ? 0 : 1;
   const bottomPlayerIndex = topPlayerIndex === 0 ? 1 : 0;
@@ -113,7 +117,7 @@ export const GamePage: React.FC = () => {
       : players[1];
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-amber-100 via-orange-50 to-amber-200 flex items-center justify-center p-0 sm:p-3">
+    <div className="min-h-screen w-full bg-gradient-to-b from-amber-100 via-orange-50 to-amber-200 flex items-center justify-center p-0 sm:p-3 select-none">
       <div
         className={`relative w-full max-w-[445px] min-h-screen sm:min-h-[860px] sm:rounded-[40px] bg-gradient-to-b ${boardThemeMeta.bgGradient} sm:shadow-[0_28px_70px_rgba(15,23,42,0.35),inset_0_2px_4px_rgba(255,255,255,0.8)] sm:border-[6px] sm:border-white flex flex-col justify-between p-3 sm:p-4 overflow-hidden`}
       >
@@ -133,46 +137,76 @@ export const GamePage: React.FC = () => {
           onRestartMatch={handleRestartMatch}
         />
 
-        {/* 2. Top Scoreboard (Round Colored Dots for Out & Greyish Dots for In + Score) */}
-        <div className="mt-1 flex items-center gap-2">
-          <TopScoreCard
-            playerIdx={0}
-            player={players[0]}
-            playerPawns={pawns.filter((p) => p.playerIndex === 0)}
-            score={playerScores[0] ?? 0}
-            isTurn={currentPlayerIndex === 0 && !isGameOver}
-          />
-          <TopScoreCard
-            playerIdx={1}
-            player={players[1]}
-            playerPawns={pawns.filter((p) => p.playerIndex === 1)}
-            score={playerScores[1] ?? 0}
-            isTurn={currentPlayerIndex === 1 && !isGameOver}
-          />
+        {/* 2. Scoreboard (Single Compact Row for 4 Players or 2 Wide Cards for Duo) */}
+        <div className="mt-1 flex items-center gap-1.5">
+          {players.map((p, pIdx) => (
+            <TopScoreCard
+              key={`score-${p.id}-${pIdx}`}
+              playerIdx={pIdx}
+              player={p}
+              playerPawns={pawns.filter((pawn) => pawn.playerIndex === pIdx)}
+              score={playerScores[pIdx] ?? 0}
+              isTurn={currentPlayerIndex === pIdx && !isGameOver}
+              compact={isFourPlayer}
+            />
+          ))}
         </div>
 
-        {/* 3. Top-of-Board Dice Dock (Matches whichever player owns Blue Top-Left or Red Top-Right!) */}
-        <div
-          className={`mt-2 flex ${
-            topPlayer.color === 'red' ? 'justify-end' : 'justify-start'
-          }`}
-        >
-          <CornerDiceDock
-            playerIdx={topPlayerIndex}
-            player={topPlayer}
-            isMyTurn={currentPlayerIndex === topPlayerIndex && !isGameOver}
-            isIdle={isIdle}
-            isRolling={isRolling}
-            isSelectingPawn={isSelectingPawn}
-            diceValue={diceValue}
-            lastFace={playerLastDiceValues[topPlayerIndex] ?? 1}
-            onTriggerRoll={handleTriggerRoll}
-            onRollSettled={handleRollSettled}
-          />
-        </div>
+        {/* 3. Top-of-Board Dice Docks (Blue Top-Left & Red Top-Right) */}
+        {isFourPlayer ? (
+          <div className="mt-1.5 flex items-center justify-between gap-1">
+            {bluePlayerIdx !== -1 && (
+              <CornerDiceDock
+                playerIdx={bluePlayerIdx}
+                player={players[bluePlayerIdx]}
+                isMyTurn={currentPlayerIndex === bluePlayerIdx && !isGameOver}
+                isIdle={isIdle}
+                isRolling={isRolling}
+                isSelectingPawn={isSelectingPawn}
+                diceValue={diceValue}
+                lastFace={playerLastDiceValues[bluePlayerIdx] ?? 1}
+                onTriggerRoll={handleTriggerRoll}
+                onRollSettled={handleRollSettled}
+              />
+            )}
+            {redPlayerIdx !== -1 && (
+              <CornerDiceDock
+                playerIdx={redPlayerIdx}
+                player={players[redPlayerIdx]}
+                isMyTurn={currentPlayerIndex === redPlayerIdx && !isGameOver}
+                isIdle={isIdle}
+                isRolling={isRolling}
+                isSelectingPawn={isSelectingPawn}
+                diceValue={diceValue}
+                lastFace={playerLastDiceValues[redPlayerIdx] ?? 1}
+                onTriggerRoll={handleTriggerRoll}
+                onRollSettled={handleRollSettled}
+              />
+            )}
+          </div>
+        ) : (
+          <div
+            className={`mt-2 flex ${
+              topPlayer.color === 'red' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <CornerDiceDock
+              playerIdx={topPlayerIndex}
+              player={topPlayer}
+              isMyTurn={currentPlayerIndex === topPlayerIndex && !isGameOver}
+              isIdle={isIdle}
+              isRolling={isRolling}
+              isSelectingPawn={isSelectingPawn}
+              diceValue={diceValue}
+              lastFace={playerLastDiceValues[topPlayerIndex] ?? 1}
+              onTriggerRoll={handleTriggerRoll}
+              onRollSettled={handleRollSettled}
+            />
+          </div>
+        )}
 
         {/* 4. Center 15x15 Ludo Board */}
-        <div className="my-1.5 flex flex-col items-center">
+        <div className="my-1 flex flex-col items-center">
           {/* Tactical Board Power Floating Action Banner */}
           <TacticalPowerBanner
             canPlaceMarbleWall={canPlaceMarbleWall}
@@ -191,6 +225,7 @@ export const GamePage: React.FC = () => {
             activeMove={activeMove}
             boardTheme={selectedBoardTheme}
             actionCameraEnabled={actionCameraEnabled}
+            isAiTurn={isAiTurn}
             boardPowers={boardPowers}
             targetingMode={targetingMode}
             currentPlayerColor={players[currentPlayerIndex]?.color}
@@ -201,33 +236,74 @@ export const GamePage: React.FC = () => {
           />
         </div>
 
-        {/* 5. Bottom-of-Board Dice Dock (Matches whichever player owns Yellow Bottom-Left or Green Bottom-Right!) */}
+        {/* 5. Bottom-of-Board Dice Docks (Yellow Bottom-Left & Green Bottom-Right) */}
         <footer
-          className={`relative mt-1 flex items-center justify-between gap-2 ${
-            bottomPlayer.color === 'yellow' ? 'flex-row-reverse' : 'flex-row'
+          className={`relative mt-1 flex items-center justify-between gap-1 ${
+            !isFourPlayer && bottomPlayer.color === 'yellow'
+              ? 'flex-row-reverse'
+              : 'flex-row'
           }`}
         >
-          <div className="flex-1" />
-          <CornerDiceDock
-            playerIdx={bottomPlayerIndex}
-            player={bottomPlayer}
-            isMyTurn={currentPlayerIndex === bottomPlayerIndex && !isGameOver}
-            isIdle={isIdle}
-            isRolling={isRolling}
-            isSelectingPawn={isSelectingPawn}
-            diceValue={diceValue}
-            lastFace={playerLastDiceValues[bottomPlayerIndex] ?? 1}
-            onTriggerRoll={handleTriggerRoll}
-            onRollSettled={handleRollSettled}
-          />
+          {isFourPlayer ? (
+            <>
+              {yellowPlayerIdx !== -1 && (
+                <CornerDiceDock
+                  playerIdx={yellowPlayerIdx}
+                  player={players[yellowPlayerIdx]}
+                  isMyTurn={currentPlayerIndex === yellowPlayerIdx && !isGameOver}
+                  isIdle={isIdle}
+                  isRolling={isRolling}
+                  isSelectingPawn={isSelectingPawn}
+                  diceValue={diceValue}
+                  lastFace={playerLastDiceValues[yellowPlayerIdx] ?? 1}
+                  onTriggerRoll={handleTriggerRoll}
+                  onRollSettled={handleRollSettled}
+                />
+              )}
+              <div className="flex-1" />
+              {greenPlayerIdx !== -1 && (
+                <CornerDiceDock
+                  playerIdx={greenPlayerIdx}
+                  player={players[greenPlayerIdx]}
+                  isMyTurn={currentPlayerIndex === greenPlayerIdx && !isGameOver}
+                  isIdle={isIdle}
+                  isRolling={isRolling}
+                  isSelectingPawn={isSelectingPawn}
+                  diceValue={diceValue}
+                  lastFace={playerLastDiceValues[greenPlayerIdx] ?? 1}
+                  onTriggerRoll={handleTriggerRoll}
+                  onRollSettled={handleRollSettled}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex-1" />
+              <CornerDiceDock
+                playerIdx={bottomPlayerIndex}
+                player={bottomPlayer}
+                isMyTurn={currentPlayerIndex === bottomPlayerIndex && !isGameOver}
+                isIdle={isIdle}
+                isRolling={isRolling}
+                isSelectingPawn={isSelectingPawn}
+                diceValue={diceValue}
+                lastFace={playerLastDiceValues[bottomPlayerIndex] ?? 1}
+                onTriggerRoll={handleTriggerRoll}
+                onRollSettled={handleRollSettled}
+              />
+            </>
+          )}
         </footer>
       </div>
 
-      {/* VICTORY MODAL ("You Win!") */}
+      {/* VICTORY MODAL ("You Win!" or 4-Player Standings) */}
       <GameOverOverlay
         isGameOver={isGameOver}
         winnerPlayer={winnerPlayer}
         loserPlayer={loserPlayer}
+        players={players}
+        winnerIndex={winnerIndex}
+        playerScores={playerScores}
         onPlayAgain={() => send({ type: 'RESET_MATCH' })}
       />
 

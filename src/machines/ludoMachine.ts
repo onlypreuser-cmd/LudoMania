@@ -52,23 +52,27 @@ export interface LudoMachineContext {
 }
 
 export type LudoMachineEvent =
-  | { type: 'CONFIGURE_PLAYERS'; players: PlayerConfig[]; boardTheme?: BoardThemeId }
+  | { type: 'CONFIGURE_PLAYERS'; players: PlayerConfig[]; boardTheme?: BoardThemeId; pawnCount?: 2 | 4 }
   | { type: 'RESTORE_SESSION'; session: SavedGameSession }
   | { type: 'ROLL_DICE' }
   | { type: 'DICE_SETTLED' }
   | { type: 'SELECT_PAWN'; pawnId: string }
   | { type: 'ANIMATION_COMPLETE' }
-  | { type: 'RESET_MATCH' }
+  | { type: 'RESET_MATCH'; pawnCount?: 2 | 4 }
   | { type: 'DEPLOY_MARBLE_WALL'; tileIndex: number }
   | { type: 'DEPLOY_ROYAL_GUARD'; pawnId: string }
   | { type: 'LAUNCH_CYBER_ASTEROID'; targetPawnId: string }
   | { type: 'BREAK_STASIS_WITH_SIX'; pawnId: string }
   | { type: 'TICK_STASIS_TIMERS'; currentTime: number };
 
-export function createInitialPawns(players: PlayerConfig[]): Pawn[] {
+export function createInitialPawns(
+  players: PlayerConfig[],
+  pawnCount: number = 4
+): Pawn[] {
   const pawns: Pawn[] = [];
+  const count = Math.min(4, Math.max(1, pawnCount));
   players.forEach((player, pIdx) => {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < count; i++) {
       pawns.push({
         id: `${player.color}-${i}`,
         playerIndex: pIdx,
@@ -89,6 +93,7 @@ export const ludoMachine = setup({
       players: PlayerConfig[];
       boardTheme?: BoardThemeId;
       savedSession?: SavedGameSession | null;
+      pawnCount?: 2 | 4;
     },
   },
   guards: {
@@ -110,7 +115,7 @@ export const ludoMachine = setup({
       const playerPawns = context.pawns.filter(
         (p) => p.playerIndex === context.currentPlayerIndex
       );
-      return playerPawns.length === 4 && playerPawns.every((p) => p.step === 56);
+      return playerPawns.length > 0 && playerPawns.every((p) => p.step === 56);
     },
     earnedExtraTurn: ({ context }) => Boolean(context.hasExtraTurn),
   },
@@ -317,6 +322,21 @@ export const ludoMachine = setup({
         }
       }
 
+      // 5. Kinetic Speed Dash Pads (Tiles 8, 21, 34, 47 grant +2 kinetic boost!)
+      const DASH_STEPS = [8, 21, 34, 47];
+      let speedDashTriggered = false;
+      if (
+        move.toStep <= 48 &&
+        DASH_STEPS.includes(move.toStep) &&
+        !move.landsOnSafeStar
+      ) {
+        const movedPawn = updatedPawns.find((p) => p.id === move.pawnId);
+        if (movedPawn && movedPawn.step < 50) {
+          movedPawn.step = Math.min(50, movedPawn.step + 2);
+          speedDashTriggered = true;
+        }
+      }
+
       if (moveBonusEarned > 0) {
         nextBonus[context.currentPlayerIndex] =
           (nextBonus[context.currentPlayerIndex] ?? 0) + moveBonusEarned;
@@ -431,6 +451,9 @@ export const ludoMachine = setup({
       }
       if (guardAbsorbedMsg) {
         statusMessage += guardAbsorbedMsg;
+      }
+      if (speedDashTriggered) {
+        statusMessage += ` 🚀 Speed Dash Pad: Surged +2 tiles!`;
       }
 
       return {
@@ -633,9 +656,15 @@ export const ludoMachine = setup({
         event.type === 'CONFIGURE_PLAYERS' && event.boardTheme
           ? event.boardTheme
           : context.boardTheme;
+      const pCount =
+        event.type === 'CONFIGURE_PLAYERS' && event.pawnCount
+          ? event.pawnCount
+          : event.type === 'RESET_MATCH' && event.pawnCount
+          ? event.pawnCount
+          : context.pawns.filter((p) => p.playerIndex === 0).length || 4;
       return {
         players,
-        pawns: createInitialPawns(players),
+        pawns: createInitialPawns(players, pCount),
         boardTheme,
         currentPlayerIndex: 0,
         diceValue: null,
@@ -763,7 +792,7 @@ export const ludoMachine = setup({
     }
     return {
       players: input.players,
-      pawns: createInitialPawns(input.players),
+      pawns: createInitialPawns(input.players, input.pawnCount ?? 4),
       boardTheme: input.boardTheme ?? 'classic-kingdom',
       currentPlayerIndex: 0,
       diceValue: null,

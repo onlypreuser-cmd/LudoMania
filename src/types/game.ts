@@ -173,6 +173,9 @@ export interface Pawn {
   step: number; // -1..56
 }
 
+export type AiDifficulty = 'easy' | 'medium' | 'hard';
+export type MatchMode = 'duo' | 'four-player';
+
 export interface PlayerConfig {
   id: string;
   name: string;
@@ -180,6 +183,8 @@ export interface PlayerConfig {
   color: PlayerColor;
   tokenSkin: TokenSkinId;
   diceSkin: DiceSkinId;
+  isAi?: boolean;
+  aiDifficulty?: AiDifficulty;
 }
 
 export interface GridCoord {
@@ -278,6 +283,9 @@ export interface SavedGameSession {
   boardPowers?: BoardPowersState;
   /** Internal engine state — persisted silently for mid-game save/restore accuracy */
   _e?: DiceBiasState;
+  matchMode?: MatchMode;
+  pawnCount?: 2 | 4;
+  rankings?: number[];
   turnNumber: number;
   statusMessage: string;
   timestamp: number;

@@ -36,13 +36,17 @@ export const CornerDiceDock: React.FC<CornerDiceDockProps> = ({
     player.color === 'red' || player.color === 'green';
   const palette = COLOR_PALETTE[player.color];
 
+  const isAi = Boolean(player.isAi);
+
   return (
     <div
       className={`relative flex items-center gap-2.5 px-3 py-1.5 rounded-[24px] border-2 transition-all duration-200 ${
         isRightSideCorner ? 'flex-row-reverse' : 'flex-row'
       } ${
         isMyTurn
-          ? 'bg-white border-amber-400 shadow-[0_10px_25px_rgba(245,158,11,0.28)]'
+          ? isAi
+            ? 'bg-white border-indigo-400 shadow-[0_10px_25px_rgba(99,102,241,0.30)]'
+            : 'bg-white border-amber-400 shadow-[0_10px_25px_rgba(245,158,11,0.28)]'
           : 'bg-white/75 border-white/70 opacity-80'
       }`}
     >
@@ -61,22 +65,43 @@ export const CornerDiceDock: React.FC<CornerDiceDockProps> = ({
           />
         </div>
         <div>
-          <span className="block text-xs font-extrabold text-slate-900 leading-tight max-w-[90px] truncate">
-            {player.name || `Player ${playerIdx + 1}`}
-          </span>
+          <div className={`flex items-center gap-1 ${isRightSideCorner ? 'justify-end' : 'justify-start'}`}>
+            <span className="block text-xs font-extrabold text-slate-900 leading-tight max-w-[85px] truncate">
+              {player.name || `Player ${playerIdx + 1}`}
+            </span>
+            {isAi && (
+              <span className="px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 text-[8px] font-black shrink-0">
+                AI
+              </span>
+            )}
+          </div>
           <span
             className={`block text-[10px] font-extrabold ${
-              isMyTurn ? 'text-blue-600' : 'text-slate-400'
+              isMyTurn
+                ? isAi
+                  ? 'text-indigo-600 animate-pulse'
+                  : 'text-blue-600'
+                : 'text-slate-400'
             }`}
           >
             {isMyTurn
-              ? isIdle
+              ? isAi
+                ? isIdle
+                  ? '🤖 Thinking...'
+                  : isRolling
+                  ? '🤖 Rolling...'
+                  : isSelectingPawn
+                  ? '🤖 Moving...'
+                  : '🤖 In Action'
+                : isIdle
                 ? 'Tap Dice!'
                 : isRolling
                 ? 'Rolling...'
                 : isSelectingPawn
                 ? 'Move Token!'
                 : 'Moving...'
+              : isAi
+              ? '🤖 AI Bot'
               : 'Waiting...'}
           </span>
         </div>
@@ -88,7 +113,7 @@ export const CornerDiceDock: React.FC<CornerDiceDockProps> = ({
         value={isMyTurn ? diceValue : lastFace}
         lastRolledValue={lastFace}
         isRolling={isMyTurn && isRolling}
-        canRoll={isMyTurn && isIdle}
+        canRoll={isMyTurn && isIdle && !isAi}
         onTriggerRoll={onTriggerRoll}
         onRollSettled={isMyTurn ? onRollSettled : undefined}
         size="md"

@@ -43,6 +43,7 @@ export const HomePage: React.FC = () => {
   const selectedDiceSkin = useProfileStore((s) => s.selectedDiceSkin);
   const players = useProfileStore((s) => s.players);
   const setPlayers = useProfileStore((s) => s.setPlayers);
+  const setMatchMode = useProfileStore((s) => s.setMatchMode);
   const soundEnabled = useProfileStore((s) => s.soundEnabled);
   const toggleSound = useProfileStore((s) => s.toggleSound);
   const actionCameraEnabled = useProfileStore((s) => s.actionCameraEnabled);
@@ -67,6 +68,7 @@ export const HomePage: React.FC = () => {
   // Mode 1: Quick Play (1 vs 1 Cross Duel)
   const handleQuickPlay = () => {
     soundManager.play('ui_click');
+    setMatchMode('duo');
     const p1: PlayerConfig = {
       id: 'p1',
       name: userName.trim() ? userName : 'Player 1',
@@ -74,6 +76,7 @@ export const HomePage: React.FC = () => {
       color: preferredColor || 'blue',
       tokenSkin: selectedTokenSkin,
       diceSkin: selectedDiceSkin,
+      isAi: false,
     };
     const crossColor = CROSS_OPPOSITE_COLOR[p1.color] || 'green';
     const p2: PlayerConfig = {
@@ -83,14 +86,16 @@ export const HomePage: React.FC = () => {
       color: crossColor,
       tokenSkin: players[1]?.tokenSkin || 'dog',
       diceSkin: players[1]?.diceSkin || 'royal-gold',
+      isAi: false,
     };
     setPlayers([p1, p2]);
     navigate('/setup');
   };
 
-  // Mode 2: 4-Player Battle (Pass & Play)
+  // Mode 2: 4-Player Battle (Pass & Play or Bots)
   const handle4PlayerBattle = () => {
     soundManager.play('ui_click');
+    setMatchMode('four-player');
     const p1: PlayerConfig = {
       id: 'p1',
       name: userName.trim() ? userName : 'Player 1',
@@ -98,30 +103,37 @@ export const HomePage: React.FC = () => {
       color: 'blue',
       tokenSkin: selectedTokenSkin,
       diceSkin: selectedDiceSkin,
+      isAi: false,
     };
     const p2: PlayerConfig = {
       id: 'p2',
-      name: 'Player 2',
+      name: 'RoboMaster',
       avatarId: 'avatar-2',
       color: 'red',
       tokenSkin: 'knight',
       diceSkin: 'ruby-blaze',
+      isAi: true,
+      aiDifficulty: 'hard',
     };
     const p3: PlayerConfig = {
       id: 'p3',
-      name: 'Player 3',
+      name: 'CyberNinja',
       avatarId: 'avatar-3',
       color: 'green',
       tokenSkin: 'dog',
       diceSkin: 'emerald-jade',
+      isAi: true,
+      aiDifficulty: 'hard',
     };
     const p4: PlayerConfig = {
       id: 'p4',
-      name: 'Player 4',
+      name: 'TitanClaw',
       avatarId: 'avatar-4',
       color: 'yellow',
       tokenSkin: 'cat',
       diceSkin: 'royal-gold',
+      isAi: true,
+      aiDifficulty: 'hard',
     };
     setPlayers([p1, p2, p3, p4]);
     navigate('/setup');
@@ -130,6 +142,7 @@ export const HomePage: React.FC = () => {
   // Mode 3: Solo AI Rush
   const handleSoloAI = () => {
     soundManager.play('ui_click');
+    setMatchMode('duo');
     const p1: PlayerConfig = {
       id: 'p1',
       name: userName.trim() ? userName : 'Player 1',
@@ -137,6 +150,7 @@ export const HomePage: React.FC = () => {
       color: preferredColor || 'blue',
       tokenSkin: selectedTokenSkin,
       diceSkin: selectedDiceSkin,
+      isAi: false,
     };
     const crossColor = CROSS_OPPOSITE_COLOR[p1.color] || 'green';
     const p2: PlayerConfig = {
@@ -146,6 +160,8 @@ export const HomePage: React.FC = () => {
       color: crossColor,
       tokenSkin: 'robot',
       diceSkin: 'cyber-neon',
+      isAi: true,
+      aiDifficulty: 'hard',
     };
     setPlayers([p1, p2]);
     navigate('/setup');

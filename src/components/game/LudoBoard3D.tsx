@@ -41,6 +41,7 @@ interface LudoBoard3DProps {
   activeMove: MoveEvaluation | null;
   boardTheme: BoardThemeId;
   actionCameraEnabled?: boolean;
+  isAiTurn?: boolean;
   boardPowers?: BoardPowersState;
   targetingMode?: 'wall' | 'guard' | 'asteroid' | null;
   currentPlayerColor?: PlayerColor;
@@ -58,6 +59,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     activeMove,
     boardTheme,
     actionCameraEnabled: _actionCameraEnabled,
+    isAiTurn,
     boardPowers,
     targetingMode,
     currentPlayerColor,
@@ -404,7 +406,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               </div>
 
               {/* Responsive 2D Touch/Click Hit Targets for Legal Movable Pawns */}
-              {!targetingMode && legalMoves.length > 0 && !activeMove && (
+              {!targetingMode && legalMoves.length > 0 && !activeMove && !isAiTurn && (
                 <div className="absolute inset-0 pointer-events-none">
                   {pawns
                     .filter((p) => legalPawnIds.has(p.id))

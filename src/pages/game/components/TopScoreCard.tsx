@@ -8,6 +8,7 @@ interface TopScoreCardProps {
   playerPawns: Pawn[];
   score: number;
   isTurn: boolean;
+  compact?: boolean;
 }
 
 export const TopScoreCard: React.FC<TopScoreCardProps> = ({
@@ -16,15 +17,73 @@ export const TopScoreCard: React.FC<TopScoreCardProps> = ({
   playerPawns,
   score,
   isTurn,
+  compact = false,
 }) => {
   const avatar =
     AVATAR_OPTIONS.find((a) => a.id === player.avatarId) ??
-    AVATAR_OPTIONS[playerIdx];
+    AVATAR_OPTIONS[playerIdx % AVATAR_OPTIONS.length];
   const palette = COLOR_PALETTE[player.color];
-  const isRight = playerIdx === 1;
+  const isRight = playerIdx === 1 && !compact;
 
   // Sort dots so Out/Home colored circles appear first, followed by Greyish In-Yard circles
   const sortedPawns = [...playerPawns].sort((a, b) => b.step - a.step);
+
+  if (compact) {
+    return (
+      <div
+        className={`flex-1 min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-xl border-2 transition-all ${
+          isTurn
+            ? player.isAi
+              ? 'bg-white border-indigo-400 shadow-[0_4px_12px_rgba(99,102,241,0.30)] scale-[1.02]'
+              : 'bg-white border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.25)] scale-[1.02]'
+            : 'bg-white/80 border-white/70 opacity-80'
+        }`}
+      >
+        <div className="relative shrink-0">
+          <img
+            src={avatar.src}
+            alt={player.name}
+            className="w-6 h-6 rounded-full object-cover border border-white shadow-xs"
+          />
+          {player.isAi && (
+            <span className="absolute -bottom-1 -right-1 px-0.5 rounded bg-indigo-600 text-[6px] font-black text-white">
+              AI
+            </span>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-0.5">
+            <span className="text-[10px] font-black text-slate-900 truncate">
+              {player.name || `P${playerIdx + 1}`}
+            </span>
+            <span className="text-[9px] font-black text-amber-800 tabular-nums">
+              {score}
+            </span>
+          </div>
+
+          <div className="mt-0.5 flex items-center gap-0.5">
+            {sortedPawns.map((p) => {
+              const isOut = p.step >= 0;
+              const isHome = p.step === 56;
+              return (
+                <span
+                  key={p.id}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    isHome
+                      ? `${palette.bgClass} ring-1 ring-amber-400 scale-110`
+                      : isOut
+                      ? `${palette.bgClass} border border-white`
+                      : 'bg-slate-300'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -6,6 +6,7 @@ import {
   AvatarId,
   BoardThemeId,
   DiceSkinId,
+  MatchMode,
   PlayerColor,
   PlayerConfig,
   SavedGameSession,
@@ -83,8 +84,13 @@ interface ProfileState {
   savedGameSession: SavedGameSession | null;
   _hasHydrated: boolean;
 
+  matchMode: MatchMode;
+  pawnCount: 2 | 4;
+
   addCoins: (amount: number) => void;
   addXp: (amount: number) => void;
+  setMatchMode: (mode: MatchMode) => void;
+  setPawnCount: (count: 2 | 4) => void;
   completeInitialSetup: (payload: {
     name: string;
     avatar: AvatarId;
@@ -128,6 +134,48 @@ const DEFAULT_PLAYERS: PlayerConfig[] = [
   },
 ];
 
+export const DEFAULT_4_PLAYERS: PlayerConfig[] = [
+  {
+    id: 'p1',
+    name: 'Player 1',
+    avatarId: 'avatar-1',
+    color: 'blue',
+    tokenSkin: 'classic',
+    diceSkin: 'classic-white',
+    isAi: false,
+  },
+  {
+    id: 'p2',
+    name: 'RoboMaster',
+    avatarId: 'avatar-2',
+    color: 'red',
+    tokenSkin: 'knight',
+    diceSkin: 'ruby-blaze',
+    isAi: true,
+    aiDifficulty: 'hard',
+  },
+  {
+    id: 'p3',
+    name: 'CyberNinja',
+    avatarId: 'avatar-3',
+    color: 'green',
+    tokenSkin: 'dog',
+    diceSkin: 'emerald-jade',
+    isAi: true,
+    aiDifficulty: 'hard',
+  },
+  {
+    id: 'p4',
+    name: 'TitanClaw',
+    avatarId: 'avatar-4',
+    color: 'yellow',
+    tokenSkin: 'cat',
+    diceSkin: 'royal-gold',
+    isAi: true,
+    aiDifficulty: 'hard',
+  },
+];
+
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -140,6 +188,8 @@ export const useProfileStore = create<ProfileState>()(
       preferredColor: 'blue',
       soundEnabled: true,
       actionCameraEnabled: true,
+      matchMode: 'duo',
+      pawnCount: 4,
 
       coins: 2450,
       playerLevel: 5,
@@ -210,14 +260,39 @@ export const useProfileStore = create<ProfileState>()(
         });
       },
 
+      setMatchMode: (mode) => {
+        const currentPlayers = get().players;
+        if (mode === 'four-player') {
+          if (currentPlayers.length === 4) {
+            set({ matchMode: mode });
+            return;
+          }
+          const p1 = { ...currentPlayers[0], color: 'blue' as PlayerColor };
+          const p2 = { ...DEFAULT_4_PLAYERS[1] };
+          const p3 = { ...DEFAULT_4_PLAYERS[2] };
+          const p4 = { ...DEFAULT_4_PLAYERS[3] };
+          set({ matchMode: mode, players: [p1, p2, p3, p4] });
+        } else {
+          const p1 = currentPlayers[0] ?? DEFAULT_PLAYERS[0];
+          const crossColor = CROSS_OPPOSITE_COLOR[p1.color] || 'green';
+          const p2 = currentPlayers[1] ?? DEFAULT_PLAYERS[1];
+          const updatedP2 = { ...p2, color: crossColor };
+          set({ matchMode: mode, players: [p1, updatedP2] });
+        }
+      },
+
+      setPawnCount: (count) => {
+        set({ pawnCount: count });
+      },
+
       updatePlayerConfig: (index, partial) => {
         const next = [...get().players];
         if (!next[index]) return;
         next[index] = { ...next[index], ...partial };
 
-        // Enforce Cross (Diagonal) Corner Allocation in 2-Player mode:
+        // Enforce Cross (Diagonal) Corner Allocation ONLY in 2-Player mode:
         // Blue <-> Green, Red <-> Yellow
-        if (partial.color) {
+        if (partial.color && next.length === 2) {
           const otherIdx = index === 0 ? 1 : 0;
           if (next[otherIdx]) {
             next[otherIdx] = {

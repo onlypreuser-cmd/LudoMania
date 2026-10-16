@@ -30,7 +30,7 @@ export interface SkinPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'token' | 'dice';
-  targetPlayerIndex?: 0 | 1;
+  targetPlayerIndex?: number;
   initialSkinId?: string;
   initialColor?: PlayerColor;
 }

@@ -33,7 +33,7 @@ const FUN_GAMER_NAMES = [
 interface PlayerSetupModalProps {
   isOpen: boolean;
   onClose?: () => void;
-  targetPlayerIndex?: 0 | 1;
+  targetPlayerIndex?: number;
   title?: string;
   subtitle?: string;
 }
