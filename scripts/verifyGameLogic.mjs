@@ -1,5 +1,7 @@
 import { evaluateBestAiMove } from '../src/engine/ai/aiDecisionEngine.ts';
 import { createInitialPawns } from '../src/machines/ludoMachine.ts';
+import { DICE_SKINS } from '../src/engine/boardConfig.ts';
+import { ALL_DICE_SKINS } from '../src/store/useProfileStore.ts';
 
 console.log('--- 🧪 STARTING LUDOMANIA AI & 4-PLAYER & DUO TEST SUITE ---');
 
@@ -129,5 +131,11 @@ const safeMoveChoice = evaluateBestAiMove(
 );
 console.assert(safeMoveChoice.pawnId === 'red-1', `Expected AI to avoid walking into blue crosshairs and choose red-1, got ${safeMoveChoice.pawnId}`);
 console.log('✅ TEST 5 Passed: AI detects enemy crosshairs and avoids suicide moves');
+
+// TEST 6: Verify Magma Inferno and Glacial Cryo dice skins catalog
+console.assert(ALL_DICE_SKINS.includes('magma-inferno'), 'Expected ALL_DICE_SKINS to include magma-inferno');
+console.assert(ALL_DICE_SKINS.includes('cryo-glacial'), 'Expected ALL_DICE_SKINS to include cryo-glacial');
+console.assert(DICE_SKINS.length === 8, `Expected 8 dice skins in catalog, got ${DICE_SKINS.length}`);
+console.log('✅ TEST 6 Passed: Magma Inferno and Glacial Cryo dice skins catalog verified');
 
 console.log('--- 🎉 ALL LUDOMANIA TEST SUITE CHECKS PASSED SUCCESSFULLY! ---');

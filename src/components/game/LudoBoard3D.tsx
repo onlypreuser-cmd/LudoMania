@@ -23,6 +23,7 @@ import { StepEffects3D } from '../three/StepEffects3D';
 import { MarbleWall3D } from '../three/powers/MarbleWall3D';
 import { RoyalGuard3DModel } from '../three/powers/RoyalGuard3DModel';
 import { StasisRock3D } from '../three/powers/StasisRock3D';
+import { HyperWarpPad3D } from '../three/powers/HyperWarpPad3D';
 import {
   AutoZoomOrthographicController,
   BOARD_CAM_Y,
@@ -339,6 +340,11 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                     <AutoZoomOrthographicController />
                     <ThematicBoard3D themeId={boardTheme} />
                     <StepEffects3D />
+
+                    {/* 4 Kinetic Hyper Warp Mystery Surge Pads */}
+                    {[8, 21, 34, 47].map((tileIdx) => (
+                      <HyperWarpPad3D key={`warp-pad-${tileIdx}`} tileIndex={tileIdx} />
+                    ))}
 
                     {/* Tactical Board Powers 3D Models */}
                     {boardPowers?.walls.map((wall) => (

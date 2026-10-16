@@ -322,9 +322,10 @@ export const ludoMachine = setup({
         }
       }
 
-      // 5. Kinetic Speed Dash Pads (Tiles 8, 21, 34, 47 grant +2 kinetic boost!)
+      // 5. Kinetic Hyper Warp Surge Pads (Tiles 8, 21, 34, 47 grant mystery rocket surge +2..+5!)
       const DASH_STEPS = [8, 21, 34, 47];
       let speedDashTriggered = false;
+      let warpSurgeLeap = 0;
       if (
         move.toStep <= 48 &&
         DASH_STEPS.includes(move.toStep) &&
@@ -332,7 +333,9 @@ export const ludoMachine = setup({
       ) {
         const movedPawn = updatedPawns.find((p) => p.id === move.pawnId);
         if (movedPawn && movedPawn.step < 50) {
-          movedPawn.step = Math.min(50, movedPawn.step + 2);
+          const SURGE_POOLS = [2, 3, 4, 5];
+          warpSurgeLeap = SURGE_POOLS[Math.floor(Math.random() * SURGE_POOLS.length)];
+          movedPawn.step = Math.min(50, movedPawn.step + warpSurgeLeap);
           speedDashTriggered = true;
         }
       }
@@ -453,7 +456,7 @@ export const ludoMachine = setup({
         statusMessage += guardAbsorbedMsg;
       }
       if (speedDashTriggered) {
-        statusMessage += ` 🚀 Speed Dash Pad: Surged +2 tiles!`;
+        statusMessage += ` ⚡ HYPER WARP SURGE! Rocketed +${warpSurgeLeap} tiles forward!`;
       }
 
       return {

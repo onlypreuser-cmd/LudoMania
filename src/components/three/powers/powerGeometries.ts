@@ -248,6 +248,112 @@ export function createJaggedFractureGeometry(): THREE.BufferGeometry {
   });
 }
 
+// 9. Sculpted Paladin Cuirass (Lathe Breastplate with anatomical swell)
+export function createCuirassGeometry(): THREE.LatheGeometry {
+  const points = [
+    new THREE.Vector2(0.0, -0.15),
+    new THREE.Vector2(0.125, -0.15), // Waist flare
+    new THREE.Vector2(0.138, -0.08), // Flared belt line
+    new THREE.Vector2(0.152, 0.02),  // Ribcage contour
+    new THREE.Vector2(0.175, 0.12),  // Pectoral plate swell
+    new THREE.Vector2(0.162, 0.18),  // Clavicle taper
+    new THREE.Vector2(0.125, 0.22),  // Gorget collar rim
+    new THREE.Vector2(0.0, 0.22),
+  ];
+  return new THREE.LatheGeometry(points, 24);
+}
+
+// 10. Chibi Medieval Barbute Helmet (Monolithic sculpted helm)
+export function createBarbuteHelmGeometry(): THREE.LatheGeometry {
+  const points = [
+    new THREE.Vector2(0.0, -0.13),
+    new THREE.Vector2(0.135, -0.13), // Lower cheek/neck rim
+    new THREE.Vector2(0.155, -0.04), // Chin and jawline
+    new THREE.Vector2(0.178, 0.08),  // Temple & brow ridge swell
+    new THREE.Vector2(0.152, 0.17),  // Cranium arch
+    new THREE.Vector2(0.085, 0.22),  // Crown apex
+    new THREE.Vector2(0.0, 0.23),
+  ];
+  return new THREE.LatheGeometry(points, 24);
+}
+
+// 11. Sculpted Curved Pauldron (Shoulder armor plate)
+export function createPauldronGeometry(): THREE.BufferGeometry {
+  return new THREE.SphereGeometry(0.092, 18, 18, 0, Math.PI, 0, Math.PI * 0.72);
+}
+
+// 12. Crenelated Roman Fortress Wall Block (Monolithic Carrara Marble Battlement)
+export function createCrenelatedWallGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  const hw = 0.36; // half-width 0.72 total
+  shape.moveTo(-hw, 0);
+  shape.lineTo(hw, 0);
+  shape.lineTo(hw, 0.44); // right shoulder
+  // Right merlon
+  shape.lineTo(hw, 0.52);
+  shape.lineTo(hw - 0.10, 0.52);
+  shape.lineTo(hw - 0.10, 0.44);
+  // Right crenel (gap)
+  shape.lineTo(hw - 0.16, 0.44);
+  // Center merlon
+  shape.lineTo(hw - 0.16, 0.52);
+  shape.lineTo(-(hw - 0.16), 0.52);
+  shape.lineTo(-(hw - 0.16), 0.44);
+  // Left crenel (gap)
+  shape.lineTo(-(hw - 0.10), 0.44);
+  // Left merlon
+  shape.lineTo(-(hw - 0.10), 0.52);
+  shape.lineTo(-hw, 0.52);
+  shape.closePath();
+
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.22,
+    bevelEnabled: true,
+    bevelThickness: 0.016,
+    bevelSize: 0.016,
+    bevelSegments: 3,
+  });
+}
+
+// 13. Floating Hexagonal Kinetic Pad (Hyper Warp Tile)
+export function createKineticHexPadGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  const r = 0.38;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.05,
+    bevelEnabled: true,
+    bevelThickness: 0.014,
+    bevelSize: 0.014,
+    bevelSegments: 2,
+  });
+}
+
+// 14. Holographic Kinetic Chevron (>>> Energy Wave)
+export function createChevronGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.12, -0.06);
+  shape.lineTo(0.0, 0.06);
+  shape.lineTo(0.12, -0.06);
+  shape.lineTo(0.08, -0.09);
+  shape.lineTo(0.0, -0.01);
+  shape.lineTo(-0.08, -0.09);
+  shape.closePath();
+
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.01,
+    bevelEnabled: false,
+  });
+}
+
 // Export singleton bundle of shared geometries
 export const POWER_GEO = {
   unitSphere: new THREE.SphereGeometry(1, 24, 24),
@@ -266,10 +372,17 @@ export const POWER_GEO = {
   balusterLathe: createBalusterLatheGeometry(),
   laurelWreath: createLaurelWreathGeometry(),
   jaggedFracture: createJaggedFractureGeometry(),
-  // Obsidian asteroid chunks
+  cuirassLathe: createCuirassGeometry(),
+  barbuteHelm: createBarbuteHelmGeometry(),
+  pauldronCurved: createPauldronGeometry(),
+  crenelatedWall: createCrenelatedWallGeometry(),
+  hexPad: createKineticHexPadGeometry(),
+  chevronArrow: createChevronGeometry(),
+  // Obsidian asteroid chunks & celestial core
   chunkLarge: new THREE.DodecahedronGeometry(0.24, 1),
   chunkMedium: new THREE.DodecahedronGeometry(0.17, 0),
   chunkSmall: new THREE.IcosahedronGeometry(0.11, 0),
+  crystalCore: new THREE.OctahedronGeometry(0.18, 0),
   stasisFieldRing: new THREE.TorusGeometry(0.38, 0.018, 16, 36),
   stasisSubRing: new THREE.TorusGeometry(0.44, 0.01, 12, 32),
 };

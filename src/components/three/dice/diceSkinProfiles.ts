@@ -79,6 +79,28 @@ export const SKIN_PBR_MAP: Record<DiceSkinId, SkinPBRProfile> = {
     pipEmissiveIntensity: 1.6,
     rimColor: '#c084fc',
   },
+  'magma-inferno': {
+    metalness: 0.2,
+    roughness: 0.88,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.15,
+    ior: 1.54,
+    sheen: 0.1,
+    pipEmissive: '#f97316',
+    pipEmissiveIntensity: 2.4,
+    rimColor: '#fdba74',
+  },
+  'cryo-glacial': {
+    metalness: 0.05,
+    roughness: 0.14,
+    clearcoat: 0.85,
+    clearcoatRoughness: 0.08,
+    ior: 1.31,
+    sheen: 0.4,
+    pipEmissive: '#38bdf8',
+    pipEmissiveIntensity: 1.5,
+    rimColor: '#bae6fd',
+  },
 };
 
 export const POD_CONTAINER_CLASSES: Record<DicePodTheme, string> = {
@@ -103,4 +125,6 @@ export const DICE_AUDIO_PITCH_MAP: Record<DiceSkinId, number> = {
   'cyber-neon': 1.15,
   'emerald-jade': 0.9,
   'obsidian-galaxy': 0.72,
+  'magma-inferno': 0.78,
+  'cryo-glacial': 1.42,
 };

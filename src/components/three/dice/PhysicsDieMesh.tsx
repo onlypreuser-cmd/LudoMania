@@ -23,6 +23,171 @@ export interface PhysicsDieMeshProps {
   onSettled?: () => void;
 }
 
+const LAVA_BUBBLES = [
+  { pos: [0.42, 0.54, 0.12] as [number, number, number], r: 0.055, speed: 4.2, phase: 0 },
+  { pos: [-0.38, 0.54, -0.22] as [number, number, number], r: 0.068, speed: 3.5, phase: 1.2 },
+  { pos: [0.54, 0.22, -0.35] as [number, number, number], r: 0.06, speed: 5.0, phase: 2.1 },
+  { pos: [-0.54, -0.15, 0.32] as [number, number, number], r: 0.052, speed: 3.8, phase: 3.4 },
+  { pos: [0.15, -0.54, 0.42] as [number, number, number], r: 0.07, speed: 4.8, phase: 0.7 },
+  { pos: [-0.25, -0.54, -0.38] as [number, number, number], r: 0.048, speed: 3.2, phase: 2.8 },
+  { pos: [0.35, -0.22, 0.54] as [number, number, number], r: 0.062, speed: 4.4, phase: 1.8 },
+  { pos: [-0.42, 0.35, -0.54] as [number, number, number], r: 0.058, speed: 3.9, phase: 4.0 },
+];
+
+const LAVA_DRIPS = [
+  { pos: [0.36, -0.52, 0.36] as [number, number, number], speed: 2.5, phase: 0.5 },
+  { pos: [-0.36, -0.52, 0.36] as [number, number, number], speed: 2.8, phase: 1.6 },
+  { pos: [0.36, -0.52, -0.36] as [number, number, number], speed: 2.2, phase: 2.7 },
+  { pos: [-0.36, -0.52, -0.36] as [number, number, number], speed: 3.0, phase: 3.8 },
+];
+
+const FROST_SHARDS = [
+  { pos: [0.52, 0.52, 0.52] as [number, number, number], rot: [0.6, 0.8, 0.4] as [number, number, number], s: 1 },
+  { pos: [-0.52, 0.52, 0.52] as [number, number, number], rot: [-0.6, 0.8, -0.4] as [number, number, number], s: 0.9 },
+  { pos: [0.52, -0.52, 0.52] as [number, number, number], rot: [0.6, -0.8, 0.4] as [number, number, number], s: 1.1 },
+  { pos: [-0.52, -0.52, 0.52] as [number, number, number], rot: [-0.6, -0.8, -0.4] as [number, number, number], s: 0.85 },
+  { pos: [0.52, 0.52, -0.52] as [number, number, number], rot: [0.6, 0.8, -0.4] as [number, number, number], s: 1.05 },
+  { pos: [-0.52, 0.52, -0.52] as [number, number, number], rot: [-0.6, 0.8, 0.4] as [number, number, number], s: 0.95 },
+  { pos: [0.52, -0.52, -0.52] as [number, number, number], rot: [0.6, -0.8, -0.4] as [number, number, number], s: 0.9 },
+  { pos: [-0.52, -0.52, -0.52] as [number, number, number], rot: [-0.6, -0.8, 0.4] as [number, number, number], s: 1 },
+];
+
+/**
+ * Procedural Dynamic Magma Bubbles & Viscous Oozing Beads
+ */
+const DynamicMagmaFX: React.FC = () => {
+  const bubbleRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const dripRefs = useRef<(THREE.Mesh | null)[]>([]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+
+    // Harmonic sine boiling bubbles
+    LAVA_BUBBLES.forEach((b, i) => {
+      const mesh = bubbleRefs.current[i];
+      if (mesh) {
+        const sineWave = Math.max(0, Math.sin(t * b.speed + b.phase));
+        const scaleVal = b.r * Math.pow(sineWave, 2) * 20;
+        mesh.scale.setScalar(scaleVal);
+      }
+    });
+
+    // Viscous dripping magma droplets
+    LAVA_DRIPS.forEach((d, i) => {
+      const mesh = dripRefs.current[i];
+      if (mesh) {
+        const dropCycle = (t * d.speed + d.phase) % Math.PI;
+        const stretchY = 0.05 + Math.sin(dropCycle) * 0.03;
+        mesh.scale.set(0.035, stretchY, 0.035);
+        mesh.position.y = d.pos[1] - Math.sin(dropCycle) * 0.035;
+      }
+    });
+  });
+
+  return (
+    <group>
+      {/* 8 Dynamic Harmonic Boiling Bubbles */}
+      {LAVA_BUBBLES.map((b, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { bubbleRefs.current[i] = el; }}
+          position={b.pos}
+          scale={0}
+        >
+          <sphereGeometry args={[1, 14, 14]} />
+          <meshStandardMaterial
+            color="#ffea00"
+            emissive="#ff4500"
+            emissiveIntensity={2.8}
+            roughness={0.2}
+            metalness={0.1}
+          />
+        </mesh>
+      ))}
+
+      {/* 4 Oozing / Dripping Magma Viscous Beads on Lower Beveled Edges */}
+      {LAVA_DRIPS.map((d, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { dripRefs.current[i] = el; }}
+          position={d.pos}
+          scale={[0.035, 0.05, 0.035]}
+        >
+          <sphereGeometry args={[1, 12, 12]} />
+          <meshStandardMaterial
+            color="#ea580c"
+            emissive="#ff2200"
+            emissiveIntensity={2.2}
+            roughness={0.25}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+/**
+ * Procedural Glacial Ice Frostbite Crystalline Shards & Cold Sublimation Vapor
+ */
+const DynamicCryoFX: React.FC = () => {
+  const mistGroupRef = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (mistGroupRef.current) {
+      mistGroupRef.current.rotation.y = t * 0.45;
+      mistGroupRef.current.position.y = -0.05 + Math.sin(t * 1.8) * 0.02;
+    }
+  });
+
+  return (
+    <group>
+      {/* 8 Needle-Like Frostbite Corner Crystals Protruding from Vertices */}
+      {FROST_SHARDS.map((s, i) => (
+        <mesh
+          key={i}
+          position={s.pos}
+          rotation={s.rot}
+          scale={s.s}
+          castShadow
+        >
+          <coneGeometry args={[0.045, 0.24, 5]} />
+          <meshPhysicalMaterial
+            color="#bae6fd"
+            roughness={0.08}
+            metalness={0.1}
+            transmission={0.88}
+            thickness={1.4}
+            ior={1.31}
+            clearcoat={1.0}
+            clearcoatRoughness={0.05}
+          />
+        </mesh>
+      ))}
+
+      {/* Cold Sublimation Vapor Mist Billowing Around Die */}
+      <group ref={mistGroupRef}>
+        {[0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].map((ang, i) => (
+          <mesh
+            key={i}
+            position={[Math.cos(ang) * 0.58, -0.06, Math.sin(ang) * 0.58]}
+            rotation={[-Math.PI / 2, 0, ang]}
+          >
+            <planeGeometry args={[0.55, 0.55]} />
+            <meshBasicMaterial
+              color="#e0f2fe"
+              transparent
+              opacity={0.24}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+};
+
 export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
   ({ skinId, value, isRolling, onSettled }) => {
     const visualGroupRef = useRef<THREE.Group>(null);
@@ -47,12 +212,10 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
         soundManager.play('dice_roll', DICE_AUDIO_PITCH_MAP[skinId] ?? 1.0);
         const targetEuler = FACE_EULER_MAP[value] ?? FACE_EULER_MAP[1];
 
-        // Normalize current rotation to [0..2PI) before launching smooth multi-axis spin
         grp.rotation.x = grp.rotation.x % (Math.PI * 2);
         grp.rotation.y = grp.rotation.y % (Math.PI * 2);
         grp.rotation.z = grp.rotation.z % (Math.PI * 2);
 
-        // Smooth 0.70s multi-bounce ballistic tumble synced with dice_roll audio bounces
         const tl = gsap.timeline({
           onComplete: () => {
             if (hasSettledFiredRef.current) return;
@@ -69,7 +232,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
           },
         });
 
-        // Continuous smooth multi-axis spin settling onto exact target face
         tl.to(
           grp.rotation,
           {
@@ -81,7 +243,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
           },
           0
         )
-          // 1. Toss upward (0.00s -> 0.165s) + volume-preserving stretch
           .to(
             grp.position,
             {
@@ -104,7 +265,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             },
             0
           )
-          // 2. First board drop impact (0.165s -> 0.305s) + impact squash
           .to(
             grp.position,
             {
@@ -127,7 +287,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             },
             0.28
           )
-          // 3. First rebound hop (0.305s -> 0.415s)
           .to(
             grp.position,
             {
@@ -150,7 +309,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             },
             0.335
           )
-          // 4. Second board impact (0.415s -> 0.505s) + lighter squash
           .to(
             grp.position,
             {
@@ -173,7 +331,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
             },
             0.485
           )
-          // 5. Final micro-hop & elastic settle (0.505s -> 0.68s)
           .to(
             grp.position,
             {
@@ -227,7 +384,6 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
       if (!isRolling && visualGroupRef.current) {
         const t = state.clock.elapsedTime;
         const targetEuler = FACE_EULER_MAP[value] ?? FACE_EULER_MAP[1];
-        // Subtle lifelike idle hover & gentle micro-precession so HDRI reflections shimmer
         visualGroupRef.current.position.y = Math.sin(t * 2.2) * 0.032;
         visualGroupRef.current.rotation.x = targetEuler[0];
         visualGroupRef.current.rotation.y =
@@ -241,77 +397,121 @@ export const PhysicsDieMesh: React.FC<PhysicsDieMeshProps> = React.memo(
     }, [skin.shapeType]);
 
     return (
-      <group ref={visualGroupRef}>
-        {/* Sculpted High-Tessellation Custom Shaped Cube Body */}
-        <RoundedBox
-          args={cubeConfig.args}
-          radius={cubeConfig.radius}
-          smoothness={cubeConfig.smoothness}
-        >
-          <meshStandardMaterial
-            color={skin.bodyColor}
-            metalness={skin.metalness}
-            roughness={skin.roughness}
-          />
-        </RoundedBox>
+      <group>
+        {/* Dock Floor Impact FX: Molten Burn Ring or Cryo Spiderweb Freeze Ring */}
+        {skinId === 'magma-inferno' && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.56, 0]}>
+            <ringGeometry args={[0.42, 0.68, 32]} />
+            <meshBasicMaterial color="#ea580c" transparent opacity={0.5} side={THREE.DoubleSide} />
+          </mesh>
+        )}
+        {skinId === 'cryo-glacial' && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.56, 0]}>
+            <ringGeometry args={[0.45, 0.72, 32]} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.45} side={THREE.DoubleSide} />
+          </mesh>
+        )}
 
-        {/* Engraved High-Contrast 3D Pips + Metallic Bevel Rims on all 6 faces */}
-        {DICE_FACE_PIPS.map((face, fIdx) => {
-          const isAce = face.faceValue === 1;
-          const isClassicAce = skinId === 'classic-white' && isAce;
-          const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
-          const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
-          const pipGeo = getDicePipGeometry(face.faceValue, skinId, skin.pipShape);
+        <group ref={visualGroupRef}>
+          {/* Custom Shaped Die Body: Physical Refractive Ice for Cryo, Basalt for Magma */}
+          <RoundedBox
+            args={cubeConfig.args}
+            radius={cubeConfig.radius}
+            smoothness={cubeConfig.smoothness}
+          >
+            {skinId === 'cryo-glacial' ? (
+              <meshPhysicalMaterial
+                color={skin.bodyColor}
+                roughness={0.14}
+                metalness={0.05}
+                transmission={0.92}
+                thickness={1.8}
+                ior={1.31}
+                attenuationColor="#38bdf8"
+                attenuationDistance={0.75}
+                clearcoat={0.9}
+                clearcoatRoughness={0.08}
+                transparent
+              />
+            ) : skinId === 'magma-inferno' ? (
+              <meshStandardMaterial
+                color={skin.bodyColor}
+                metalness={skin.metalness}
+                roughness={skin.roughness}
+                emissive="#7c2d12"
+                emissiveIntensity={0.25}
+              />
+            ) : (
+              <meshStandardMaterial
+                color={skin.bodyColor}
+                metalness={skin.metalness}
+                roughness={skin.roughness}
+              />
+            )}
+          </RoundedBox>
 
-          return (
-            <group
-              key={fIdx}
-              position={face.normal}
-              rotation={face.rotation}
-            >
-              {face.pips.map(([px, py], pIdx) => (
-                <group key={pIdx} position={[px, py, 0]}>
-                  {/* High-Contrast Visible 3D Pip */}
-                  <mesh
-                    geometry={pipGeo}
-                    position={[0, 0, 0.003]}
-                    rotation={
-                      skin.pipShape === 'digital-square'
-                        ? [0, 0, 0]
-                        : [Math.PI / 2, 0, 0]
-                    }
-                  >
-                    <meshStandardMaterial
-                      color={pipColor}
-                      roughness={0.2}
-                      metalness={0.15}
-                      emissive={isClassicAce ? '#7f1d1d' : pbr.pipEmissive}
-                      emissiveIntensity={
-                        isClassicAce ? 0.35 : Math.min(1.0, pbr.pipEmissiveIntensity)
+          {/* Dynamic Magma Boiling Bubbles & Oozing Beads */}
+          {skinId === 'magma-inferno' && <DynamicMagmaFX />}
+
+          {/* Dynamic Glacial Frostbite Shards & Sublimation Mist */}
+          {skinId === 'cryo-glacial' && <DynamicCryoFX />}
+
+          {/* Engraved High-Contrast 3D Pips + Metallic Bevel Rims on all 6 faces */}
+          {DICE_FACE_PIPS.map((face, fIdx) => {
+            const isAce = face.faceValue === 1;
+            const isClassicAce = skinId === 'classic-white' && isAce;
+            const pipColor = isClassicAce ? '#dc2626' : skin.pipColor;
+            const rimColor = isClassicAce ? '#fbbf24' : pbr.rimColor;
+            const pipGeo = getDicePipGeometry(face.faceValue, skinId, skin.pipShape);
+
+            return (
+              <group
+                key={fIdx}
+                position={face.normal}
+                rotation={face.rotation}
+              >
+                {face.pips.map(([px, py], pIdx) => (
+                  <group key={pIdx} position={[px, py, 0]}>
+                    <mesh
+                      geometry={pipGeo}
+                      position={[0, 0, 0.003]}
+                      rotation={
+                        skin.pipShape === 'digital-square'
+                          ? [0, 0, 0]
+                          : [Math.PI / 2, 0, 0]
                       }
-                    />
-                  </mesh>
-                  {/* Fine Metallic / Luminous Bevel Rim Around Pip */}
-                  <mesh
-                    geometry={
-                      isClassicAce
-                        ? SHARED_DICE_GEO.pipAceRim
-                        : SHARED_DICE_GEO.pipRim
-                    }
-                    position={[0, 0, 0.007]}
-                  >
-                    <meshStandardMaterial
-                      color={rimColor}
-                      metalness={0.85}
-                      roughness={0.15}
-                      side={THREE.DoubleSide}
-                    />
-                  </mesh>
-                </group>
-              ))}
-            </group>
-          );
-        })}
+                    >
+                      <meshStandardMaterial
+                        color={pipColor}
+                        roughness={0.2}
+                        metalness={0.15}
+                        emissive={isClassicAce ? '#7f1d1d' : pbr.pipEmissive}
+                        emissiveIntensity={
+                          isClassicAce ? 0.35 : Math.min(2.5, pbr.pipEmissiveIntensity)
+                        }
+                      />
+                    </mesh>
+                    <mesh
+                      geometry={
+                        isClassicAce
+                          ? SHARED_DICE_GEO.pipAceRim
+                          : SHARED_DICE_GEO.pipRim
+                      }
+                      position={[0, 0, 0.007]}
+                    >
+                      <meshStandardMaterial
+                        color={rimColor}
+                        metalness={0.85}
+                        roughness={0.15}
+                        side={THREE.DoubleSide}
+                      />
+                    </mesh>
+                  </group>
+                ))}
+              </group>
+            );
+          })}
+        </group>
       </group>
     );
   }

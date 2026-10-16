@@ -47,6 +47,8 @@ export const StasisRock3D: React.FC<StasisRock3DProps> = React.memo(
     const rootRef = useRef<THREE.Group>(null);
     const ringRef = useRef<THREE.Group>(null);
     const subRingRef = useRef<THREE.Group>(null);
+    const orbitGroupRef = useRef<THREE.Group>(null);
+    const crystalRef = useRef<THREE.Mesh>(null);
     const beamRef = useRef<THREE.Mesh>(null);
     const fissureMatCyanRef = useRef<THREE.MeshBasicMaterial>(null);
     const fissureMatMagentaRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -101,6 +103,19 @@ export const StasisRock3D: React.FC<StasisRock3DProps> = React.memo(
       if (subRingRef.current) {
         subRingRef.current.rotation.y = -t * 1.8;
         subRingRef.current.rotation.z = Math.sin(t * 1.5) * 0.12;
+      }
+
+      // Gravitational orbital revolution of 3 micro debris rocks
+      if (orbitGroupRef.current) {
+        orbitGroupRef.current.rotation.y = t * 1.5;
+        orbitGroupRef.current.rotation.x = Math.sin(t * 0.8) * 0.15;
+      }
+
+      // Alien Starlight Crystal Core levitation & rotation
+      if (crystalRef.current) {
+        crystalRef.current.rotation.y = t * 0.9;
+        crystalRef.current.rotation.z = Math.sin(t * 1.2) * 0.2;
+        crystalRef.current.position.y = 0.32 + Math.sin(t * 2.5) * 0.035;
       }
 
       // Pulsing neon fissures
@@ -206,7 +221,57 @@ export const StasisRock3D: React.FC<StasisRock3DProps> = React.memo(
         </group>
 
         {/* ============================================================ */}
-        {/* 4. QUANTUM STASIS CYLINDER BEAM                             */}
+        {/* 4. ALIEN STARLIGHT CRYSTAL CORE (Pulsing Geode Energy)       */}
+        {/* ============================================================ */}
+        <mesh
+          ref={crystalRef}
+          geometry={POWER_GEO.crystalCore}
+          position={[0, 0.32, 0]}
+          castShadow
+        >
+          <meshPhysicalMaterial
+            color="#a855f7"
+            emissive="#c084fc"
+            emissiveIntensity={2.2}
+            roughness={0.12}
+            metalness={0.1}
+            transmission={0.82}
+            thickness={1.2}
+            ior={1.6}
+            clearcoat={1.0}
+          />
+        </mesh>
+
+        {/* ============================================================ */}
+        {/* 5. 3 ORBITING CELESTIAL DEBRIS ROCKS (Gravitational Anomaly) */}
+        {/* ============================================================ */}
+        <group ref={orbitGroupRef} position={[0, 0.30, 0]}>
+          {[
+            { angle: 0, r: 0.46, y: 0.05, rot: [0.4, 0.2, 0.6], s: 0.8 },
+            { angle: (Math.PI * 2) / 3, r: 0.50, y: -0.06, rot: [-0.3, 0.8, -0.2], s: 0.95 },
+            { angle: (Math.PI * 4) / 3, r: 0.44, y: 0.08, rot: [0.5, -0.4, 0.3], s: 0.7 },
+          ].map((deb, dIdx) => (
+            <mesh
+              key={dIdx}
+              geometry={POWER_GEO.chunkSmall}
+              position={[Math.cos(deb.angle) * deb.r, deb.y, Math.sin(deb.angle) * deb.r]}
+              rotation={deb.rot as [number, number, number]}
+              scale={deb.s}
+              castShadow
+            >
+              <meshPhysicalMaterial
+                color="#030712"
+                roughness={0.24}
+                metalness={0.5}
+                clearcoat={0.9}
+                clearcoatRoughness={0.1}
+              />
+            </mesh>
+          ))}
+        </group>
+
+        {/* ============================================================ */}
+        {/* 6. QUANTUM STASIS CYLINDER BEAM                             */}
         {/* ============================================================ */}
         <mesh
           ref={beamRef}
@@ -224,7 +289,7 @@ export const StasisRock3D: React.FC<StasisRock3DProps> = React.memo(
         </mesh>
 
         {/* ============================================================ */}
-        {/* 5. FLOATING MAGNETIC CONTAINMENT RING                        */}
+        {/* 7. FLOATING MAGNETIC CONTAINMENT RING                        */}
         {/* ============================================================ */}
         <group ref={ringRef} position={[0, 0.54, 0]}>
           {/* Main Magnetic Outer Torus */}

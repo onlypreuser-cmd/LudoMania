@@ -26,7 +26,9 @@ export type DiceSkinId =
   | 'ruby-blaze'
   | 'cyber-neon'
   | 'emerald-jade'
-  | 'obsidian-galaxy';
+  | 'obsidian-galaxy'
+  | 'magma-inferno'
+  | 'cryo-glacial';
 
 export type BoardThemeId =
   | 'classic-kingdom'

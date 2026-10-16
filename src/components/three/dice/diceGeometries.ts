@@ -185,8 +185,8 @@ export function getDiceCubeConfig(shapeType: string) {
 export function getDicePipGeometry(faceVal: number, skinId: DiceSkinId, pipShape?: string): THREE.BufferGeometry {
   if (faceVal === 1) {
     if (skinId === 'classic-white') return SHARED_DICE_GEO.crownAce;
-    if (skinId === 'royal-gold') return SHARED_DICE_GEO.starPip;
-    if (skinId === 'ruby-blaze') return SHARED_DICE_GEO.diamondPip;
+    if (skinId === 'royal-gold' || skinId === 'magma-inferno') return SHARED_DICE_GEO.starPip;
+    if (skinId === 'ruby-blaze' || skinId === 'cryo-glacial') return SHARED_DICE_GEO.diamondPip;
     if (skinId === 'cyber-neon') return SHARED_DICE_GEO.squarePip;
     if (skinId === 'emerald-jade') return SHARED_DICE_GEO.lotusPip;
     if (skinId === 'obsidian-galaxy') return SHARED_DICE_GEO.runePip;

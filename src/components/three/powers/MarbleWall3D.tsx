@@ -255,44 +255,45 @@ export const MarbleWall3D: React.FC<MarbleWall3DProps> = React.memo(
         ))}
 
         {/* ============================================================ */}
-        {/* 3. ARCHITECTURAL BALUSTRADE & STONE SPAN                      */}
+        {/* 3. ARCHITECTURAL CRENELATED FORTRESS BATTLEMENT & STONE SPAN  */}
         {/* ============================================================ */}
-        <group position={[0, 0.1, 0]}>
-          {/* Lower Balustrade Sill Rail */}
+        <group position={[0, 0.1, -0.11]}>
+          {/* Monolithic Carrara Marble Crenelated Fortress Battlement */}
           <mesh
-            geometry={POWER_GEO.unitBox}
-            position={[0, 0.025, 0]}
-            scale={[0.48, 0.045, 0.16]}
+            geometry={POWER_GEO.crenelatedWall}
+            position={[0, 0.02, 0]}
             castShadow
-          >
-            <meshPhysicalMaterial
-              color="#f1f5f9"
-              roughness={0.25}
-              clearcoat={0.65}
-            />
-          </mesh>
-
-          {/* Central Carved Relief Block */}
-          <mesh
-            geometry={POWER_GEO.unitBox}
-            position={[0, 0.22, 0]}
-            scale={[0.26, 0.34, 0.13]}
-            castShadow
+            receiveShadow
           >
             <meshPhysicalMaterial
               color="#f8fafc"
               roughness={0.22}
+              metalness={0.04}
               clearcoat={0.75}
+              clearcoatRoughness={0.12}
             />
           </mesh>
 
-          {/* Flanking Carved Balusters (Left & Right of Relief Block) */}
-          {[-0.19, 0.19].map((bX, bIdx) => (
+          {/* Gold Decorative Frieze Trim along the Merlon Crest Base */}
+          <mesh
+            geometry={POWER_GEO.unitBox}
+            position={[0, 0.44, 0.11]}
+            scale={[0.70, 0.016, 0.22]}
+          >
+            <meshStandardMaterial
+              color={effectiveColor}
+              metalness={0.9}
+              roughness={0.15}
+            />
+          </mesh>
+
+          {/* Flanking Carved Balusters embedded in the wall face */}
+          {[-0.20, 0.20].map((bX, bIdx) => (
             <mesh
               key={bIdx}
               geometry={POWER_GEO.balusterLathe}
-              position={[bX, 0.05, 0]}
-              scale={[1, 0.85, 1]}
+              position={[bX, 0.04, 0.11]}
+              scale={[0.85, 0.8, 0.85]}
               castShadow
             >
               <meshPhysicalMaterial
@@ -302,89 +303,67 @@ export const MarbleWall3D: React.FC<MarbleWall3DProps> = React.memo(
               />
             </mesh>
           ))}
-
-          {/* Top Coping Rail with Beveled Profile */}
-          <mesh
-            geometry={POWER_GEO.unitBox}
-            position={[0, 0.42, 0]}
-            scale={[0.50, 0.055, 0.18]}
-            castShadow
-          >
-            <meshPhysicalMaterial
-              color="#f8fafc"
-              roughness={0.18}
-              clearcoat={0.85}
-              clearcoatRoughness={0.1}
-            />
-          </mesh>
-          <mesh
-            geometry={POWER_GEO.unitBox}
-            position={[0, 0.39, 0]}
-            scale={[0.49, 0.012, 0.17]}
-          >
-            <meshStandardMaterial
-              color={effectiveColor}
-              metalness={0.88}
-              roughness={0.18}
-            />
-          </mesh>
         </group>
 
         {/* ============================================================ */}
-        {/* 4. ROSE-GOLD / BRONZE LAUREL FILIGREE CENTERPIECE             */}
+        {/* 4. ROSE-GOLD / GILDED LAUREL WREATH & LION CREST MEDALLION    */}
         {/* ============================================================ */}
-        <group position={[0, 0.32, 0.07]}>
+        <group position={[0, 0.30, 0.04]}>
           {/* Front Laurel Medallion */}
           <mesh
             geometry={POWER_GEO.laurelWreath}
             position={[0, 0, 0]}
-            scale={0.9}
+            scale={1.05}
             castShadow
           >
             <meshStandardMaterial
               color={effectiveColor}
-              metalness={0.9}
-              roughness={0.16}
+              metalness={0.92}
+              roughness={0.14}
             />
           </mesh>
 
-          {/* Central Imperial Roman Medallion Stud */}
+          {/* Centered Embossed Golden Lion Relief on Front */}
           <mesh
-            geometry={POWER_GEO.unitSphere}
-            position={[0, 0, 0.012]}
-            scale={[0.042, 0.042, 0.02]}
-          >
-            <meshPhysicalMaterial
-              color="#ffe4e6"
-              metalness={0.7}
-              roughness={0.2}
-              clearcoat={0.9}
-            />
-          </mesh>
-          <mesh
-            geometry={POWER_GEO.thinTorus}
+            geometry={POWER_GEO.lionEmblem}
             position={[0, 0, 0.015]}
-            scale={0.045}
+            scale={0.58}
+            castShadow
           >
             <meshStandardMaterial
-              color={effectiveColor}
-              metalness={0.92}
-              roughness={0.12}
+              color="#fbbf24"
+              metalness={0.95}
+              roughness={0.1}
             />
           </mesh>
 
           {/* Back Laurel Medallion (Double-Sided Wall for 360 Viewing) */}
           <mesh
             geometry={POWER_GEO.laurelWreath}
-            position={[0, 0, -0.14]}
+            position={[0, 0, -0.08]}
             rotation={[0, Math.PI, 0]}
-            scale={0.9}
+            scale={1.05}
             castShadow
           >
             <meshStandardMaterial
               color={effectiveColor}
-              metalness={0.9}
-              roughness={0.16}
+              metalness={0.92}
+              roughness={0.14}
+            />
+          </mesh>
+
+          {/* Centered Embossed Golden Lion Relief on Back */}
+          <mesh
+            geometry={POWER_GEO.lionEmblem}
+            position={[0, 0, -0.095]}
+            rotation={[0, Math.PI, 0]}
+            scale={0.58}
+            castShadow
+          >
+            <meshStandardMaterial
+              color="#fbbf24"
+              metalness={0.95}
+              roughness={0.1}
             />
           </mesh>
         </group>

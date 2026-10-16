@@ -246,14 +246,14 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
           </group>
 
           {/* ============================================================ */}
-          {/* 3. TORSO & CUIRASS (Teakwood Inlay & Gilded Plate)           */}
+          {/* 3. TORSO & CUIRASS (Master Lathe-Sculpted Plate & Plated Gorget) */}
           {/* ============================================================ */}
-          <group position={[0, 0.29, 0]}>
-            {/* Armored Faulds / Tassets (Hanging Skirt Plates) */}
+          <group position={[0, 0.28, 0]}>
+            {/* Hanging Faulds / Tassets (Hanging Skirt Plates) */}
             <mesh
               geometry={POWER_GEO.unitCylinder}
-              position={[0, -0.04, 0]}
-              scale={[0.16, 0.06, 0.13]}
+              position={[0, -0.05, 0]}
+              scale={[0.16, 0.05, 0.13]}
               castShadow
             >
               <meshPhysicalMaterial
@@ -264,34 +264,33 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
             </mesh>
             <mesh
               geometry={POWER_GEO.thinTorus}
-              position={[0, -0.015, 0]}
+              position={[0, -0.025, 0]}
               rotation={[Math.PI / 2, 0, 0]}
               scale={[0.165, 0.135, 0.1]}
             >
               <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.15} />
             </mesh>
 
-            {/* Main Chest Cuirass (Chiseled Muscular Torso) */}
+            {/* Master-Crafted Lathe-Sculpted Organic Cuirass */}
             <mesh
-              geometry={POWER_GEO.unitSphere}
-              position={[0, 0.06, 0]}
-              scale={[0.17, 0.14, 0.13]}
+              geometry={POWER_GEO.cuirassLathe}
+              position={[0, 0.03, 0]}
               castShadow
             >
               <meshPhysicalMaterial
-                color="#475569"
+                color="#334155"
                 metalness={0.9}
-                roughness={0.2}
+                roughness={0.18}
                 clearcoat={0.95}
-                clearcoatRoughness={0.08}
+                clearcoatRoughness={0.06}
               />
             </mesh>
 
-            {/* Rich Polished Teakwood Inset Front Plate */}
+            {/* Polished Burma Teakwood Inset Pectoral Medallion */}
             <mesh
               geometry={POWER_GEO.unitSphere}
-              position={[0, 0.065, 0.035]}
-              scale={[0.12, 0.11, 0.105]}
+              position={[0, 0.06, 0.045]}
+              scale={[0.12, 0.10, 0.09]}
             >
               <meshPhysicalMaterial
                 color="#5c2e0b"
@@ -301,49 +300,50 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
               />
             </mesh>
 
-            {/* Embossed Golden Heraldic Lion Crest on Breastplate */}
+            {/* Embossed Golden Heraldic Lion Crest Centered on Breastplate */}
             <mesh
               geometry={POWER_GEO.lionEmblem}
-              position={[0, 0.065, 0.125]}
-              scale={0.52}
+              position={[0, 0.065, 0.132]}
+              scale={0.55}
               castShadow
             >
               <meshStandardMaterial
                 color="#fbbf24"
-                metalness={0.95}
-                roughness={0.12}
+                metalness={0.96}
+                roughness={0.1}
               />
             </mesh>
 
-            {/* Gorget Neck Collar */}
+            {/* Gilded Gorget Neck Collar */}
             <mesh
-              geometry={POWER_GEO.unitCylinder}
-              position={[0, 0.15, 0]}
-              scale={[0.09, 0.045, 0.09]}
+              geometry={POWER_GEO.thinTorus}
+              position={[0, 0.22, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={0.13}
             >
-              <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.15} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.12} />
             </mesh>
           </group>
 
           {/* ============================================================ */}
-          {/* 4. PAULDRONS (Curved Shoulder Armor Plates)                  */}
+          {/* 4. PAULDRONS (Curved Sculpted Shoulder Armor Plates)         */}
           {/* ============================================================ */}
           {[-0.19, 0.19].map((pX, pIdx) => (
             <group
               key={pIdx}
               position={[pX, 0.36, 0]}
-              rotation={[0, 0, pIdx === 0 ? 0.28 : -0.28]}
+              rotation={[0, 0, pIdx === 0 ? 0.32 : -0.32]}
             >
               <mesh
-                geometry={POWER_GEO.unitSphere}
+                geometry={POWER_GEO.pauldronCurved}
                 position={[0, 0, 0]}
-                scale={[0.085, 0.06, 0.085]}
+                rotation={[0, pIdx === 0 ? Math.PI : 0, 0]}
                 castShadow
               >
                 <meshPhysicalMaterial
                   color="#334155"
-                  metalness={0.88}
-                  roughness={0.22}
+                  metalness={0.92}
+                  roughness={0.18}
                   clearcoat={0.9}
                 />
               </mesh>
@@ -351,9 +351,9 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
                 geometry={POWER_GEO.thinTorus}
                 position={[0, -0.015, 0]}
                 rotation={[Math.PI / 2, 0, 0]}
-                scale={0.085}
+                scale={0.088}
               >
-                <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.15} />
+                <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.1} />
               </mesh>
               <mesh
                 geometry={POWER_GEO.unitSphere}
@@ -371,100 +371,66 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
           ))}
 
           {/* ============================================================ */}
-          {/* 5. HEAD & HELMET (Metallic Bascinet, Visor Slit & Plume)    */}
+          {/* 5. HEAD & HELMET (Monolithic Lathe Barbute & Royal Plume)    */}
           {/* ============================================================ */}
-          <group position={[0, 0.52, 0]}>
-            {/* Knight Helmet Skull Dome */}
+          <group position={[0, 0.53, 0]}>
+            {/* Sculpted Barbute Helm Geometry */}
             <mesh
-              geometry={POWER_GEO.unitSphere}
+              geometry={POWER_GEO.barbuteHelm}
               position={[0, 0, 0]}
-              scale={[0.175, 0.185, 0.18]}
               castShadow
             >
               <meshPhysicalMaterial
                 color="#334155"
-                metalness={0.9}
-                roughness={0.2}
+                metalness={0.92}
+                roughness={0.18}
                 clearcoat={0.95}
-                clearcoatRoughness={0.08}
+                clearcoatRoughness={0.06}
               />
             </mesh>
 
-            {/* Side Cheek Guards (Flanking Lower Face) */}
-            {[-0.14, 0.14].map((cgX, cgIdx) => (
-              <mesh
-                key={cgIdx}
-                geometry={POWER_GEO.unitBox}
-                position={[cgX, -0.04, 0.04]}
-                rotation={[0, cgIdx === 0 ? -0.22 : 0.22, 0]}
-                scale={[0.024, 0.11, 0.11]}
-                castShadow
-              >
-                <meshPhysicalMaterial
-                  color="#1e293b"
-                  metalness={0.9}
-                  roughness={0.22}
-                  clearcoat={0.85}
-                />
-              </mesh>
-            ))}
-
-            {/* Chin Bevor (Lower Jaw Guard) */}
+            {/* Forehead Brow Band (Gilded Helm Ridge) */}
             <mesh
-              geometry={POWER_GEO.unitBox}
-              position={[0, -0.08, 0.11]}
-              scale={[0.13, 0.05, 0.06]}
-              castShadow
+              geometry={POWER_GEO.thinTorus}
+              position={[0, 0.045, 0.02]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={[0.175, 0.175, 0.1]}
             >
-              <meshPhysicalMaterial
-                color="#475569"
-                metalness={0.88}
-                roughness={0.22}
-                clearcoat={0.9}
-              />
+              <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.12} />
             </mesh>
 
-            {/* Forehead Brow Band (Golden Visor Brow) */}
+            {/* Glowing Golden Visor Slit (Mysterious Champion Gaze) */}
             <mesh
               geometry={POWER_GEO.unitBox}
-              position={[0, 0.045, 0.14]}
-              scale={[0.17, 0.028, 0.05]}
-            >
-              <meshStandardMaterial color="#fbbf24" metalness={0.92} roughness={0.15} />
-            </mesh>
-
-            {/* Glowing Golden Visor Slit */}
-            <mesh
-              geometry={POWER_GEO.unitBox}
-              position={[0, 0.015, 0.165]}
-              scale={[0.145, 0.022, 0.012]}
+              position={[0, 0.02, 0.166]}
+              scale={[0.13, 0.022, 0.015]}
             >
               <meshBasicMaterial color="#fef08a" />
             </mesh>
 
-            {/* Visor Slit Frame Divider */}
+            {/* Visor Slit Center Divider */}
             <mesh
               geometry={POWER_GEO.unitBox}
-              position={[0, 0.015, 0.17]}
+              position={[0, 0.02, 0.172]}
               scale={[0.015, 0.026, 0.01]}
             >
-              <meshStandardMaterial color="#b45309" metalness={0.8} roughness={0.2} />
+              <meshStandardMaterial color="#b45309" metalness={0.85} roughness={0.2} />
             </mesh>
 
-            {/* Golden Plume Socket on Crown */}
+            {/* Golden Plume Socket on Helmet Crown */}
             <mesh
               geometry={POWER_GEO.unitCylinder}
-              position={[0, 0.175, 0.02]}
-              scale={[0.04, 0.04, 0.04]}
+              position={[0, 0.22, 0.01]}
+              scale={[0.038, 0.035, 0.038]}
             >
-              <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.1} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.96} roughness={0.08} />
             </mesh>
 
-            {/* Sweeping Majestic Royal Plume Crest */}
+            {/* Sweeping Majestic Royal Plume Crest with Organic Sway */}
             <mesh
               ref={plumeRef}
               geometry={POWER_GEO.plumeCrest}
-              position={[0, 0.18, 0.02]}
+              position={[0, 0.22, 0.01]}
               castShadow
             >
               <meshPhysicalMaterial
@@ -473,45 +439,50 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
                 sheen={1.0}
                 sheenRoughness={0.4}
                 sheenColor="#fde047"
-                clearcoat={0.2}
+                clearcoat={0.25}
               />
             </mesh>
           </group>
 
           {/* ============================================================ */}
-          {/* 6. LEFT ARM & TOWER SHIELD (Royal Teakwood Shield)           */}
+          {/* 6. LEFT ARM & TOWER SHIELD (Firmly Planted on Plinth)        */}
           {/* ============================================================ */}
-          <group position={[-0.24, 0.36, 0.12]} rotation={[0.08, 0.32, -0.05]}>
-            {/* Left Gauntlet Arm */}
+          <group position={[-0.22, 0.28, 0.15]} rotation={[0.04, 0.28, -0.04]}>
+            {/* Armored Left Gauntlet Gripping Shield Bracket */}
             <mesh
-              geometry={POWER_GEO.unitCylinder}
-              position={[0.06, 0.02, -0.08]}
-              rotation={[0.3, 0.2, 0.4]}
-              scale={[0.045, 0.16, 0.045]}
+              geometry={POWER_GEO.unitSphere}
+              position={[0.08, 0.04, -0.08]}
+              scale={[0.05, 0.055, 0.05]}
               castShadow
             >
               <meshPhysicalMaterial
                 color="#334155"
-                metalness={0.88}
-                roughness={0.22}
+                metalness={0.9}
+                roughness={0.2}
                 clearcoat={0.85}
               />
             </mesh>
 
-            {/* Tower Shield Outer Body & Golden Rim */}
-            <mesh geometry={POWER_GEO.towerShield} castShadow receiveShadow>
+            {/* Firmly Planted Tower Shield (Touches Base at y=-0.20) */}
+            <mesh
+              geometry={POWER_GEO.towerShield}
+              position={[0, 0, 0]}
+              scale={[1.05, 1.05, 1.05]}
+              castShadow
+              receiveShadow
+            >
               <meshStandardMaterial
                 color="#fbbf24"
-                metalness={0.94}
-                roughness={0.14}
+                metalness={0.95}
+                roughness={0.12}
               />
             </mesh>
 
-            {/* Shield Face: Burma Teakwood / Team Color Lacquer */}
+            {/* Shield Face: Burma Teakwood / Team Color Lacquer Inlay */}
             <mesh
               geometry={POWER_GEO.towerShield}
-              position={[0, 0, 0.008]}
-              scale={[0.91, 0.91, 0.9]}
+              position={[0, 0, 0.009]}
+              scale={[0.94, 0.94, 0.92]}
             >
               <meshPhysicalMaterial
                 color={shieldInlayColor}
@@ -521,30 +492,30 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
               />
             </mesh>
 
-            {/* Brass Studs Along Shield Perimeter */}
+            {/* Perimeter Brass Rivets */}
             {[
-              [-0.13, 0.16],
-              [0.13, 0.16],
-              [-0.11, -0.04],
-              [0.11, -0.04],
-              [0, 0.27],
-              [0, -0.26],
+              [-0.14, 0.18],
+              [0.14, 0.18],
+              [-0.12, -0.06],
+              [0.12, -0.06],
+              [0, 0.30],
+              [0, -0.28],
             ].map(([sX, sY], sIdx) => (
               <mesh
                 key={sIdx}
                 geometry={POWER_GEO.unitSphere}
-                position={[sX, sY, 0.042]}
+                position={[sX, sY, 0.046]}
                 scale={0.014}
               >
                 <meshStandardMaterial color="#fde047" metalness={0.95} roughness={0.1} />
               </mesh>
             ))}
 
-            {/* Embossed Golden Heraldic Teakwood Lion Centerpiece */}
+            {/* Embossed Golden Heraldic Lion Centerpiece */}
             <mesh
               geometry={POWER_GEO.lionEmblem}
-              position={[0, 0.02, 0.038]}
-              scale={0.95}
+              position={[0, 0.02, 0.042]}
+              scale={1.02}
               castShadow
             >
               <meshStandardMaterial
@@ -554,15 +525,15 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
               />
             </mesh>
 
-            {/* REACTIVE STATE: Battle Fracture Decal & Pulsing Sparks (hitsRemaining === 1) */}
+            {/* REACTIVE STATE: Battle Fracture Decal & Pulsing Emissive Sparks (hitsRemaining === 1) */}
             {isDamaged && (
-              <group position={[0, 0, 0.045]}>
+              <group position={[0, 0, 0.048]}>
                 <mesh
                   ref={sparkDecalRef}
                   geometry={POWER_GEO.jaggedFracture}
                   position={[0.02, 0.02, 0]}
                   rotation={[0, 0, -0.15]}
-                  scale={[1.1, 1.1, 1]}
+                  scale={[1.15, 1.15, 1]}
                 >
                   <meshBasicMaterial
                     color="#ff4400"
@@ -573,22 +544,22 @@ export const RoyalGuard3DModel: React.FC<RoyalGuard3DModelProps> = React.memo(
                 <mesh
                   geometry={POWER_GEO.unitSphere}
                   position={[0.03, 0.04, 0.01]}
-                  scale={0.022}
+                  scale={0.024}
                 >
                   <meshBasicMaterial color="#ffea00" />
                 </mesh>
                 <mesh
                   geometry={POWER_GEO.unitSphere}
                   position={[0.01, -0.08, 0.01]}
-                  scale={0.018}
+                  scale={0.020}
                 >
                   <meshBasicMaterial color="#ff6600" />
                 </mesh>
               </group>
             )}
 
-            {/* Fortitude Durability Indicator (2 Hearts vs 1 Heart) */}
-            <group position={[0, 0.38, 0.04]}>
+            {/* Fortitude Durability Indicator (2 Orbs vs 1 Orb) */}
+            <group position={[0, 0.40, 0.04]}>
               <mesh
                 geometry={POWER_GEO.unitSphere}
                 position={[-0.045, 0, 0]}

@@ -49,6 +49,8 @@ export const ALL_DICE_SKINS: DiceSkinId[] = [
   'cyber-neon',
   'emerald-jade',
   'obsidian-galaxy',
+  'magma-inferno',
+  'cryo-glacial',
 ];
 
 export const ALL_BOARD_THEMES: BoardThemeId[] = [
