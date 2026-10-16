@@ -82,6 +82,10 @@ export function useGameSessionSync() {
     capturedPlayerFlags,
     consecutiveSixes,
     biasState,
+    boardPowers,
+    canPlaceMarbleWall,
+    canDeployGuard,
+    canLaunchAsteroid,
   } = state.context;
 
   // Match victory win recording
@@ -127,6 +131,7 @@ export function useGameSessionSync() {
           consecutiveSixes,
           captureBonusPoints,
           capturedPlayerFlags,
+          boardPowers,
           _e: biasState,
           turnNumber,
           statusMessage,
@@ -150,6 +155,7 @@ export function useGameSessionSync() {
     savedGameSession?.id,
     consecutiveSixes,
     biasState,
+    boardPowers,
   ]);
 
   // Update gameStartedRef when game progresses, reset on game over
@@ -245,6 +251,19 @@ export function useGameSessionSync() {
     };
   }, [isGameOver]);
 
+  // Tactical Powers: Tick active Cyber Stasis timers every 1s
+  useEffect(() => {
+    if (isGameOver) return;
+    const hasActiveStasis = boardPowers.stasis.length > 0;
+    if (!hasActiveStasis) return;
+
+    const intervalId = setInterval(() => {
+      send({ type: 'TICK_STASIS_TIMERS', currentTime: Date.now() });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isGameOver, boardPowers.stasis.length, send]);
+
   const handleRestartMatch = useCallback(() => {
     soundManager.play('ui_click');
     clearSavedGameSession();
@@ -271,6 +290,38 @@ export function useGameSessionSync() {
   const handleMoveAnimationComplete = useCallback(() => {
     send({ type: 'ANIMATION_COMPLETE' });
   }, [send]);
+
+  const handleDeployMarbleWall = useCallback(
+    (tileIndex: number) => {
+      soundManager.play('ui_click');
+      send({ type: 'DEPLOY_MARBLE_WALL', tileIndex });
+    },
+    [send]
+  );
+
+  const handleDeployRoyalGuard = useCallback(
+    (pawnId: string) => {
+      soundManager.play('ui_click');
+      send({ type: 'DEPLOY_ROYAL_GUARD', pawnId });
+    },
+    [send]
+  );
+
+  const handleLaunchCyberAsteroid = useCallback(
+    (targetPawnId: string) => {
+      soundManager.play('ui_click');
+      send({ type: 'LAUNCH_CYBER_ASTEROID', targetPawnId });
+    },
+    [send]
+  );
+
+  const handleBreakStasisWithSix = useCallback(
+    (pawnId: string) => {
+      soundManager.play('ui_click');
+      send({ type: 'BREAK_STASIS_WITH_SIX', pawnId });
+    },
+    [send]
+  );
 
   // Live scores calculation
   const playerScores = useMemo(
@@ -322,6 +373,14 @@ export function useGameSessionSync() {
     handleRollSettled,
     handleSelectPawn,
     handleMoveAnimationComplete,
+    boardPowers,
+    canPlaceMarbleWall,
+    canDeployGuard,
+    canLaunchAsteroid,
+    handleDeployMarbleWall,
+    handleDeployRoyalGuard,
+    handleLaunchCyberAsteroid,
+    handleBreakStasisWithSix,
     send,
   };
 }

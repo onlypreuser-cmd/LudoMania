@@ -7,16 +7,22 @@ import {
   BOARD_THEMES,
   COLOR_PALETTE,
   getPawnGridCoord,
+  MAIN_TRACK_COORDS,
 } from '../../engine/boardConfig';
 import {
+  BoardPowersState,
   BoardThemeId,
   MoveEvaluation,
   Pawn,
+  PlayerColor,
   PlayerConfig,
 } from '../../types/game';
 import { StudioEnvironment } from '../three/StudioEnvironment';
 import { ThematicBoard3D } from '../three/ThematicBoard3D';
 import { StepEffects3D } from '../three/StepEffects3D';
+import { MarbleWall3D } from '../three/powers/MarbleWall3D';
+import { RoyalGuard3DModel } from '../three/powers/RoyalGuard3DModel';
+import { StasisRock3D } from '../three/powers/StasisRock3D';
 import {
   AutoZoomOrthographicController,
   BOARD_CAM_Y,
@@ -35,8 +41,13 @@ interface LudoBoard3DProps {
   activeMove: MoveEvaluation | null;
   boardTheme: BoardThemeId;
   actionCameraEnabled?: boolean;
+  boardPowers?: BoardPowersState;
+  targetingMode?: 'wall' | 'guard' | 'asteroid' | null;
+  currentPlayerColor?: PlayerColor;
   onSelectPawn: (pawnId: string) => void;
   onMoveAnimationComplete: () => void;
+  onSelectTrackTile?: (tileIndex: number) => void;
+  onSelectTargetPawn?: (pawnId: string) => void;
 }
 
 export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
@@ -47,8 +58,13 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
     activeMove,
     boardTheme,
     actionCameraEnabled: _actionCameraEnabled,
+    boardPowers,
+    targetingMode,
+    currentPlayerColor,
     onSelectPawn,
     onMoveAnimationComplete,
+    onSelectTrackTile,
+    onSelectTargetPawn,
   }) => {
     const themeMeta = useMemo(
       () => BOARD_THEMES.find((t) => t.id === boardTheme) ?? BOARD_THEMES[0],
@@ -321,6 +337,39 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                     <AutoZoomOrthographicController />
                     <ThematicBoard3D themeId={boardTheme} />
                     <StepEffects3D />
+
+                    {/* Tactical Board Powers 3D Models */}
+                    {boardPowers?.walls.map((wall) => (
+                      <MarbleWall3D key={wall.id} wall={wall} />
+                    ))}
+
+                    {boardPowers &&
+                      Object.values(boardPowers.guard)
+                        .filter((g) => g.active && g.targetPawnId)
+                        .map((g) => {
+                          const targetPawn = pawns.find((p) => p.id === g.targetPawnId);
+                          if (!targetPawn) return null;
+                          return (
+                            <RoyalGuard3DModel
+                              key={`guard-${g.ownerColor}-${g.targetPawnId}`}
+                              guard={g}
+                              pawn={targetPawn}
+                            />
+                          );
+                        })}
+
+                    {boardPowers?.stasis.map((s) => {
+                      const targetPawn = pawns.find((p) => p.id === s.targetPawnId);
+                      if (!targetPawn) return null;
+                      return (
+                        <StasisRock3D
+                          key={`stasis-${s.targetPawnId}`}
+                          stasis={s}
+                          pawn={targetPawn}
+                        />
+                      );
+                    })}
+
                     {pawns.map((pawn) => {
                       const player = players[pawn.playerIndex] ?? players[0];
                       const g = getPawnGridCoord(
@@ -355,7 +404,7 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
               </div>
 
               {/* Responsive 2D Touch/Click Hit Targets for Legal Movable Pawns */}
-              {legalMoves.length > 0 && !activeMove && (
+              {!targetingMode && legalMoves.length > 0 && !activeMove && (
                 <div className="absolute inset-0 pointer-events-none">
                   {pawns
                     .filter((p) => legalPawnIds.has(p.id))
@@ -385,6 +434,106 @@ export const LudoBoard3D: React.FC<LudoBoard3DProps> = React.memo(
                           className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full cursor-pointer flex items-center justify-center group focus:outline-none"
                         >
                           <span className="w-9 h-9 rounded-full border-2 border-amber-300 bg-amber-400/35 shadow-[0_0_12px_#fbbf24] transition-transform group-hover:scale-110 group-active:scale-95" />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* 2D Interactive Targeting Overlays when Tactical Power is Active */}
+              {targetingMode === 'wall' && (
+                <div className="absolute inset-0 pointer-events-none z-20">
+                  {MAIN_TRACK_COORDS.map((coord, tIdx) => {
+                    const leftPct = ((coord.col + 0.5) / 15) * 100;
+                    const topPct = ((coord.row + 0.5) / 15) * 100;
+                    const hasWall = boardPowers?.walls.some((w) => w.tileIndex === tIdx);
+                    if (hasWall) return null;
+
+                    return (
+                      <button
+                        key={`target-wall-${tIdx}`}
+                        type="button"
+                        onClick={() => {
+                          onSelectTrackTile?.(tIdx);
+                        }}
+                        style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                        title={`Erect Wall at Tile #${tIdx}`}
+                        className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-lg cursor-pointer flex items-center justify-center group focus:outline-none"
+                      >
+                        <span className="w-6 h-6 rounded-md border-2 border-amber-300 bg-amber-400/40 shadow-[0_0_8px_#fbbf24] animate-pulse group-hover:scale-125 transition-transform" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {targetingMode === 'guard' && (
+                <div className="absolute inset-0 pointer-events-none z-20">
+                  {pawns
+                    .filter(
+                      (p) =>
+                        p.color === currentPlayerColor &&
+                        p.step >= 0 &&
+                        p.step < 56
+                    )
+                    .map((pawn) => {
+                      const coord = getPawnGridCoord(
+                        pawn.color,
+                        pawn.step,
+                        pawn.pawnIndex
+                      );
+                      const leftPct = ((coord.col + 0.5) / 15) * 100;
+                      const topPct = ((coord.row + 0.5) / 15) * 100;
+
+                      return (
+                        <button
+                          key={`target-guard-${pawn.id}`}
+                          type="button"
+                          onClick={() => {
+                            onSelectTargetPawn?.(pawn.id);
+                          }}
+                          style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                          title="Deploy Royal Guard to this token"
+                          className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full cursor-pointer flex items-center justify-center group focus:outline-none"
+                        >
+                          <span className="w-10 h-10 rounded-full border-2 border-yellow-300 bg-yellow-400/45 shadow-[0_0_14px_#facc15] animate-bounce" />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+
+              {targetingMode === 'asteroid' && (
+                <div className="absolute inset-0 pointer-events-none z-20">
+                  {pawns
+                    .filter(
+                      (p) =>
+                        p.color !== currentPlayerColor &&
+                        p.step >= 0 &&
+                        p.step < 56
+                    )
+                    .map((pawn) => {
+                      const coord = getPawnGridCoord(
+                        pawn.color,
+                        pawn.step,
+                        pawn.pawnIndex
+                      );
+                      const leftPct = ((coord.col + 0.5) / 15) * 100;
+                      const topPct = ((coord.row + 0.5) / 15) * 100;
+
+                      return (
+                        <button
+                          key={`target-asteroid-${pawn.id}`}
+                          type="button"
+                          onClick={() => {
+                            onSelectTargetPawn?.(pawn.id);
+                          }}
+                          style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                          title="Target Opponent for Cyber Stasis"
+                          className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full cursor-pointer flex items-center justify-center group focus:outline-none"
+                        >
+                          <span className="w-10 h-10 rounded-full border-2 border-cyan-400 bg-cyan-500/45 shadow-[0_0_16px_#06b6d4] animate-ping" />
+                          <span className="absolute text-sm">🎯</span>
                         </button>
                       );
                     })}

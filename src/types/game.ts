@@ -228,6 +228,36 @@ export interface MoveEvaluation {
   willReachHome: boolean;
   landsOnSafeStar: boolean;
   perkRuleTag?: string;
+  brokenWallIds?: string[];
+  shieldedPawnIds?: string[];
+  isStasisBreakMove?: boolean;
+}
+
+export interface MarbleWall {
+  id: string;
+  ownerColor: PlayerColor;
+  tileIndex: number;
+  hp: number;
+}
+
+export interface RoyalGuardState {
+  active: boolean;
+  ownerColor: PlayerColor;
+  targetPawnId: string | null;
+  hitsRemaining: number;
+}
+
+export interface CyberStasis {
+  targetPawnId: string;
+  appliedAt: number;
+  durationMs: number;
+}
+
+export interface BoardPowersState {
+  walls: MarbleWall[];
+  guard: Record<PlayerColor, RoyalGuardState>;
+  stasis: CyberStasis[];
+  lastNearHomeStasisTimestamp: Record<PlayerColor, number>;
 }
 
 export interface SavedGameSession {
@@ -244,6 +274,8 @@ export interface SavedGameSession {
   capturedPlayerFlags: boolean[];
   /** Tracks which players have successfully captured at least one opponent pawn this match (for Cut-to-Enter rule) */
   playerHasCapturedAnyOpponent?: boolean[];
+  /** Tactical Board Powers state */
+  boardPowers?: BoardPowersState;
   /** Internal engine state — persisted silently for mid-game save/restore accuracy */
   _e?: DiceBiasState;
   turnNumber: number;

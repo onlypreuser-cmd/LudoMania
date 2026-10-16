@@ -6,13 +6,23 @@ import {
   rollSmartDice,
 } from '../engine/diceEngine';
 import {
+  BoardPowersState,
   BoardThemeId,
+  CyberStasis,
   DiceBiasState,
+  MarbleWall,
   MoveEvaluation,
   Pawn,
   PlayerConfig,
   SavedGameSession,
 } from '../types/game';
+import {
+  canPlayerDeployRoyalGuard,
+  canPlayerLaunchCyberAsteroid,
+  canPlayerPlaceMarbleWall,
+  cleanExpiredStasis,
+  createInitialBoardPowers,
+} from '../engine/powers/boardPowersEngine';
 
 export interface LudoMachineContext {
   players: PlayerConfig[];
@@ -35,6 +45,10 @@ export interface LudoMachineContext {
   winnerIndex: number | null;
   statusMessage: string;
   turnNumber: number;
+  boardPowers: BoardPowersState;
+  canPlaceMarbleWall: boolean;
+  canDeployGuard: boolean;
+  canLaunchAsteroid: boolean;
 }
 
 export type LudoMachineEvent =
@@ -44,7 +58,12 @@ export type LudoMachineEvent =
   | { type: 'DICE_SETTLED' }
   | { type: 'SELECT_PAWN'; pawnId: string }
   | { type: 'ANIMATION_COMPLETE' }
-  | { type: 'RESET_MATCH' };
+  | { type: 'RESET_MATCH' }
+  | { type: 'DEPLOY_MARBLE_WALL'; tileIndex: number }
+  | { type: 'DEPLOY_ROYAL_GUARD'; pawnId: string }
+  | { type: 'LAUNCH_CYBER_ASTEROID'; targetPawnId: string }
+  | { type: 'BREAK_STASIS_WITH_SIX'; pawnId: string }
+  | { type: 'TICK_STASIS_TIMERS'; currentTime: number };
 
 export function createInitialPawns(players: PlayerConfig[]): Pawn[] {
   const pawns: Pawn[] = [];
@@ -113,6 +132,25 @@ export const ludoMachine = setup({
       const nextLastDiceValues = [...context.playerLastDiceValues];
       nextLastDiceValues[context.currentPlayerIndex] = diceValue;
 
+      const playerPawns = context.pawns.filter(
+        (p) => p.playerIndex === context.currentPlayerIndex
+      );
+      const canPlaceMarbleWall = canPlayerPlaceMarbleWall(
+        context.boardTheme,
+        nextConsecutiveSixes
+      );
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        context.boardTheme,
+        playerPawns,
+        context.boardPowers.guard[currentPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        context.boardTheme,
+        playerPawns,
+        nextConsecutiveSixes,
+        context.boardPowers.lastNearHomeStasisTimestamp[currentPlayer.color] ?? 0
+      );
+
       return {
         diceValue,
         playerLastDiceValues: nextLastDiceValues,
@@ -122,6 +160,9 @@ export const ludoMachine = setup({
         hasExtraTurn: false,
         lastCapturedPawnIds: [],
         statusMessage: `${currentPlayer.name} is rolling...`,
+        canPlaceMarbleWall,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }),
 
@@ -146,12 +187,31 @@ export const ludoMachine = setup({
         currentPlayer.color,
         diceValue,
         context.boardTheme,
-        playerHasCaptured
+        playerHasCaptured,
+        context.boardPowers
+      );
+
+      const playerPawns = context.pawns.filter(
+        (p) => p.playerIndex === context.currentPlayerIndex
+      );
+      const canPlaceMarbleWall = canPlayerPlaceMarbleWall(
+        context.boardTheme,
+        context.consecutiveSixes
+      );
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        context.boardTheme,
+        playerPawns,
+        context.boardPowers.guard[currentPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        context.boardTheme,
+        playerPawns,
+        context.consecutiveSixes,
+        context.boardPowers.lastNearHomeStasisTimestamp[currentPlayer.color] ?? 0
       );
 
       let statusMessage = `${currentPlayer.name} rolled ${diceValue}!`;
       if (legalMoves.length === 0) {
-        const playerPawns = context.pawns.filter((p) => p.playerIndex === context.currentPlayerIndex);
         if (playerPawns.every((p) => p.step === -1)) {
           statusMessage = `Rolled ${diceValue} — Need a 6 to deploy from Yard.`;
         } else {
@@ -164,6 +224,9 @@ export const ludoMachine = setup({
       return {
         legalMoves,
         statusMessage,
+        canPlaceMarbleWall,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }),
 
@@ -259,6 +322,81 @@ export const ludoMachine = setup({
           (nextBonus[context.currentPlayerIndex] ?? 0) + moveBonusEarned;
       }
 
+      // Tactical Board Powers Updates
+      let updatedWalls = [...context.boardPowers.walls];
+      const updatedGuard = { ...context.boardPowers.guard };
+      let updatedStasis = [...context.boardPowers.stasis];
+
+      // A. Destroy broken walls
+      if (move.brokenWallIds && move.brokenWallIds.length > 0) {
+        const brokenSet = new Set(move.brokenWallIds);
+        updatedWalls = updatedWalls.filter((w) => !brokenSet.has(w.id));
+      }
+
+      // B. Shielded pawns: decrement Royal Guard hitsRemaining
+      let guardAbsorbedMsg = '';
+      if (move.shieldedPawnIds && move.shieldedPawnIds.length > 0) {
+        for (const shieldedId of move.shieldedPawnIds) {
+          const victim = context.pawns.find((p) => p.id === shieldedId);
+          if (victim) {
+            const gState = updatedGuard[victim.color];
+            if (gState && gState.active) {
+              const remaining = gState.hitsRemaining - 1;
+              if (remaining <= 0) {
+                updatedGuard[victim.color] = {
+                  ...gState,
+                  active: false,
+                  targetPawnId: null,
+                  hitsRemaining: 0,
+                };
+                guardAbsorbedMsg = ` 🛡️ Opponent's Royal Guard shattered!`;
+              } else {
+                updatedGuard[victim.color] = {
+                  ...gState,
+                  hitsRemaining: remaining,
+                };
+                guardAbsorbedMsg = ` 🛡️ Opponent's Royal Guard absorbed hit! (${remaining} left)`;
+              }
+            }
+          }
+        }
+      }
+
+      // C. Dismiss Royal Guard if player deploys a second token from yard (-1 to 0)
+      if (move.fromStep === -1 && move.toStep === 0) {
+        const myGuard = updatedGuard[currentPlayer.color];
+        if (myGuard?.active) {
+          const alreadyOnTrack = context.pawns.filter(
+            (p) =>
+              p.playerIndex === context.currentPlayerIndex &&
+              p.id !== move.pawnId &&
+              p.step >= 0 &&
+              p.step < 56
+          );
+          if (alreadyOnTrack.length >= 1) {
+            updatedGuard[currentPlayer.color] = {
+              ...myGuard,
+              active: false,
+              targetPawnId: null,
+              hitsRemaining: 2,
+            };
+            guardAbsorbedMsg += ` (Royal Guard dismissed: 2nd token deployed)`;
+          }
+        }
+      }
+
+      // D. Stasis break move
+      if (move.isStasisBreakMove) {
+        updatedStasis = updatedStasis.filter((s) => s.targetPawnId !== move.pawnId);
+      }
+
+      const nextBoardPowers: BoardPowersState = {
+        ...context.boardPowers,
+        walls: updatedWalls,
+        guard: updatedGuard,
+        stasis: updatedStasis,
+      };
+
       const rolledSix = context.diceValue === 6;
       const killedOpponent = move.willKillPawnIds.length > 0;
       const reachedHome = move.willReachHome;
@@ -291,6 +429,9 @@ export const ludoMachine = setup({
       if (move.perkRuleTag) {
         statusMessage += ` [${move.perkRuleTag}]`;
       }
+      if (guardAbsorbedMsg) {
+        statusMessage += guardAbsorbedMsg;
+      }
 
       return {
         pawns: updatedPawns,
@@ -301,24 +442,58 @@ export const ludoMachine = setup({
         capturedPlayerFlags: nextCapturedFlags,
         playerHasCapturedAnyOpponent: nextHasCaptured,
         legalMoves: [],
+        boardPowers: nextBoardPowers,
         statusMessage,
       };
     }),
 
     prepareExtraTurn: assign(({ context }) => {
       const currentPlayer = context.players[context.currentPlayerIndex];
+      const playerPawns = context.pawns.filter(
+        (p) => p.playerIndex === context.currentPlayerIndex
+      );
+      const canPlaceMarbleWall = canPlayerPlaceMarbleWall(
+        context.boardTheme,
+        context.consecutiveSixes
+      );
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        context.boardTheme,
+        playerPawns,
+        context.boardPowers.guard[currentPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        context.boardTheme,
+        playerPawns,
+        context.consecutiveSixes,
+        context.boardPowers.lastNearHomeStasisTimestamp[currentPlayer.color] ?? 0
+      );
       return {
         diceValue: null,
         activeMove: null,
         hasExtraTurn: false,
         legalMoves: [],
         statusMessage: `🔥 Bonus Turn for ${currentPlayer.name}! Roll again!`,
+        canPlaceMarbleWall,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }),
 
     switchToNextPlayer: assign(({ context }) => {
       const nextIdx = (context.currentPlayerIndex + 1) % context.players.length;
       const nextPlayer = context.players[nextIdx];
+      const nextPawns = context.pawns.filter((p) => p.playerIndex === nextIdx);
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        context.boardTheme,
+        nextPawns,
+        context.boardPowers.guard[nextPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        context.boardTheme,
+        nextPawns,
+        0,
+        context.boardPowers.lastNearHomeStasisTimestamp[nextPlayer.color] ?? 0
+      );
       return {
         currentPlayerIndex: nextIdx,
         diceValue: null,
@@ -329,6 +504,9 @@ export const ludoMachine = setup({
         lastCapturedPawnIds: [],
         turnNumber: context.turnNumber + 1,
         statusMessage: `${nextPlayer.name}'s turn to roll!`,
+        canPlaceMarbleWall: false,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }),
 
@@ -351,6 +529,100 @@ export const ludoMachine = setup({
         winnerIndex: context.currentPlayerIndex,
         captureBonusPoints: nextBonus,
         statusMessage: `🏆 ${winner.name} wins the match!`,
+      };
+    }),
+
+    deployMarbleWall: assign(({ context, event }) => {
+      if (event.type !== 'DEPLOY_MARBLE_WALL') return {};
+      const currentPlayer = context.players[context.currentPlayerIndex];
+      const newWall: MarbleWall = {
+        id: `wall-${Date.now()}-${event.tileIndex}`,
+        ownerColor: currentPlayer.color,
+        tileIndex: event.tileIndex,
+        hp: 1,
+      };
+      return {
+        boardPowers: {
+          ...context.boardPowers,
+          walls: [
+            ...context.boardPowers.walls.filter((w) => w.tileIndex !== event.tileIndex),
+            newWall,
+          ],
+        },
+        canPlaceMarbleWall: false,
+        statusMessage: `🧱 ${currentPlayer.name} erected a Roman Marble Wall at tile ${event.tileIndex}!`,
+      };
+    }),
+
+    deployRoyalGuard: assign(({ context, event }) => {
+      if (event.type !== 'DEPLOY_ROYAL_GUARD') return {};
+      const currentPlayer = context.players[context.currentPlayerIndex];
+      return {
+        boardPowers: {
+          ...context.boardPowers,
+          guard: {
+            ...context.boardPowers.guard,
+            [currentPlayer.color]: {
+              active: true,
+              ownerColor: currentPlayer.color,
+              targetPawnId: event.pawnId,
+              hitsRemaining: 2,
+            },
+          },
+        },
+        canDeployGuard: false,
+        statusMessage: `🛡️ Royal Guard deployed to protect token! Absorbs next 2 cuts.`,
+      };
+    }),
+
+    launchCyberAsteroid: assign(({ context, event }) => {
+      if (event.type !== 'LAUNCH_CYBER_ASTEROID') return {};
+      const currentPlayer = context.players[context.currentPlayerIndex];
+      const newStasis: CyberStasis = {
+        targetPawnId: event.targetPawnId,
+        appliedAt: Date.now(),
+        durationMs: 60000,
+      };
+      return {
+        boardPowers: {
+          ...context.boardPowers,
+          stasis: [
+            ...context.boardPowers.stasis.filter((s) => s.targetPawnId !== event.targetPawnId),
+            newStasis,
+          ],
+          lastNearHomeStasisTimestamp: {
+            ...context.boardPowers.lastNearHomeStasisTimestamp,
+            [currentPlayer.color]: Date.now(),
+          },
+        },
+        canLaunchAsteroid: false,
+        statusMessage: `☄️ Cyber Asteroid impact! Opponent token frozen in stasis for 60s!`,
+      };
+    }),
+
+    breakStasisWithSix: assign(({ context, event }) => {
+      if (event.type !== 'BREAK_STASIS_WITH_SIX') return {};
+      const currentPlayer = context.players[context.currentPlayerIndex];
+      return {
+        boardPowers: {
+          ...context.boardPowers,
+          stasis: context.boardPowers.stasis.filter((s) => s.targetPawnId !== event.pawnId),
+        },
+        statusMessage: `⚡ ${currentPlayer.name} broke Cyber Stasis!`,
+      };
+    }),
+
+    tickStasisTimers: assign(({ context, event }) => {
+      if (event.type !== 'TICK_STASIS_TIMERS') return {};
+      const nextStasis = cleanExpiredStasis(context.boardPowers.stasis, event.currentTime);
+      if (nextStasis.length === context.boardPowers.stasis.length) {
+        return {};
+      }
+      return {
+        boardPowers: {
+          ...context.boardPowers,
+          stasis: nextStasis,
+        },
       };
     }),
 
@@ -380,12 +652,34 @@ export const ludoMachine = setup({
         winnerIndex: null,
         turnNumber: 1,
         statusMessage: `${players[0]?.name || 'Player 1'}'s turn to roll!`,
+        boardPowers: createInitialBoardPowers(),
+        canPlaceMarbleWall: false,
+        canDeployGuard: false,
+        canLaunchAsteroid: false,
       };
     }),
 
     restoreSessionState: assign(({ event }) => {
       if (event.type !== 'RESTORE_SESSION') return {};
       const s = event.session;
+      const initialPowers = s.boardPowers ?? createInitialBoardPowers();
+      const currentPlayer = s.players[s.currentPlayerIndex] ?? s.players[0];
+      const playerPawns = s.pawns.filter((p) => p.playerIndex === s.currentPlayerIndex);
+      const canPlaceMarbleWall = canPlayerPlaceMarbleWall(
+        s.boardTheme ?? 'classic-kingdom',
+        s.consecutiveSixes ?? 0
+      );
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        s.boardTheme ?? 'classic-kingdom',
+        playerPawns,
+        initialPowers.guard[currentPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        s.boardTheme ?? 'classic-kingdom',
+        playerPawns,
+        s.consecutiveSixes ?? 0,
+        initialPowers.lastNearHomeStasisTimestamp[currentPlayer.color] ?? 0
+      );
       return {
         players: s.players,
         pawns: s.pawns,
@@ -399,7 +693,6 @@ export const ludoMachine = setup({
         hasExtraTurn: false,
         lastCapturedPawnIds: [],
         captureBonusPoints: s.captureBonusPoints ?? s.players.map(() => 0),
-        // Restore flags if present; older saves default to false (safe fallback)
         capturedPlayerFlags: s.capturedPlayerFlags ?? s.players.map(() => false),
         playerHasCapturedAnyOpponent:
           s.playerHasCapturedAnyOpponent ?? s.players.map(() => false),
@@ -409,6 +702,10 @@ export const ludoMachine = setup({
         statusMessage:
           s.statusMessage ||
           `${s.players[s.currentPlayerIndex]?.name || 'Player'}'s turn to roll!`,
+        boardPowers: initialPowers,
+        canPlaceMarbleWall,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }),
   },
@@ -418,6 +715,24 @@ export const ludoMachine = setup({
   context: ({ input }) => {
     if (input.savedSession) {
       const s = input.savedSession;
+      const initialPowers = s.boardPowers ?? createInitialBoardPowers();
+      const currentPlayer = s.players[s.currentPlayerIndex] ?? s.players[0];
+      const playerPawns = s.pawns.filter((p) => p.playerIndex === s.currentPlayerIndex);
+      const canPlaceMarbleWall = canPlayerPlaceMarbleWall(
+        s.boardTheme ?? input.boardTheme ?? 'classic-kingdom',
+        s.consecutiveSixes ?? 0
+      );
+      const canDeployGuard = canPlayerDeployRoyalGuard(
+        s.boardTheme ?? input.boardTheme ?? 'classic-kingdom',
+        playerPawns,
+        initialPowers.guard[currentPlayer.color]
+      );
+      const canLaunchAsteroid = canPlayerLaunchCyberAsteroid(
+        s.boardTheme ?? input.boardTheme ?? 'classic-kingdom',
+        playerPawns,
+        s.consecutiveSixes ?? 0,
+        initialPowers.lastNearHomeStasisTimestamp[currentPlayer.color] ?? 0
+      );
       return {
         players: s.players,
         pawns: s.pawns,
@@ -440,6 +755,10 @@ export const ludoMachine = setup({
         statusMessage:
           s.statusMessage ||
           `${s.players[s.currentPlayerIndex]?.name || 'Player'}'s turn to roll!`,
+        boardPowers: initialPowers,
+        canPlaceMarbleWall,
+        canDeployGuard,
+        canLaunchAsteroid,
       };
     }
     return {
@@ -461,6 +780,10 @@ export const ludoMachine = setup({
       winnerIndex: null,
       turnNumber: 1,
       statusMessage: `${input.players[0]?.name || 'Player 1'}'s turn to roll!`,
+      boardPowers: createInitialBoardPowers(),
+      canPlaceMarbleWall: false,
+      canDeployGuard: false,
+      canLaunchAsteroid: false,
     };
   },
   on: {
@@ -475,6 +798,21 @@ export const ludoMachine = setup({
     RESET_MATCH: {
       target: '.IDLE',
       actions: 'resetMatchState',
+    },
+    TICK_STASIS_TIMERS: {
+      actions: 'tickStasisTimers',
+    },
+    DEPLOY_MARBLE_WALL: {
+      actions: 'deployMarbleWall',
+    },
+    DEPLOY_ROYAL_GUARD: {
+      actions: 'deployRoyalGuard',
+    },
+    LAUNCH_CYBER_ASTEROID: {
+      actions: 'launchCyberAsteroid',
+    },
+    BREAK_STASIS_WITH_SIX: {
+      actions: 'breakStasisWithSix',
     },
   },
   states: {

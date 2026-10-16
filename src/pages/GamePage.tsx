@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { LudoBoard3D } from '../components/game/LudoBoard3D';
 import { PlayerSetupModal } from '../components/modals/PlayerSetupModal';
 import { BOARD_THEMES } from '../engine/boardConfig';
 import { CornerDiceDock } from './game/components/CornerDiceDock';
 import { GameHeaderHUD } from './game/components/GameHeaderHUD';
 import { GameOverOverlay } from './game/components/GameOverOverlay';
+import { TacticalPowerBanner } from './game/components/TacticalPowerBanner';
 import { TopScoreCard } from './game/components/TopScoreCard';
 import { useGameSessionSync } from './game/hooks/useGameSessionSync';
 
@@ -41,8 +42,53 @@ export const GamePage: React.FC = () => {
     handleRollSettled,
     handleSelectPawn,
     handleMoveAnimationComplete,
+    boardPowers,
+    canPlaceMarbleWall,
+    canDeployGuard,
+    canLaunchAsteroid,
+    handleDeployMarbleWall,
+    handleDeployRoyalGuard,
+    handleLaunchCyberAsteroid,
     send,
   } = useGameSessionSync();
+
+  const [targetingMode, setTargetingMode] = useState<
+    'wall' | 'guard' | 'asteroid' | null
+  >(null);
+
+  const handleStartTargeting = useCallback(
+    (mode: 'wall' | 'guard' | 'asteroid') => {
+      setTargetingMode(mode);
+    },
+    []
+  );
+
+  const handleCancelTargeting = useCallback(() => {
+    setTargetingMode(null);
+  }, []);
+
+  const handleSelectTrackTile = useCallback(
+    (tileIndex: number) => {
+      if (targetingMode === 'wall') {
+        handleDeployMarbleWall(tileIndex);
+        setTargetingMode(null);
+      }
+    },
+    [targetingMode, handleDeployMarbleWall]
+  );
+
+  const handleSelectTargetPawn = useCallback(
+    (pawnId: string) => {
+      if (targetingMode === 'guard') {
+        handleDeployRoyalGuard(pawnId);
+        setTargetingMode(null);
+      } else if (targetingMode === 'asteroid') {
+        handleLaunchCyberAsteroid(pawnId);
+        setTargetingMode(null);
+      }
+    },
+    [targetingMode, handleDeployRoyalGuard, handleLaunchCyberAsteroid]
+  );
 
   const boardThemeMeta =
     BOARD_THEMES.find((b) => b.id === selectedBoardTheme) ?? BOARD_THEMES[0];
@@ -126,7 +172,18 @@ export const GamePage: React.FC = () => {
         </div>
 
         {/* 4. Center 15x15 Ludo Board */}
-        <div className="my-1.5">
+        <div className="my-1.5 flex flex-col items-center">
+          {/* Tactical Board Power Floating Action Banner */}
+          <TacticalPowerBanner
+            canPlaceMarbleWall={canPlaceMarbleWall}
+            canDeployGuard={canDeployGuard}
+            canLaunchAsteroid={canLaunchAsteroid}
+            boardTheme={selectedBoardTheme}
+            targetingMode={targetingMode}
+            onStartTargeting={handleStartTargeting}
+            onCancelTargeting={handleCancelTargeting}
+          />
+
           <LudoBoard3D
             players={players}
             pawns={pawns}
@@ -134,8 +191,13 @@ export const GamePage: React.FC = () => {
             activeMove={activeMove}
             boardTheme={selectedBoardTheme}
             actionCameraEnabled={actionCameraEnabled}
+            boardPowers={boardPowers}
+            targetingMode={targetingMode}
+            currentPlayerColor={players[currentPlayerIndex]?.color}
             onSelectPawn={handleSelectPawn}
             onMoveAnimationComplete={handleMoveAnimationComplete}
+            onSelectTrackTile={handleSelectTrackTile}
+            onSelectTargetPawn={handleSelectTargetPawn}
           />
         </div>
 

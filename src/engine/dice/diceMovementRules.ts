@@ -1,4 +1,5 @@
 import {
+  BoardPowersState,
   BoardThemeId,
   CapturedPawnInfo,
   MoveEvaluation,
@@ -11,6 +12,11 @@ import {
   isSafeStep,
   SAFE_TRACK_INDICES,
 } from '../boardConfig';
+import {
+  getOpponentWallAtTrackIndex,
+  hasActiveRoyalGuard,
+  isPawnInStasis,
+} from '../powers/boardPowersEngine';
 
 function otherStepOr(step: number): number {
   return step;
@@ -23,6 +29,10 @@ function otherStepOr(step: number): number {
  * - Roman Phalanx Blockade (Marble Palace)
  * - Timber Sanctuary Leap (Royal Teakwood)
  * - Quantum Warp Speedpads (Midnight Cyber)
+ * - Tactical Board Powers:
+ *   - Marble Wall: -1 step deduction to break through opponent wall
+ *   - Royal Guard: Shields against up to 2 cuts
+ *   - Cyber Stasis: Frozen tokens cannot move unless broken with a roll of 6
  */
 export function getLegalMovesForPlayer(
   pawns: Pawn[],
@@ -30,12 +40,38 @@ export function getLegalMovesForPlayer(
   playerColor: PlayerColor,
   diceValue: number,
   boardThemeId: BoardThemeId = 'classic-kingdom',
-  hasCapturedOpponent: boolean = false
+  hasCapturedOpponent: boolean = false,
+  boardPowers?: BoardPowersState
 ): MoveEvaluation[] {
   const playerPawns = pawns.filter((p) => p.playerIndex === playerIndex);
   const legalMoves: MoveEvaluation[] = [];
 
   for (const pawn of playerPawns) {
+    // 0. Check Cyber Stasis
+    const inStasis = boardPowers?.stasis
+      ? isPawnInStasis(pawn.id, boardPowers.stasis)
+      : false;
+
+    if (inStasis) {
+      if (diceValue === 6) {
+        // Special legal move option: "Break Stasis"
+        legalMoves.push({
+          pawnId: pawn.id,
+          fromStep: pawn.step,
+          toStep: pawn.step,
+          pathSteps: [pawn.step],
+          willKillPawnIds: [],
+          capturedPawnsInfo: [],
+          willReachHome: false,
+          landsOnSafeStar: pawn.step >= 0 ? isSafeStep(playerColor, pawn.step) : true,
+          perkRuleTag: '⚡ Break Cyber Stasis',
+          isStasisBreakMove: true,
+        });
+      }
+      // Frozen token cannot move normally for 1-5 (and on 6 only breaks stasis)
+      continue;
+    }
+
     // 1. Pawn in Yard (-1): requires a 6 to deploy to start square (step 0)
     if (pawn.step === -1) {
       if (diceValue === 6) {
@@ -60,7 +96,7 @@ export function getLegalMovesForPlayer(
         }
 
         if (!isBlockaded) {
-          const killedPawns = landsOnSafeStar
+          const opponentPawnsOnTarget = landsOnSafeStar
             ? []
             : pawns.filter(
                 (other) =>
@@ -70,12 +106,36 @@ export function getLegalMovesForPlayer(
                   getGlobalTrackIndex(other.color, other.step) === targetGlobalIdx
               );
 
+          const killedPawns: Pawn[] = [];
+          const shieldedPawnIds: string[] = [];
+          for (const opp of opponentPawnsOnTarget) {
+            if (hasActiveRoyalGuard(boardPowers?.guard, opp)) {
+              shieldedPawnIds.push(opp.id);
+            } else {
+              killedPawns.push(opp);
+            }
+          }
+
           const capturedPawnsInfo: CapturedPawnInfo[] = killedPawns.map((o) => ({
             pawnId: o.id,
             color: o.color,
             pawnIndex: o.pawnIndex,
             fromStep: o.step,
           }));
+
+          const brokenWallIds: string[] = [];
+          let perkTag: string | undefined = undefined;
+          if (targetGlobalIdx !== null) {
+            const wall = getOpponentWallAtTrackIndex(
+              boardPowers?.walls,
+              targetGlobalIdx,
+              playerColor
+            );
+            if (wall) {
+              brokenWallIds.push(wall.id);
+              perkTag = '🧱 Wall Broken';
+            }
+          }
 
           legalMoves.push({
             pawnId: pawn.id,
@@ -86,6 +146,9 @@ export function getLegalMovesForPlayer(
             capturedPawnsInfo,
             willReachHome: false,
             landsOnSafeStar,
+            brokenWallIds: brokenWallIds.length > 0 ? brokenWallIds : undefined,
+            shieldedPawnIds: shieldedPawnIds.length > 0 ? shieldedPawnIds : undefined,
+            perkRuleTag: perkTag,
           });
         }
 
@@ -114,15 +177,57 @@ export function getLegalMovesForPlayer(
     }
 
     // 3. Pawn on Main Track (0..50) or Home Stretch (51..55)
-    let toStep = pawn.step + diceValue;
+    // Check if movement traverses or lands on an opponent's Marble Wall
+    let movementDistance = diceValue;
+    const brokenWallIds: string[] = [];
+    let wallDeductionApplied = false;
+
+    if (pawn.step >= 0 && pawn.step <= 50) {
+      for (let stepOffset = 1; stepOffset <= diceValue; stepOffset++) {
+        const checkStep = pawn.step + stepOffset;
+        if (checkStep <= 50) {
+          const gIdx = getGlobalTrackIndex(playerColor, checkStep);
+          if (gIdx !== null) {
+            const wall = getOpponentWallAtTrackIndex(
+              boardPowers?.walls,
+              gIdx,
+              playerColor
+            );
+            if (wall) {
+              // 1 step is deducted from movement to break through the wall!
+              movementDistance = Math.max(0, diceValue - 1);
+              brokenWallIds.push(wall.id);
+              wallDeductionApplied = true;
+              break; // Only 1 wall deducted per move
+            }
+          }
+        }
+      }
+    }
+
+    let toStep = pawn.step + movementDistance;
     if (toStep > 56) {
       continue;
     }
 
+    // If step was deducted and toStep === pawn.step (e.g. rolled 1, spent 1 step to destroy wall, advances 0 steps)
+    if (wallDeductionApplied && toStep === pawn.step) {
+      legalMoves.push({
+        pawnId: pawn.id,
+        fromStep: pawn.step,
+        toStep: pawn.step,
+        pathSteps: [pawn.step],
+        willKillPawnIds: [],
+        capturedPawnsInfo: [],
+        willReachHome: false,
+        landsOnSafeStar: isSafeStep(playerColor, pawn.step),
+        brokenWallIds,
+        perkRuleTag: '🧱 Wall Broken (-1 Step)',
+      });
+      continue;
+    }
+
     // Tournament Cut-to-Enter Rule (Classic Kingdom):
-    // Must capture at least 1 opponent pawn to enter the Home Stretch (step 51..56).
-    // Option A: If not yet captured, token wraps around the 52-cell track for another
-    // lap to hunt down opponents, avoiding permanent deadlock at step 50!
     let isCircuitLap = false;
     if (
       boardThemeId === 'classic-kingdom' &&
@@ -161,7 +266,10 @@ export function getLegalMovesForPlayer(
     let willReachHome = toStep === 56;
     let landsOnSafeStar = false;
     let killedPawns: Pawn[] = [];
-    let perkRuleTag: string | undefined = isCircuitLap
+    const shieldedPawnIds: string[] = [];
+    let perkRuleTag: string | undefined = wallDeductionApplied
+      ? '🧱 Wall Broken (-1 Step)'
+      : isCircuitLap
       ? '🔄 Circuit Lap (Hunting Opponent)'
       : undefined;
 
@@ -171,7 +279,6 @@ export function getLegalMovesForPlayer(
         targetGlobalIdx !== null && SAFE_TRACK_INDICES.has(targetGlobalIdx);
 
       // Midnight Cyber: Quantum Warp Speedpads
-      // Landing on a Star Safe Square relays the token +2 steps along the cyber grid
       if (
         boardThemeId === 'midnight-neon' &&
         landsOnSafeStar &&
@@ -187,13 +294,21 @@ export function getLegalMovesForPlayer(
       }
 
       if (!landsOnSafeStar && targetGlobalIdx !== null) {
-        killedPawns = pawns.filter(
+        const candidateVictims = pawns.filter(
           (other) =>
             other.playerIndex !== playerIndex &&
             other.step >= 0 &&
             other.step <= 50 &&
             getGlobalTrackIndex(other.color, other.step) === targetGlobalIdx
         );
+
+        for (const vic of candidateVictims) {
+          if (hasActiveRoyalGuard(boardPowers?.guard, vic)) {
+            shieldedPawnIds.push(vic.id);
+          } else {
+            killedPawns.push(vic);
+          }
+        }
       }
     }
 
@@ -213,6 +328,8 @@ export function getLegalMovesForPlayer(
       capturedPawnsInfo,
       willReachHome,
       landsOnSafeStar,
+      brokenWallIds: brokenWallIds.length > 0 ? brokenWallIds : undefined,
+      shieldedPawnIds: shieldedPawnIds.length > 0 ? shieldedPawnIds : undefined,
       perkRuleTag,
     });
   }
