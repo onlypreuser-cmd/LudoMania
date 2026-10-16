@@ -121,13 +121,15 @@ export const PlayerSetupModal: React.FC<PlayerSetupModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 overflow-y-auto"
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto"
         >
           <motion.div
-            initial={{ scale: 0.92, y: 20, opacity: 0 }}
+            initial={{ scale: 0.96, y: 12, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.92, y: 16, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            exit={{ scale: 0.96, y: 8, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ willChange: 'transform, opacity' }}
             className="relative w-full max-w-md rounded-[32px] bg-gradient-to-b from-white via-sky-50/90 to-indigo-50/95 p-5 sm:p-6 shadow-[0_24px_60px_rgba(15,23,42,0.45),inset_0_2px_4px_rgba(255,255,255,1)] border-4 border-white text-slate-800 max-h-[92vh] overflow-y-auto"
           >
             <div className="mb-4">

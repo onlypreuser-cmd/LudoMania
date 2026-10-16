@@ -1,193 +1,448 @@
 import React from 'react';
-import { ExpressiveEye } from '../common/ExpressiveEye';
 import { SHARED_GEO } from '../geometries/tokenGeometries';
 import { SkinComponentProps } from '../types';
 
+/**
+ * Star Unicorn Figurine (Ground-up procedural 3D sculpture matching Reference Sheet 1, Row 3 with Cosmic Star theme)
+ * Features:
+ * - Cuddly quadruped white pony/foal sitting neatly on a deep cosmic amethyst pedestal with 4 raised golden stars
+ * - Cute pony muzzle/snout with soft pink nostrils and baby cheeks (real horse/foal feel)
+ * - Giant soulful anime eyes with deep celestial violet gradient, white catchlights, and star glints
+ * - Golden helical spiral alicorn horn on forehead with cute white pony ears
+ * - Golden star hair clip nestled on left mane curls
+ * - Multi-layered pastel cotton-candy rainbow swirl mane (pink, purple, cyan, yellow) cascading down both sides
+ * - Swirled pastel rainbow tail curving up at rear
+ * - Delicate white pegasus wings on the sides
+ * - Golden collar necklace with blue jewel pendant on chest!
+ */
 export const StarUnicornSkin: React.FC<SkinComponentProps> = React.memo(() => {
   return (
     <group position={[0, 0.14, 0]}>
-      {/* Deep Cosmic Amethyst Pedestal Collar + 4 Raised 3D Golden Stars */}
-      <mesh
-        geometry={SHARED_GEO.themeCollar}
-        position={[0, -0.04, 0]}
-        castShadow
-        receiveShadow
-      >
-        <meshPhysicalMaterial
-          color="#581c87"
-          roughness={0.12}
-          metalness={0.35}
-          clearcoat={1}
-          ior={1.62}
-        />
-      </mesh>
-      {[-0.9, -0.3, 0.3, 0.9].map((ang, sIdx) => (
+      {/* 1. Deep Cosmic Amethyst Pedestal Collar + 4 Raised 3D Golden Stars */}
+      <group position={[0, -0.04, 0]}>
         <mesh
-          key={sIdx}
-          geometry={SHARED_GEO.star3D}
-          position={[
-            Math.sin(ang) * 0.33,
-            -0.04,
-            Math.cos(ang) * 0.33,
-          ]}
-          rotation={[0, ang, 0]}
-          scale={0.88}
+          geometry={SHARED_GEO.themeCollar}
+          castShadow
+          receiveShadow
         >
           <meshPhysicalMaterial
-            color="#fbbf24"
-            metalness={0.95}
-            roughness={0.06}
+            color="#581c87"
+            roughness={0.12}
+            metalness={0.35}
             clearcoat={1}
+            ior={1.62}
           />
         </mesh>
-      ))}
+        <mesh geometry={SHARED_GEO.collarTorus} position={[0, 0.05, 0]} scale={1.22}>
+          <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.08} />
+        </mesh>
+        <mesh geometry={SHARED_GEO.collarTorus} position={[0, -0.05, 0]} scale={1.22}>
+          <meshStandardMaterial color="#fbbf24" metalness={0.94} roughness={0.08} />
+        </mesh>
 
-      {/* Solid Pearlescent Celestial Nebula Body (ZERO Glass / Transmission!) */}
+        {/* 4 Raised 3D Golden Stars on Pedestal Rim */}
+        {[-0.9, -0.3, 0.3, 0.9].map((ang, sIdx) => (
+          <mesh
+            key={sIdx}
+            geometry={SHARED_GEO.star3D}
+            position={[
+              Math.sin(ang) * 0.34,
+              0.01,
+              Math.cos(ang) * 0.34,
+            ]}
+            rotation={[0, ang, 0]}
+            scale={0.85}
+          >
+            <meshPhysicalMaterial
+              color="#fbbf24"
+              metalness={0.95}
+              roughness={0.06}
+              clearcoat={1}
+            />
+          </mesh>
+        ))}
+
+        {/* Soft Dream Cloud Top Mounds */}
+        {[
+          { x: 0, y: 0.04, z: 0.18, s: 0.13, col: '#fdf4ff' },
+          { x: -0.16, y: 0.035, z: 0.12, s: 0.12, col: '#fce7f3' },
+          { x: 0.16, y: 0.035, z: 0.12, s: 0.12, col: '#e0f2fe' },
+          { x: 0, y: 0.03, z: -0.16, s: 0.13, col: '#f3e8ff' },
+        ].map((c, cIdx) => (
+          <mesh
+            key={cIdx}
+            geometry={SHARED_GEO.lowSphere}
+            position={[c.x, c.y, c.z]}
+            scale={[c.s * 1.3, c.s * 0.75, c.s * 1.2]}
+            castShadow
+          >
+            <meshPhysicalMaterial
+              color={c.col}
+              roughness={0.3}
+              clearcoat={0.8}
+              sheen={0.9}
+              sheenColor="#f472b6"
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* 2. Plump Pure-White Pearlescent Seated Foal Body */}
       <mesh
         geometry={SHARED_GEO.unitSphere}
-        position={[0, 0.2, -0.02]}
-        scale={[0.22, 0.21, 0.225]}
+        position={[0, 0.21, -0.01]}
+        scale={[0.22, 0.21, 0.23]}
         castShadow
       >
         <meshPhysicalMaterial
-          color="#fdf4ff"
-          roughness={0.24}
+          color="#ffffff"
+          roughness={0.22}
           metalness={0.08}
-          clearcoat={0.9}
-          sheen={0.8}
-          sheenColor="#e879f9"
+          clearcoat={0.95}
+          clearcoatRoughness={0.04}
+          sheen={0.85}
+          sheenColor="#fdf4ff"
         />
       </mesh>
 
-      {/* Rose-Gold Gilded Hooves */}
-      {[-0.09, 0.09].map((hx, hIdx) => (
+      {/* 3. Golden Collar Necklace with Glowing Blue Gem Pendant on Chest */}
+      <group position={[0, 0.25, 0.06]}>
+        {/* Gold Choker Collar Ring */}
         <mesh
-          key={hIdx}
+          geometry={SHARED_GEO.collarTorus}
+          rotation={[0.35, 0, 0]}
+          scale={[0.62, 0.62, 0.45]}
+        >
+          <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+        </mesh>
+        {/* Gold Pendant Bezel Setting */}
+        <mesh
           geometry={SHARED_GEO.lowSphere}
-          position={[hx, 0.055, 0.16]}
-          scale={[0.072, 0.055, 0.088]}
-          castShadow
+          position={[0, -0.06, 0.12]}
+          scale={[0.034, 0.042, 0.02]}
+        >
+          <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+        </mesh>
+        {/* Glowing Sky-Blue / Cyan Faceted Gem Jewel */}
+        <mesh
+          geometry={SHARED_GEO.lowSphere}
+          position={[0, -0.06, 0.13]}
+          scale={[0.024, 0.032, 0.018]}
         >
           <meshPhysicalMaterial
-            color="#f472b6"
-            metalness={0.75}
-            roughness={0.18}
-            clearcoat={0.9}
+            color="#06b6d4"
+            emissive="#06b6d4"
+            emissiveIntensity={2.8}
+            metalness={0.25}
+            roughness={0.05}
+            clearcoat={1}
+            toneMapped={false}
           />
         </mesh>
-      ))}
+      </group>
 
-      {/* Graceful Folded Celestial Pegasus Feather Wings on Flanks */}
-      {[-1, 1].map((sign, wIdx) => (
-        <group
-          key={wIdx}
-          position={[sign * 0.19, 0.23, -0.02]}
-          rotation={[0.3, sign * -0.25, sign * 0.35]}
-        >
-          {/* 3 Layered Feathers */}
-          {[
-            { y: 0.1, rz: 0.2, s: 0.85, col: '#c084fc' },
-            { y: 0, rz: 0.45, s: 1.0, col: '#e879f9' },
-            { y: -0.09, rz: 0.7, s: 0.9, col: '#38bdf8' },
-          ].map((f, fIdx) => (
-            <mesh
-              key={fIdx}
-              geometry={SHARED_GEO.wingFeather}
-              position={[0, f.y, 0]}
-              rotation={[0, 0, sign * f.rz]}
-              scale={[0.7 * f.s, 0.9 * f.s, 0.3 * f.s]}
-              castShadow
-            >
-              <meshPhysicalMaterial
-                color={f.col}
-                roughness={0.18}
-                clearcoat={0.95}
-                sheen={0.8}
-                sheenColor="#fdf4ff"
-              />
-            </mesh>
-          ))}
+      {/* 4. Quadruped Seated Foal Legs with Polished Golden Hooves */}
+      {/* Front Left & Right Planted Legs with Gold Hooves */}
+      {[-0.09, 0.09].map((hx, hIdx) => (
+        <group key={hIdx} position={[hx, 0.065, 0.16]}>
+          <mesh geometry={SHARED_GEO.capsuleLimb} scale={[0.6, 0.65, 0.6]} castShadow>
+            <meshPhysicalMaterial
+              color="#ffffff"
+              roughness={0.22}
+              clearcoat={0.9}
+            />
+          </mesh>
+          <mesh
+            geometry={SHARED_GEO.unitCylinder}
+            position={[0, -0.025, 0.035]}
+            scale={[0.05, 0.022, 0.055]}
+          >
+            <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+          </mesh>
         </group>
       ))}
 
-      {/* Sculpted Graceful Chibi Pony Head */}
-      <group rotation={[0, -0.1, 0]}>
-        <mesh
-          geometry={SHARED_GEO.unitSphere}
-          position={[0, 0.56, 0.01]}
-          scale={[0.25, 0.24, 0.245]}
-          castShadow
-        >
+      {/* Tucked Seated Hind Haunches & Side Hooves */}
+      {[-0.17, 0.17].map((hx, hIdx) => {
+        const sign = hIdx === 0 ? -1 : 1;
+        return (
+          <group key={hIdx} position={[hx, 0.1, -0.04]}>
+            <mesh geometry={SHARED_GEO.lowSphere} scale={[0.075, 0.095, 0.1]}>
+              <meshPhysicalMaterial color="#ffffff" roughness={0.25} clearcoat={0.8} />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.lowSphere}
+              position={[sign * 0.03, -0.05, 0.07]}
+              scale={[0.048, 0.04, 0.06]}
+            >
+              <meshStandardMaterial color="#fbbf24" metalness={0.95} roughness={0.08} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* 5. Delicate White Pegasus Wings on Sides */}
+      {[-0.18, 0.18].map((wx, wIdx) => {
+        const sign = wIdx === 0 ? -1 : 1;
+        return (
+          <group
+            key={wIdx}
+            position={[wx, 0.28, -0.08]}
+            rotation={[0.3, sign * -0.4, sign * -0.35]}
+          >
+            <mesh geometry={SHARED_GEO.wingFeather} scale={[0.85, 0.9, 0.6]} castShadow>
+              <meshPhysicalMaterial
+                color="#ffffff"
+                roughness={0.25}
+                clearcoat={0.8}
+                sheen={0.7}
+                sheenColor="#fdf4ff"
+              />
+            </mesh>
+            <mesh
+              geometry={SHARED_GEO.wingFeather}
+              position={[sign * -0.04, -0.04, 0.02]}
+              rotation={[0, 0, sign * -0.2]}
+              scale={[0.65, 0.75, 0.5]}
+            >
+              <meshPhysicalMaterial color="#f8fafc" roughness={0.28} clearcoat={0.75} />
+            </mesh>
+          </group>
+        );
+      })}
+
+      {/* 6. Adorable Pony Head, Muzzle, Cheeks, Ears & Alicorn Horn */}
+      <group position={[0, 0.55, 0.03]}>
+        {/* Pearlescent White Foal Cranium */}
+        <mesh geometry={SHARED_GEO.unitSphere} scale={[0.265, 0.245, 0.25]} castShadow>
           <meshPhysicalMaterial
             color="#ffffff"
-            roughness={0.18}
-            clearcoat={0.9}
+            roughness={0.22}
+            metalness={0.05}
+            clearcoat={0.95}
+            clearcoatRoughness={0.03}
             sheen={0.85}
             sheenColor="#fdf4ff"
           />
         </mesh>
-        {/* Sweet Rounded Snout */}
+
+        {/* Cute Baby Pony Muzzle / Snout (Real Horse Proportions!) */}
         <mesh
-          geometry={SHARED_GEO.unitSphere}
-          position={[0, 0.505, 0.2]}
-          rotation={[0.18, 0, 0]}
-          scale={[0.145, 0.12, 0.145]}
-          castShadow
+          geometry={SHARED_GEO.lowSphere}
+          position={[0, -0.06, 0.18]}
+          scale={[0.11, 0.08, 0.11]}
         >
-          <meshPhysicalMaterial
-            color="#ffffff"
-            roughness={0.2}
-            clearcoat={0.85}
-          />
+          <meshPhysicalMaterial color="#ffffff" roughness={0.26} clearcoat={0.85} />
         </mesh>
-        {[-0.045, 0.045].map((nx, nIdx) => (
+
+        {/* Soft Pink Pony Nostrils */}
+        {[-0.032, 0.032].map((nx, nIdx) => (
           <mesh
             key={nIdx}
             geometry={SHARED_GEO.lowSphere}
-            position={[nx, 0.525, 0.325]}
-            scale={0.018}
+            position={[nx, -0.055, 0.24]}
+            scale={[0.015, 0.012, 0.012]}
           >
-            <meshStandardMaterial color="#f43f5e" />
+            <meshStandardMaterial color="#f472b6" roughness={0.4} />
           </mesh>
         ))}
 
-        {/* Enchanting Starlight Violet Eyes with Dual Catchlights */}
-        <ExpressiveEye pos={[-0.112, 0.585, 0.185]} irisColor="#6b21a8" eyeRadius={0.052} />
-        <ExpressiveEye pos={[0.112, 0.585, 0.185]} irisColor="#6b21a8" eyeRadius={0.052} />
+        {/* Sweet Smiling Foal Mouth */}
+        <mesh
+          geometry={SHARED_GEO.collarTorus}
+          position={[0, -0.09, 0.21]}
+          rotation={[0.3, 0, 0]}
+          scale={[0.12, 0.08, 0.06]}
+        >
+          <meshStandardMaterial color="#fb7185" roughness={0.5} />
+        </mesh>
 
-        {/* Equine Ears with Soft Rose-Gold Interior */}
-        {[-0.145, 0.145].map((ex, eIdx) => {
-          const sign = eIdx === 0 ? 1 : -1;
+        {/* Chubby Rosy Cheeks */}
+        {[-0.145, 0.145].map((bx, bIdx) => (
+          <mesh
+            key={bIdx}
+            geometry={SHARED_GEO.lowSphere}
+            position={[bx, -0.02, 0.19]}
+            scale={[0.045, 0.026, 0.02]}
+          >
+            <meshStandardMaterial color="#fda4af" roughness={0.55} />
+          </mesh>
+        ))}
+
+        {/* Giant Soulful Anime Pony Eyes (Deep Indigo to Violet Gradient with Stars) */}
+        {[-0.095, 0.095].map((ex, eIdx) => {
+          const side = eIdx === 0 ? -1 : 1;
           return (
-            <group
-              key={eIdx}
-              position={[ex, 0.775, -0.02]}
-              rotation={[-0.1, 0, sign * 0.24]}
-            >
-              <mesh
-                geometry={SHARED_GEO.earCone}
-                scale={[0.7, 0.88, 0.54]}
-                castShadow
-              >
-                <meshPhysicalMaterial color="#ffffff" roughness={0.24} clearcoat={0.8} />
+            <group key={eIdx} position={[ex, 0.025, 0.22]}>
+              <mesh geometry={SHARED_GEO.lowSphere} scale={[0.058, 0.064, 0.04]}>
+                <meshPhysicalMaterial
+                  color="#581c87"
+                  roughness={0.04}
+                  clearcoat={1}
+                  ior={1.48}
+                />
               </mesh>
               <mesh
-                geometry={SHARED_GEO.earCone}
-                position={[0, -0.01, 0.022]}
-                scale={[0.42, 0.62, 0.32]}
+                geometry={SHARED_GEO.lowSphere}
+                position={[0, -0.012, 0.012]}
+                scale={[0.048, 0.04, 0.028]}
               >
-                <meshStandardMaterial color="#f9a8d4" />
+                <meshStandardMaterial color="#7c3aed" roughness={0.1} />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.lowSphere}
+                position={[0, 0.005, 0.02]}
+                scale={[0.038, 0.045, 0.02]}
+              >
+                <meshBasicMaterial color="#090d16" />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.lowSphere}
+                position={[side * -0.016, 0.022, 0.034]}
+                scale={0.02}
+              >
+                <meshBasicMaterial color="#ffffff" />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.lowSphere}
+                position={[side * 0.018, -0.016, 0.032]}
+                scale={0.011}
+              >
+                <meshBasicMaterial color="#ffffff" />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.lowSphere}
+                position={[0, -0.022, 0.03]}
+                scale={0.008}
+              >
+                <meshBasicMaterial color="#ffffff" />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.collarTorus}
+                position={[0, 0.038, 0.022]}
+                rotation={[0, 0, side * -0.15]}
+                scale={[0.18, 0.09, 0.06]}
+              >
+                <meshBasicMaterial color="#1e1b4b" />
               </mesh>
             </group>
           );
         })}
 
-        {/* Forehead 3D Golden Star Tiara Crest */}
+        {/* Forehead Golden Spiral Alicorn Horn */}
+        <group position={[0, 0.2, 0.18]} rotation={[0.42, 0, 0]}>
+          <mesh geometry={SHARED_GEO.spiralHorn} scale={1.05} castShadow>
+            <meshPhysicalMaterial
+              color="#fbbf24"
+              metalness={0.96}
+              roughness={0.06}
+              clearcoat={1}
+            />
+          </mesh>
+          <mesh geometry={SHARED_GEO.collarTorus} scale={0.35}>
+            <meshStandardMaterial color="#f59e0b" metalness={0.94} roughness={0.1} />
+          </mesh>
+        </group>
+
+        {/* Cute White Pony Ears with Soft Pink Hollows */}
+        {[-0.18, 0.18].map((ex, eIdx) => {
+          const sign = eIdx === 0 ? 1 : -1;
+          return (
+            <group
+              key={eIdx}
+              position={[ex, 0.21, 0.01]}
+              rotation={[0, 0, sign * 0.35]}
+            >
+              <mesh geometry={SHARED_GEO.earCone} scale={[0.55, 0.75, 0.4]} castShadow>
+                <meshPhysicalMaterial color="#ffffff" roughness={0.3} clearcoat={0.8} />
+              </mesh>
+              <mesh
+                geometry={SHARED_GEO.earCone}
+                position={[0, 0, 0.018]}
+                scale={[0.38, 0.55, 0.25]}
+              >
+                <meshStandardMaterial color="#fbcfe8" roughness={0.4} />
+              </mesh>
+            </group>
+          );
+        })}
+
+        {/* 7. Multi-Layer Pastel Cotton-Candy Rainbow Swirl Mane (Pink, Purple, Cyan, Yellow) */}
+        {/* Forehead Sweeping Bangs Between & Beside Horn */}
+        {[
+          { x: -0.06, y: 0.14, z: 0.21, rx: 0.3, rz: 0.4, col: '#f472b6', s: 0.82 },
+          { x: 0.06, y: 0.15, z: 0.21, rx: 0.3, rz: -0.4, col: '#38bdf8', s: 0.85 },
+          { x: 0.01, y: 0.18, z: 0.2, rx: 0.2, rz: -0.1, col: '#c084fc', s: 0.78 },
+          { x: 0.1, y: 0.13, z: 0.18, rx: 0.25, rz: -0.5, col: '#fef08a', s: 0.7 },
+        ].map((lock, lIdx) => (
+          <mesh
+            key={lIdx}
+            geometry={SHARED_GEO.lowSphere}
+            position={[lock.x, lock.y, lock.z]}
+            rotation={[lock.rx, 0, lock.rz]}
+            scale={[0.07 * lock.s, 0.09 * lock.s, 0.05 * lock.s]}
+            castShadow
+          >
+            <meshPhysicalMaterial
+              color={lock.col}
+              roughness={0.25}
+              clearcoat={0.85}
+              sheen={0.8}
+            />
+          </mesh>
+        ))}
+
+        {/* Lush Flowing Left Mane Cascading Down Neck */}
+        {[
+          { x: -0.19, y: 0.08, z: 0.08, col: '#f472b6', s: 1.1 },
+          { x: -0.22, y: -0.04, z: 0.05, col: '#38bdf8', s: 1.2 },
+          { x: -0.21, y: -0.15, z: 0.02, col: '#c084fc', s: 1.15 },
+          { x: -0.16, y: -0.24, z: 0.01, col: '#fef08a', s: 1.05 },
+        ].map((lock, lIdx) => (
+          <mesh
+            key={lIdx}
+            geometry={SHARED_GEO.lowSphere}
+            position={[lock.x, lock.y, lock.z]}
+            scale={[0.095 * lock.s, 0.13 * lock.s, 0.08 * lock.s]}
+            castShadow
+          >
+            <meshPhysicalMaterial
+              color={lock.col}
+              roughness={0.22}
+              clearcoat={0.9}
+              sheen={0.9}
+            />
+          </mesh>
+        ))}
+
+        {/* Right Mane Locks (visible in Front & Top view) */}
+        {[
+          { x: 0.18, y: 0.09, z: 0.07, col: '#c084fc', s: 1.0 },
+          { x: 0.21, y: -0.03, z: 0.04, col: '#f472b6', s: 1.1 },
+          { x: 0.19, y: -0.14, z: 0.02, col: '#38bdf8', s: 1.05 },
+        ].map((lock, lIdx) => (
+          <mesh
+            key={lIdx}
+            geometry={SHARED_GEO.lowSphere}
+            position={[lock.x, lock.y, lock.z]}
+            scale={[0.09 * lock.s, 0.12 * lock.s, 0.075 * lock.s]}
+            castShadow
+          >
+            <meshPhysicalMaterial
+              color={lock.col}
+              roughness={0.22}
+              clearcoat={0.9}
+              sheen={0.9}
+            />
+          </mesh>
+        ))}
+
+        {/* 3D Golden Star Hairclip Nestled in Left Mane Curls */}
         <mesh
           geometry={SHARED_GEO.star3D}
-          position={[0, 0.67, 0.21]}
-          rotation={[-0.3, 0, 0]}
-          scale={0.72}
+          position={[-0.23, 0.14, 0.08]}
+          rotation={[0.3, -0.5, 0.2]}
+          scale={0.75}
         >
           <meshPhysicalMaterial
             color="#fbbf24"
@@ -196,47 +451,28 @@ export const StarUnicornSkin: React.FC<SkinComponentProps> = React.memo(() => {
             clearcoat={1}
           />
         </mesh>
+      </group>
 
-        {/* Twisted Golden Helical Spiral Alicorn Horn with Radiance */}
-        <mesh
-          geometry={SHARED_GEO.spiralHorn}
-          position={[0, 0.76, 0.07]}
-          rotation={[0.26, 0, 0]}
-          scale={1.02}
-          castShadow
-        >
-          <meshPhysicalMaterial
-            color="#fbbf24"
-            metalness={0.95}
-            roughness={0.06}
-            clearcoat={1}
-            emissive="#d97706"
-            emissiveIntensity={0.35}
-          />
-        </mesh>
-
-        {/* Nebula Gradient Cascading Mane (Magenta, Lavender, Cyan) */}
+      {/* 8. Swirled Pastel Rainbow Tail Curving Up at Rear */}
+      <group position={[0, 0.16, -0.21]} rotation={[0.4, 0, 0]}>
         {[
-          { x: 0.02, y: 0.77, z: 0.08, sx: 0.14, sy: 0.1, sz: 0.13, col: '#f472b6' },
-          { x: 0.08, y: 0.71, z: -0.12, sx: 0.13, sy: 0.14, sz: 0.13, col: '#c084fc' },
-          { x: 0.13, y: 0.57, z: -0.16, sx: 0.125, sy: 0.15, sz: 0.13, col: '#38bdf8' },
-          { x: 0.14, y: 0.42, z: -0.15, sx: 0.12, sy: 0.14, sz: 0.12, col: '#c084fc' },
-          { x: 0.12, y: 0.28, z: -0.15, sx: 0.115, sy: 0.12, sz: 0.115, col: '#f472b6' },
-          { x: 0.02, y: 0.18, z: -0.23, sx: 0.12, sy: 0.13, sz: 0.13, col: '#38bdf8' },
-        ].map((m, idx) => (
+          { y: 0, z: 0, col: '#f472b6', s: 1.0 },
+          { y: 0.08, z: -0.06, col: '#38bdf8', s: 1.15 },
+          { y: 0.16, z: -0.08, col: '#c084fc', s: 1.0 },
+          { y: 0.22, z: -0.05, col: '#fef08a', s: 0.85 },
+        ].map((tailLock, tlIdx) => (
           <mesh
-            key={idx}
+            key={tailLock.y}
             geometry={SHARED_GEO.lowSphere}
-            position={[m.x, m.y, m.z]}
-            scale={[m.sx, m.sy, m.sz]}
+            position={[0, tailLock.y, tailLock.z]}
+            scale={[0.08 * tailLock.s, 0.11 * tailLock.s, 0.08 * tailLock.s]}
             castShadow
           >
             <meshPhysicalMaterial
-              color={m.col}
-              roughness={0.24}
-              clearcoat={0.8}
+              color={tailLock.col}
+              roughness={0.25}
+              clearcoat={0.85}
               sheen={0.9}
-              sheenColor="#fdf4ff"
             />
           </mesh>
         ))}

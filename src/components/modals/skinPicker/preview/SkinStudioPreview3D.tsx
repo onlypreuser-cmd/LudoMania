@@ -62,6 +62,8 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
       className="relative mt-3 w-full h-64 sm:h-72 rounded-3xl overflow-hidden border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.06),inset_0_1px_2px_rgba(255,255,255,0.8)] cursor-grab active:cursor-grabbing select-none"
       style={{
         background: 'radial-gradient(circle at 50% 40%, #ffffff 0%, #f1f5f9 65%, #e2e8f0 100%)',
+        willChange: 'transform',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Soft Atmospheric Color Bloom behind the figurine */}
@@ -118,7 +120,14 @@ export const SkinStudioPreview3D: React.FC<SkinStudioPreview3DProps> = ({
             ? { position: [0, 0.42, 3.8], fov: 36 }
             : { position: [0, 0.95, 2.6], fov: 34 }
         }
-        gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+        gl={{
+          alpha: true,
+          antialias: true,
+          powerPreference: 'high-performance',
+          stencil: false,
+          depth: true,
+        }}
+        style={{ width: '100%', height: '100%', display: 'block' }}
       >
         <ambientLight intensity={0.9} />
         <directionalLight position={[4, 6, 4]} intensity={1.5} />

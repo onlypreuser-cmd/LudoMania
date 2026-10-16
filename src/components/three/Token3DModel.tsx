@@ -14,6 +14,23 @@ export interface Token3DModelProps {
   autoRotatePreview?: boolean;
 }
 
+const THEMED_SKINS_WITH_OWN_BASE = new Set([
+  'astronomer',
+  'astronaut',
+  'pirate',
+  'unicorn',
+  'star-unicorn',
+  'robot',
+  'cyber-robot',
+  'bamboo-panda',
+  'panda',
+  'ninja',
+  'fire-dragon',
+  'ice-dragon',
+  'magician',
+  'alien',
+]);
+
 /**
  * Modular Collectible 3D Token Model Orchestrator.
  * Decomposed into independent, component-based skin units with pre-allocated shared GPU geometries.
@@ -27,13 +44,15 @@ export const Token3DModel: React.FC<Token3DModelProps> = React.memo(
     scale = 1,
     autoRotatePreview = false,
   }) => {
+    const hasOwnThemedBase = THEMED_SKINS_WITH_OWN_BASE.has(skin);
+
     const modelContent = (
       <group scale={scale}>
         {/* Pulsing Selection Halo on Board Surface */}
         {(isSelectable || isSelected) && <SelectableHaloRing />}
 
-        {/* Universal Color-Coded Collector Pedestal Base */}
-        <PedestalBase color={color} isSelected={isSelected} />
+        {/* Universal Color-Coded Collector Pedestal Base (rendered only for classic pawns without custom pedestals) */}
+        {!hasOwnThemedBase && <PedestalBase color={color} isSelected={isSelected} />}
 
         {/* Modular Skin Component */}
         <RenderTokenSkin

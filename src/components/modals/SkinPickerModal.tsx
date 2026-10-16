@@ -339,13 +339,15 @@ export const SkinPickerModal: React.FC<SkinPickerModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 select-none"
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-xs select-none"
         >
           <motion.div
-            initial={{ scale: 0.94, y: 20, opacity: 0 }}
+            initial={{ scale: 0.97, y: 12, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.94, y: 16, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            exit={{ scale: 0.97, y: 8, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ willChange: 'transform, opacity' }}
             className="relative w-full max-w-[480px] max-h-[96vh] rounded-[32px] bg-white p-4 sm:p-5 shadow-[0_24px_60px_rgba(15,23,42,0.35),0_4px_16px_rgba(15,23,42,0.1)] border border-slate-200/80 flex flex-col justify-between overflow-y-auto"
           >
             {/* Header & Mode Switcher */}
